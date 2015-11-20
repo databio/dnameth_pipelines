@@ -2,60 +2,137 @@
 
 """
 RRBS pipeline
-
 """
+
+__author__ = "Nathan Sheffield"
+__email__ = "nathan@code.databio.org"
+__credits__ = ["Charles Dietz", "Johanna Klughammer", "Christoph Bock", "Andreas Schoeneggar"]
+__license__ = "GPL3"
+__version__ = "0.1"
+__status__ = "Development"
 
 from argparse import ArgumentParser
 import os, re
-import os.path
 import sys
 import subprocess
 import yaml
 
-# Argument Parsing
-################################################################################
-parser = ArgumentParser(description='Pypiper arguments.')
-
-parser.add_argument('-P', '--pypiper', dest='pypiper_dir',
-					default=os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + "/pypiper",
-					type=str)
-# Set up a pointer to the pypiper code you want to use:
-# Just grab the single pypiper arg, and add it to the path here; leaving all other args for later parsing.
-args = parser.parse_known_args()[0]
-os.sys.path.insert(0, args.pypiper_dir)
 from pypiper import Pypiper
 from pypiper import ngstk
 
-# Add Pypiper arguments to the arguments list and then reparse.
+parser = ArgumentParser(description='Pipeline')
+
+# First, add arguments from Pypiper
+# This adds options including:
+# -R: Recover mode to overwrite locks
+# -D: Dirty mode to make suppress cleaning intermediate files
 parser = Pypiper.add_pypiper_args(parser)
 
-# Pipeline options
-## Generic options for all pipelines
-parser.add_argument('-c','--config', dest='config', type=str, required=True, help='Path to YAML configuration file')
-parser.add_argument('-i', '--unmapped-bam', nargs="+", dest='unmapped_bam', required=True,
-					help="Input unmapped bam file(s))")
-parser.add_argument('-s', '--sample-name', default="default", dest='sample_name', type=str,
-					help='Sample Name') # default means deduction from filename, except .bam extension
-parser.add_argument('--flowcell', default="", dest='flowcell', type=str, help='Flowcell number')
-parser.add_argument('--lane', default="", dest='lane', type=str, help='Lane number')
-parser.add_argument('--instr', default="", dest='instr', type=str, help='Instrument name')
-parser.add_argument('-r', '--project-root', default="", dest='project_root', type=str,
-					help='Directory in which the project will reside.')
-parser.add_argument('-g', '--genome', dest='genome_assembly', type=str, required=True, help='Genome Assembly')
-parser.add_argument('-C', '--no-checks', dest='no_check', action='store_true',
-						default=False, help='Skip sanity checks')
-parser.add_argument('-p', '--paired-end', dest='paired_end', action='store_true', help='Paired End Mode')
-parser.add_argument('-q', '--single-end', dest='paired_end', action='store_false', help='Single End Mode')
-# AS: RRBS as used by us is mainly single-end... maybe it should be the default? Will break with other pipeline's defaults?
-# AS: I got the code from Angelo to run it in paired end mode
+# Default config
+default_config = os.path.splitext(os.path.basename(__file__))[0] + ".yaml"
 
-## Pipeline-specific options
-parser.add_argument('-t', '--trimgalore', dest='trimmomatic', action="store_false", default=True, help='Use trimgalore instead of trimmomatic?')
+parser.add_argument("-c", "--config", dest = "config_file", type = str,
+	help = "pipeline config file in YAML format; relative paths are considered \
+	relative to the pipeline script. defaults to " + default_config,
+	required = False, default = default_config, metavar = "CONFIG_FILE")
+
+parser.add_argument("-i", "--input", dest = "input", type = str, nargs = "+",
+	help = "one or more input files (required)",
+	required = True, metavar = "INPUT_FILES")
+# input was previously called unmapped_bam
+
+parser.add_argument("-o", "--output_parent", dest = "output_parent", type = str,
+	help = "parent output directory of the project (required). The sample_name \
+	argument will be appended to this folder for output",
+	required = True, metavar = "PARENT_OUTPUT_FOLDER")
+# output_parent was previously called project_root
+
+parser.add_argument("-s", "--sample_name", dest = "sample_name", type = str,
+	help = "unique name for output subfolder and files (required)",
+	required = True, metavar = "SAMPLE_NAME")
+
+parser.add_argument("-p", "--cores", dest = "cores", type = str,
+	help = "number of cores to use for parallel processes",
+	required = False, default = 1, metavar = "NUMBER_OF_CORES")
+
+# Pipeline arguments
+
+parser.add_argument("-g", "--genome", dest = "genome_assembly", type = str,
+	help = "identifier for genome assempbly (required)",
+	required = True)
+
+parser.add_argument("-q", "--single_or_paired", dest = "single_or_paired", type = str,
+	help = "single or paired end? default: single",
+	required = False, default="single")
+
 args = parser.parse_args()
 
-if not args.unmapped_bam:
-	parser.print_help() #or, print_usage() for less verbosity
-	raise SystemExit
+# Read YAML config file
+if not os.path.isabs(args.config_file):
+	# Set the path to an absolute path, relative to pipeline script
+	default_config_abs = os.path.join(os.path.dirname(__file__), args.config_file)
+	if os.path.isfile(default_config_abs):
+		args.config_file = default_config_abs
+	else:
+		args.config_file = None
+
+
+	with open(args.config_file, 'r') as config_file:
+		config = yaml.load(config_file)
+
+
+# Create a Pypiper object, forwarding args to pypiper
+
+pipeline_outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
+pipe = Pypiper(name="ExamplePipeline", outfolder=pipeline_outfolder, args=args)
+
+raise SystemExit
+
+
+# Argument Parsing
+################################################################################
+# parser = ArgumentParser(description='Pypiper arguments.')
+#
+# parser.add_argument('-P', '--pypiper', dest='pypiper_dir',
+# 					default=os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + "/pypiper",
+# 					type=str)
+# # Set up a pointer to the pypiper code you want to use:
+# # Just grab the single pypiper arg, and add it to the path here; leaving all other args for later parsing.
+# args = parser.parse_known_args()[0]
+# os.sys.path.insert(0, args.pypiper_dir)
+# from pypiper import Pypiper
+# from pypiper import ngstk
+#
+# # Add Pypiper arguments to the arguments list and then reparse.
+# parser = Pypiper.add_pypiper_args(parser)
+#
+# # Pipeline options
+# ## Generic options for all pipelines
+# parser.add_argument('-c','--config', dest='config', type=str, required=True, help='Path to YAML configuration file')
+# parser.add_argument('-i', '--unmapped-bam', nargs="+", dest='unmapped_bam', required=True,
+# 					help="Input unmapped bam file(s))")
+# parser.add_argument('-s', '--sample-name', default="default", dest='sample_name', type=str,
+# 					help='Sample Name') # default means deduction from filename, except .bam extension
+# parser.add_argument('--flowcell', default="", dest='flowcell', type=str, help='Flowcell number')
+# parser.add_argument('--lane', default="", dest='lane', type=str, help='Lane number')
+# parser.add_argument('--instr', default="", dest='instr', type=str, help='Instrument name')
+# parser.add_argument('-r', '--project-root', default="", dest='project_root', type=str,
+# 					help='Directory in which the project will reside.')
+# parser.add_argument('-g', '--genome', dest='genome_assembly', type=str, required=True, help='Genome Assembly')
+# parser.add_argument('-C', '--no-checks', dest='no_check', action='store_true',
+# 						default=False, help='Skip sanity checks')
+# parser.add_argument('-p', '--paired-end', dest='paired_end', action='store_true', help='Paired End Mode')
+# parser.add_argument('-q', '--single-end', dest='paired_end', action='store_false', help='Single End Mode')
+# # AS: RRBS as used by us is mainly single-end... maybe it should be the default? Will break with other pipeline's defaults?
+# # AS: I got the code from Angelo to run it in paired end mode
+#
+# ## Pipeline-specific options
+# parser.add_argument('-t', '--trimgalore', dest='trimmomatic', action="store_false", default=True, help='Use trimgalore instead of trimmomatic?')
+# args = parser.parse_args()
+#
+# if not args.unmapped_bam:
+# 	parser.print_help() #or, print_usage() for less verbosity
+# 	raise SystemExit
 
 # Merging
 ################################################################################
