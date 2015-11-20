@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 """
 RRBS pipeline
 
@@ -10,9 +11,6 @@ import os.path
 import sys
 import subprocess
 import yaml
-
-# REMARK: The following slurm modules are needed:
-# module load bsmap (even though we use path.bsmap as well, some BSMAP scripts need to be in path, potential source of bugs TODO)
 
 # Argument Parsing
 ################################################################################
@@ -27,21 +25,26 @@ args = parser.parse_known_args()[0]
 os.sys.path.insert(0, args.pypiper_dir)
 from pypiper import Pypiper
 from pypiper import ngstk
+
 # Add Pypiper arguments to the arguments list and then reparse.
 parser = Pypiper.add_pypiper_args(parser)
 
 # Pipeline options
 ## Generic options for all pipelines
-parser.add_argument('-i', '--unmapped-bam', default="default.bam", nargs="+", dest='unmapped_bam',
-					help="Input unmapped bam file(s))") # here a default value doesn't make sense
+parser.add_argument('-c','--config', dest='config', type=str, required=True, help='Path to YAML configuration file')
+parser.add_argument('-i', '--unmapped-bam', nargs="+", dest='unmapped_bam', required=True,
+					help="Input unmapped bam file(s))")
 parser.add_argument('-s', '--sample-name', default="default", dest='sample_name', type=str,
 					help='Sample Name') # default means deduction from filename, except .bam extension
+parser.add_argument('--flowcell', default="", dest='flowcell', type=str, help='Flowcell number')
+parser.add_argument('--lane', default="", dest='lane', type=str, help='Lane number')
+parser.add_argument('--instr', default="", dest='instr', type=str, help='Instrument name')
 parser.add_argument('-r', '--project-root', default="", dest='project_root', type=str,
 					help='Directory in which the project will reside.')
-parser.add_argument('-g', '--genome', default="hg19", dest='genome_assembly', type=str, help='Genome Assembly')
+parser.add_argument('-g', '--genome', dest='genome_assembly', type=str, required=True, help='Genome Assembly')
 parser.add_argument('-C', '--no-checks', dest='no_check', action='store_true',
 						default=False, help='Skip sanity checks')
-parser.add_argument('-p', '--paired-end', dest='paired_end', action='store_true', default=False, help='Paired End Mode')
+parser.add_argument('-p', '--paired-end', dest='paired_end', action='store_true', help='Paired End Mode')
 parser.add_argument('-q', '--single-end', dest='paired_end', action='store_false', help='Single End Mode')
 # AS: RRBS as used by us is mainly single-end... maybe it should be the default? Will break with other pipeline's defaults?
 # AS: I got the code from Angelo to run it in paired end mode
@@ -49,6 +52,10 @@ parser.add_argument('-q', '--single-end', dest='paired_end', action='store_false
 ## Pipeline-specific options
 parser.add_argument('-t', '--trimgalore', dest='trimmomatic', action="store_false", default=True, help='Use trimgalore instead of trimmomatic?')
 args = parser.parse_args()
+
+if not args.unmapped_bam:
+	parser.print_help() #or, print_usage() for less verbosity
+	raise SystemExit
 
 # Merging
 ################################################################################
@@ -73,12 +80,11 @@ class Container:
 paths = Container()
 paths.scripts_dir = os.path.dirname(os.path.realpath(__file__))
 
-# import the yaml config (work in progress)...
-pipelines_config_file = os.path.join(os.path.dirname(paths.scripts_dir), ".pipelines_config.yaml")
-config = yaml.load(open(pipelines_config_file, 'r'))
+# import the yaml config
+config = yaml.load(open(args.config, 'r'))
 
 # Resources
-paths.resources_dir = config["paths"]["resources"]
+paths.resources_dir = config["resources"]["resources"]
 paths.adapter_file = os.path.join(paths.resources_dir, "adapters", "epignome_adapters_2_add.fa")
 paths.rrbs_adapter_file = os.path.join(paths.resources_dir, "adapters", "RRBS_adapters.fa")
 paths.ref_genome = os.path.join(paths.resources_dir, "genomes")
@@ -89,59 +95,89 @@ paths.bismark_indexed_genome = os.path.join(paths.resources_dir, "genomes", args
 paths.bismark_spikein_genome = os.path.join(paths.resources_dir, "genomes", "meth_spikein_k1_k3", "indexed_bismark_bt1")
 
 # Tools
-paths.picard_dir = os.path.join(paths.resources_dir, "tools/picard-tools-1.100")
-paths.trimmomatic_jar = "/cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32-epignome.jar"
-paths.bowtie1 = "/cm/shared/apps/bowtie/1.1.1/bin"
-paths.bowtie2 = "/cm/shared/apps/bowtie/2.2.3/bin"
-paths.bed2bigBed = os.path.join(paths.resources_dir, "tools", "bedToBigBed")
-paths.bed2bigWig = os.path.join(paths.resources_dir, "tools", "bedGraphToBigWig")
-paths.bismark = "/cm/shared/apps/bismark/0.12.2/bismark"
-paths.deduplicate_bismark = "/cm/shared/apps/bismark/0.12.2/deduplicate_bismark"
-#paths.bsmap = "/cm/shared/apps/bsmap/2.74/bsmap"   # module load bsmap/2.74
+paths.python = config["tools"]["python"]
+paths.java = config["tools"]["java"]
+paths.picard_jar = config["tools"]["picard"]
+paths.trimmomatic_jar = config["tools"]["trimmomatic"]
+paths.trimmomatic_epignome_jar = config["tools"]["trimmomatic_epignome"]
+paths.trimgalore = config["tools"]["trimgalore"]
+paths.bowtie1 = config["tools"]["bowtie1"]
+paths.bowtie2 = config["tools"]["bowtie2"]
+paths.bed2bigBed = config["tools"]["bed2bigBed"]
+paths.bed2bigWig = config["tools"]["bed2bigWig"]
+paths.bismark = config["tools"]["bismark"]
+paths.deduplicate_bismark = config["tools"]["deduplicate_bismark"]
+paths.bsmap = config["tools"]["bsmap"]
+paths.samtools = config["tools"]["samtools"]
 
 #Output
 paths.pipeline_outfolder_abs = os.path.abspath(os.path.join(args.project_root, args.sample_name))
 
 #Biseq paths:
-paths.biseq_tools_dir = os.path.join(paths.resources_dir, "tools")
+paths.biseq_tools_dir = config["tools"]["biseqMethCalling_tools"]
 paths.genomes_split = os.path.join(paths.resources_dir, "genomes_split")
 
 # Create a Pypiper object, and start the pipeline (runs initial setting and logging code to begin)
-
 mypiper = Pypiper(name="RRBS", outfolder=paths.pipeline_outfolder_abs, args=args)
 
-ngstk.make_sure_path_exists(os.path.join(paths.pipeline_outfolder_abs, "unmapped_bam"))
+# Create a ngstk object
+myngstk = ngstk.NGSTk(paths)
+
+myngstk.make_sure_path_exists(os.path.join(paths.pipeline_outfolder_abs, "unmapped_bam"))
 
 if merge:
-	raise NotImplementedError("Sample merging currently not implemented for RRBS")  # TODO AS: merge currently deactivated for RRBS
+	#raise NotImplementedError("Sample merging currently not implemented for RRBS")  # TODO AS: merge currently deactivated for RRBS
 
 	# inactive code
+	# There is no reason to deactivate the merge...
+	# But currently we can only merge bams, not fastq.gz inputs.
 	input_bams = args.unmapped_bam
 	merge_folder = os.path.join(paths.pipeline_outfolder_abs, "unmapped_bam")
 	sample_merged_bam = args.sample_name + ".merged.bam"
 	output_merge = os.path.join(merge_folder, sample_merged_bam)
-	cmd = ngstk.merge_bams(input_bams, output_merge, paths)
+	cmd = myngstk.merge_bams(input_bams, output_merge)
 
 	mypiper.call_lock(cmd, output_merge)
 	args.unmapped_bam = os.path.join(paths.pipeline_outfolder_abs, "unmapped_bam", sample_merged_bam)  #update unmapped bam reference
 	local_unmapped_bam_abs = os.path.join(paths.pipeline_outfolder_abs, "unmapped_bam", sample_merged_bam)
-
+	input_ext = ".bam"
 else:
 	# Link the file into the unmapped_bam directory
-#	print("Single unmapped bam found; no merge required")
-#	print("Unmapped bam:\t\t" + str(args.unmapped_bam[0]))
 	args.unmapped_bam = args.unmapped_bam[0]
 
 	if not os.path.isabs(args.unmapped_bam):
 		args.unmapped_bam = os.path.abspath(args.unmapped_bam)
 		print args.unmapped_bam
 
-	local_unmapped_bam_abs = os.path.join(paths.pipeline_outfolder_abs, "unmapped_bam", args.sample_name + ".bam")
+	if args.unmapped_bam.endswith(".bam"):
+		input_ext = ".bam"
+	elif args.unmapped_bam.endswith(".fastq.gz"):
+		input_ext = ".fastq.gz"
+	else:
+		raise NotImplementedError("This pipeline can only deal with .bam or .fastq.gz files")
+
+	local_unmapped_bam_abs = os.path.join(paths.pipeline_outfolder_abs, "unmapped_bam", args.sample_name + input_ext)
 	mypiper.callprint("ln -sf " + args.unmapped_bam + " " + local_unmapped_bam_abs, shell=True)
 
 #check for file exists:
 if not os.path.exists(local_unmapped_bam_abs):
 	raise Exception(local_unmapped_bam_abs + " is not a file")
+
+# Record file size of input file
+
+cmd = "stat -Lc '%s' " + local_unmapped_bam_abs
+input_size = mypiper.checkprint(cmd)
+input_size = float(input_size.replace("'",""))
+
+mypiper.report_result("File_mb", round((input_size/1024)/1024,2))
+mypiper.report_result("Instrument",args.instr)
+mypiper.report_result("Flowcell",args.flowcell)
+mypiper.report_result("Lane",args.lane)
+if args.paired_end:
+	mypiper.report_result("Type","paired")
+else:
+	mypiper.report_result("Type","single")
+mypiper.report_result("Genome",args.genome_assembly)
 
 
 # Fastq conversion
@@ -149,28 +185,58 @@ if not os.path.exists(local_unmapped_bam_abs):
 mypiper.timestamp("### Fastq conversion: ")
 fastq_folder = os.path.join(paths.pipeline_outfolder_abs, "fastq")
 out_fastq_pre = os.path.join(fastq_folder, args.sample_name)
-cmd = ngstk.bam_to_fastq(local_unmapped_bam_abs, out_fastq_pre, args.paired_end, paths)
-
 unaligned_fastq = out_fastq_pre + "_R1.fastq"
-mypiper.call_lock(cmd, unaligned_fastq)
-mypiper.clean_add(out_fastq_pre + "*.fastq", conditional=True)
 
-# Sanity checks:
-if not args.no_check:
-	raw_reads = ngstk.count_reads(local_unmapped_bam_abs, args.paired_end)
-	mypiper.report_result("Raw_reads", str(raw_reads))
-	fastq_reads = ngstk.count_reads(unaligned_fastq, args.paired_end)
-	mypiper.report_result("Fastq_reads", fastq_reads)
-	if fastq_reads != int(raw_reads):
-		raise Exception("Fastq conversion error? Number of reads doesn't match unaligned bam")
+if input_ext ==".bam":
+	print("Found bam file")
+	cmd = myngstk.bam_to_fastq(local_unmapped_bam_abs, out_fastq_pre, args.paired_end)
+	mypiper.call_lock(cmd, unaligned_fastq)
+	if not args.no_check:
+		raw_reads = myngstk.count_reads(local_unmapped_bam_abs, args.paired_end)
+		mypiper.report_result("Raw_reads", str(raw_reads))
+		fastq_reads = myngstk.count_reads(unaligned_fastq, args.paired_end)
+		mypiper.report_result("Fastq_reads", fastq_reads)
+		fail_filter_reads = myngstk.count_fail_reads(local_unmapped_bam_abs, args.paired_end)
+		pf_reads = int(raw_reads) - int(fail_filter_reads)
+		mypiper.report_result("PF_reads", str(pf_reads))
+		if fastq_reads != int(raw_reads):
+			raise Exception("Fastq conversion error? Number of reads doesn't match unaligned bam")
+
+elif input_ext == ".fastq.gz":
+	print("Found gz fastq file")
+	cmd = "gunzip -c " + local_unmapped_bam_abs + " > " + unaligned_fastq
+	myngstk.make_sure_path_exists(fastq_folder)
+	mypiper.call_lock(cmd, unaligned_fastq, shell=True)
+	if not args.no_check:
+		# Can't make a check here like we can for .bam files. oh well.
+		fastq_reads = myngstk.count_reads(unaligned_fastq, args.paired_end)
+		mypiper.report_result("Fastq_reads", fastq_reads)
 
 
 # Adapter trimming (Trimmomatic)
 ################################################################################
 mypiper.timestamp("### Adapter trimming: ")
 
+# We need to detect the quality encoding type of the fastq.
+cmd = paths.python + " -u " + os.path.join(paths.scripts_dir, "detect_quality_code.py") + " -f " + unaligned_fastq
+
+encoding_string = mypiper.checkprint(cmd)
+
+if encoding_string.find("phred33") != -1:
+	encoding = "phred33"
+elif encoding_string.find("phred64") != -1:
+	encoding = "phred64"
+else:
+	raise Exception("Unknown quality encoding type: "+encoding_string)
+
 if args.trimmomatic:
+
 	trimmed_fastq = out_fastq_pre + "_R1_trimmed.fq"
+	trimmed_fastq_R2 = out_fastq_pre + "_R2_trimmed.fq"
+
+	memory = str(config["parameters"]["trimmomatic"]["memory"])
+	threads = str(config["parameters"]["trimmomatic"]["threads"])
+	illuminaclip = str(config["parameters"]["trimmomatic"]["illuminaclip"])
 
 	# REMARK AS: instead of trim_galore we try to use Trimmomatic for now
 	# - we are more compatible with the other pipelines
@@ -178,39 +244,39 @@ if args.trimmomatic:
 	# - rrbs-mode not needed because biseq has the same functionality
 
 	# REMARK NS:
-	# The -Xmx4000m restricts heap memory allowed to java, and is necessary 
-	#  to prevent java from allocating lots of memory willy-nilly 
+	# The -Xmx4000m restricts heap memory allowed to java, and is necessary
+	#  to prevent java from allocating lots of memory willy-nilly
 	# if it's on a machine with lots of memory, which can lead
 	# to jobs getting killed by a resource manager. By default, java will
 	# use more memory on systems that have more memory, leading to node-dependent
 	# killing effects that are hard to trace.
-	if not args.paired_end:
-		cmd = "java -Xmx4000m -jar  " + paths.trimmomatic_jar + " SE -phred33 -threads 30"
-		cmd += " -trimlog " + os.path.join(fastq_folder, "trimlog.log") + " "
-		cmd += out_fastq_pre + "_R1.fastq "
-		cmd += out_fastq_pre + "_R1_trimmed.fq "
-		cmd += "ILLUMINACLIP:" + paths.rrbs_adapter_file + ":2:40:7 SLIDINGWINDOW:4:20 MAXINFO:20:0.60 MINLEN:20"
-		#updated by AS TO RRBS mode on 2015-05-06 according to 2014 optimizations
 
+	cmd = paths.java + " -Xmx" + memory + "g -jar " + paths.trimmomatic_epignome_jar
+	if args.paired_end:
+		cmd += " PE"
 	else:
-		raise NotImplementedError("Trimmomatic for PE RRBS not implemented")
-
-		# inactive code from here for now
-		cmd = "java -Xmx4000m -jar " + paths.trimmomatic_jar + " PE"
-		cmd += " -phred33"
-		cmd += " -threads 30"
-		cmd += " -trimlog " + os.path.join(fastq_folder, "trimlog.log") + " "
+		cmd += " SE"
+	cmd += " -" + encoding
+	cmd += " -threads " + threads + " "
+	#cmd += " -trimlog " + os.path.join(fastq_folder, "trimlog.log") + " "
+	if args.paired_end:
 		cmd += out_fastq_pre + "_R1.fastq "
 		cmd += out_fastq_pre + "_R2.fastq "
 		cmd += out_fastq_pre + "_R1_trimmed.fq "
 		cmd += out_fastq_pre + "_R1_unpaired.fq "
 		cmd += out_fastq_pre + "_R2_trimmed.fq "
 		cmd += out_fastq_pre + "_R2_unpaired.fq "
-		cmd += "ILLUMINACLIP:" + paths.adapter_file + ":2:10:4:1:true:epignome:5 SLIDINGWINDOW:4:1 MAXINFO:16:0.40 MINLEN:25"
+	else:
+		cmd += out_fastq_pre + "_R1.fastq "
+		cmd += out_fastq_pre + "_R1_trimmed.fq "
+	cmd += "ILLUMINACLIP:" + paths.rrbs_adapter_file + illuminaclip
 
 else: # use trim_galore
 	# Trim galore requires biopython, cutadapt modules. RSeQC as well (maybe?)
 	#   --- $trim_galore -q $q --phred33 -a $a --stringency $s -e $e --length $l --output_dir $output_dir $input_fastq
+
+	raise NotImplementedError("TrimGalore no longer supported")
+
 	if args.paired_end:
 		raise NotImplementedError("TrimGalore for PE RRBS not implemented")
 	input_fastq = out_fastq_pre + "_R1.fastq "
@@ -223,9 +289,10 @@ else: # use trim_galore
 	#Adapter
 	a="AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC"
 
-	cmd = "trim_galore"
+	cmd = paths.trimgalore
 	cmd += " -q 20" 	#quality trimming
-	cmd += " --phred33 -a " + a
+	cmd += " --" + encoding
+	cmd += " -a " + a
 	cmd += " --stringency 1"		#stringency: Overlap with adapter sequence required to trim a sequence
 	cmd += " -e 0.1" 	#Maximum allowed error rate
 	cmd += " --length 16"	#Minimum Read length
@@ -236,15 +303,21 @@ else: # use trim_galore
 # The code to run it is the same either way:
 
 mypiper.call_lock(cmd, trimmed_fastq)   # TODO AS: maybe another lock_name?
+trimmed_reads_count = myngstk.count_reads(trimmed_fastq, args.paired_end)
+
+mypiper.clean_add(os.path.join(fastq_folder, "*.fastq"), conditional=True)
+mypiper.clean_add(os.path.join(fastq_folder, "*.fq"), conditional=True)
+mypiper.clean_add(os.path.join(fastq_folder, "*.log"), conditional=True)
+mypiper.clean_add(fastq_folder, conditional=True)
+
 if not args.no_check:
-	x = ngstk.count_reads(trimmed_fastq, args.paired_end)
-	mypiper.report_result("Trimmed_reads", x)
+	mypiper.report_result("Trimmed_reads", trimmed_reads_count)
 
 # RRBS alignment with BSMAP.
 ################################################################################
 mypiper.timestamp("### BSMAP alignment: ")
 bsmap_folder = os.path.join(paths.pipeline_outfolder_abs, "bsmap_" + args.genome_assembly)  # e.g. bsmap_hg19
-ngstk.make_sure_path_exists(bsmap_folder)
+myngstk.make_sure_path_exists(bsmap_folder)
 # no tmp folder needed for BSMAP alignment
 
 out_bsmap = os.path.join(bsmap_folder, args.sample_name + ".bam")
@@ -256,28 +329,27 @@ out_bsmap = os.path.join(bsmap_folder, args.sample_name + ".bam")
 # extension, while trimmomatic used .fastq.
 # I updated it so that the trimmmomatic path also outputs a .fq file, so this
 # doesn't have to vary based on trimmer.
-if not args.paired_end:
-	cmd = "bsmap -a " + out_fastq_pre + "_R1_trimmed.fq"    # REMARK: bsmap needs to be in PATH (or load module)
-	cmd += " -d " + paths.ref_genome_fasta
-	cmd += " -o " + out_bsmap
-	cmd += " -D C-CGG"  # " -D C-CGG "  # set to " " to disable!
-	cmd += " -w 100"    # -w 100 is default (according to log output, help says up to 1000 locations are searched)
-	cmd += " -v 0.08"
-	cmd += " -r 1"      # -r <int>  = multimapper enabled (1) or disabled (0)
-	cmd += " -p 4"      # -p <int> = num processors
-	cmd += " -n 0"      # -n <int> = mapping strand information (2 strands or 4 strands)
-	cmd += " -S 1"      # -S <int> = set a fixed seed for random number generator for reproducibility
-	cmd += " -f 5"      # DEFAULT -f <int> = filter low-quality reads containing >n Ns, default=5
-	#cmd += " -q 0"
-	#cmd += " -A ''"    # -A <str>: Adapter trimming (is done in the step therefore disabled)
-	cmd += " -u "       # report unmapped reads (into same bam file)
 
-	# TODO AS: More configurability needed
-	# possibility to enable / disable multimappers
-	# possibility to enable / disable RRBS mode (only align reads starting with a certain restriction site)
-
-else:
-	raise NotImplementedError("Alignment for paired-end RRBS data currently not implemented!")
+cmd = paths.bsmap
+cmd += " -a " + out_fastq_pre + "_R1_trimmed.fq"
+if args.paired_end:
+	cmd += " -b " + out_fastq_pre + "_R2_trimmed.fq"
+cmd += " -d " + paths.ref_genome_fasta
+cmd += " -o " + out_bsmap
+cmd += " -D " + str(config["parameters"]["bsmap"]["rrbs_mapping_mode"])
+cmd += " -w " + str(config["parameters"]["bsmap"]["equal_best_hits"])
+cmd += " -v " + str(config["parameters"]["bsmap"]["mismatch_rate"])
+cmd += " -r " + str(config["parameters"]["bsmap"]["report_repeat"])
+cmd += " -p " + str(config["parameters"]["bsmap"]["processors"])
+cmd += " -n " + str(config["parameters"]["bsmap"]["map_to_strands"])
+cmd += " -s " + str(config["parameters"]["bsmap"]["seed_size"])
+cmd += " -S " + str(config["parameters"]["bsmap"]["random_number_seed"])
+cmd += " -f " + str(config["parameters"]["bsmap"]["filter"])
+cmd += " -q " + str(config["parameters"]["bsmap"]["quality_threshold"])
+cmd += " -u"       # report unmapped reads (into same bam file)
+if args.paired_end:
+	cmd += " -m " + str(config["parameters"]["bsmap"]["minimal_insert_size"])
+	cmd += " -x " + str(config["parameters"]["bsmap"]["maximal_insert_size"])
 
 mypiper.call_lock(cmd, out_bsmap)
 
@@ -285,21 +357,18 @@ if not args.no_check:
 	# BSMap apparently stores all the reads (mapped and unmapped) in
 	# its output bam; to count aligned reads, then, we have to use
 	# a -F4 flag (with count_mapped_reads instead of count_reads).
-	x = ngstk.count_mapped_reads(out_bsmap, args.paired_end)
+	x = myngstk.count_mapped_reads(out_bsmap, args.paired_end)
 	mypiper.report_result("Aligned_reads", x)
+	mypiper.report_result("Aligned_rate", str(float(x)/float(trimmed_reads_count)))
 	# In addition, BSMap can (if instructed by parameters) randomly assign
 	# multimapping reads. It's useful to know how many in the final bam were such.
-	x = ngstk.count_multimapping_reads(out_bsmap, args.paired_end)
+	x = myngstk.count_multimapping_reads(out_bsmap, args.paired_end)
 	mypiper.report_result("Multimap_reads", x)
-
-
-# The WGBS pipeline does some steps here which are not relevant for RRBS:
-# mypiper.timestamp("### PCR duplicate removal: ")  # because the RRBS stacks of reads would be negatively affected
-# mypiper.timestamp("### Aligned read filtering: ") #
-# mypiper.timestamp("### Methylation calling (bismark extractor): ")    # we use biseq-methcalling instead
+	mypiper.report_result("Multimap_rate", str(float(x)/float(trimmed_reads_count)))
 
 # Clean up big intermediate files:
-mypiper.clean_add(bsmap_folder + "/*.fastq") # initial unmapped fastqs
+mypiper.clean_add(os.path.join(bsmap_folder, "*.fastq"))
+mypiper.clean_add(os.path.join(bsmap_folder, "*.fq"))
 
 # Run biseq-methcalling:
 ################################################################################
@@ -319,20 +388,20 @@ biseq_output_path = os.path.join(paths.pipeline_outfolder_abs, "biseqMethcalling
 biseq_output_path_web = os.path.join(biseq_output_path, "web")
 biseq_output_path_temp = os.path.join(biseq_output_path, "temp")
 
-ngstk.make_sure_path_exists (biseq_output_path)
+myngstk.make_sure_path_exists (biseq_output_path)
 
-cmd = "python -u " + os.path.join(paths.scripts_dir, "biseqMethCalling.py")
+cmd = paths.python + " -u " + os.path.join(paths.scripts_dir, "biseqMethCalling.py")
 cmd += " --sampleName=" + args.sample_name
 cmd += " --alignmentFile=" + out_bsmap      # this is the absolute path to the bsmap aligned bam file
 cmd += " --methodPrefix=RRBS"
 cmd += " --rrbsMode"
 cmd += " --checkRestriction"
-cmd += " --minFragmentLength=20"
-cmd += " --maxFragmentLength=1000"
-cmd += " --pfStatus=All"
-cmd += " --maxMismatches=0.1"
-cmd += " --baseQualityScoreC=20"
-cmd += " --baseQualityScoreNextToC=10"
+cmd += " --minFragmentLength=" + str(config["parameters"]["biseqMethCalling"]["minFragmentLength"])
+cmd += " --maxFragmentLength=" + str(config["parameters"]["biseqMethCalling"]["maxFragmentLength"])
+cmd += " --pfStatus=" + str(config["parameters"]["biseqMethCalling"]["pfStatus"])
+cmd += " --maxMismatches=" + str(config["parameters"]["biseqMethCalling"]["maxMismatches"])
+cmd += " --baseQualityScoreC=" + str(config["parameters"]["biseqMethCalling"]["baseQualityScoreC"])
+cmd += " --baseQualityScoreNextToC=" + str(config["parameters"]["biseqMethCalling"]["baseQualityScoreNextToC"])
 cmd += " --laneSpecificStatistics"
 cmd += " --bigBedFormat"
 cmd += " --deleteTemp"
@@ -340,10 +409,10 @@ cmd += " --toolsDir=" + paths.biseq_tools_dir
 cmd += " --outputDir=" + biseq_output_path
 cmd += " --webOutputDir=" + biseq_output_path_web
 cmd += " --tempDir=" + biseq_output_path_temp
-cmd += " --timeDelay=0"
-cmd += " --genomeFraction=50"
-cmd += " --smartWindows=250000"
-cmd += " --maxProcesses=4"
+cmd += " --timeDelay=" + str(config["parameters"]["biseqMethCalling"]["timeDelay"])
+cmd += " --genomeFraction=" + str(config["parameters"]["biseqMethCalling"]["genomeFraction"])
+cmd += " --smartWindows=" + str(config["parameters"]["biseqMethCalling"]["smartWindows"])
+cmd += " --maxProcesses=" + str(config["parameters"]["biseqMethCalling"]["maxProcesses"])
 cmd += " --genomeDir=" + paths.genomes_split
 cmd += " --inGenome=" + args.genome_assembly
 cmd += " --outGenome=" + args.genome_assembly
@@ -370,19 +439,33 @@ cmd2 = "touch " + biseq_finished_helper
 mypiper.call_lock([cmd, cmd2], target=biseq_finished_helper)
 
 # Now parse some results for pypiper result reporting.
-cmd = "python " + os.path.join(paths.scripts_dir, "tsv_parser.py")
-cmd += " -i " + biseq_output_path + "/RRBS_statistics_" + args.sample_name + ".txt"
-cmd += " -c uniqueSeqMotifCount"
+read_variables = ['uniqueSeqMotifCount','totalSeqMotifCount','bisulfiteConversionRate','globalMethylationMean']
+totalSeqMotifCount = 0.0
+uniqueSeqMotifCount = 0.0
+for var in read_variables:
+	cmd = paths.python + " -u " + os.path.join(paths.scripts_dir, "tsv_parser.py")
+	cmd += " -i " + biseq_output_path + "/RRBS_statistics_" + args.sample_name + ".txt"
+	cmd += " -c " + var
+	x = mypiper.checkprint(cmd, shell=True)
 
-x = mypiper.checkprint(cmd, shell=True)
-mypiper.report_result("Unique_CpGs", x)
+	if var == 'totalSeqMotifCount':
+		totalSeqMotifCount = float(x)
+	if var == 'uniqueSeqMotifCount':
+		uniqueSeqMotifCount = float(x)
+
+	if var == 'uniqueSeqMotifCount':
+		mypiper.report_result('Unique_CpGs', x)
+	elif var == 'totalSeqMotifCount':
+		mypiper.report_result('Total_CpGs', x)
+		mypiper.report_result('meanCoverage', str( totalSeqMotifCount/uniqueSeqMotifCount ))
+	else:
+		mypiper.report_result(var, x)
 
 ################################################################################
 mypiper.timestamp("### Make bigbed: ")
 # REMARK AS: Make bigwig uses a bismark output file. For RRBS we don't have the bismark cov file
 # (essentially a bedgraph file) which the tool bed2bigWig would need
 # REMARK AS: UCSC tracks are generated by biseq-methcalling
-
 
 # First, convert the bed format into the bigBed input style.
 # This is how biseq did it, but it's actually unnecessary; instead we can just go straight off the output file.
@@ -399,12 +482,11 @@ bigwig_output_path = os.path.join(paths.pipeline_outfolder_abs, "bigwig_" + args
 
 # bedToBigBed RRBS_cpgMethylation_01_2276TU.bed ~/linkto/resources/genomes/hg19/hg19.chromSizes RRBS_cpgMethylation_test2.bb
 
-ngstk.make_sure_path_exists (bigbed_output_path)
-ngstk.make_sure_path_exists (bigwig_output_path)
-bigbed_output_file = bigbed_output_path + "/RRBS_" + args.sample_name + ".bb"
-out_bedGraph = bigwig_output_path + "/RRBS_" + args.sample_name + ".bedGraph"
-out_bigwig = bigwig_output_path + "/RRBS_" + args.sample_name + ".bw"
-
+myngstk.make_sure_path_exists (bigbed_output_path)
+myngstk.make_sure_path_exists (bigwig_output_path)
+bigbed_output_file = os.path.join(bigbed_output_path,"RRBS_" + args.sample_name + ".bb")
+out_bedGraph = os.path.join(bigwig_output_path,"RRBS_" + args.sample_name + ".bedGraph")
+out_bigwig = os.path.join(bigwig_output_path, "RRBS_" + args.sample_name + ".bw")
 
 cmd = paths.bed2bigBed
 cmd += " " + biseq_methcall_file
@@ -415,11 +497,11 @@ cmd += " " + bigbed_output_file
 # in a unique format if the *filename contains  "RRBS_cpgMethylation" -- see
 # https://github.com/igvteam/igv/blob/master/src/org/broad/igv/methyl/MethylTrack.java
 # This is obviously not ideal, but I will create a link with this filename
-# to the original file (even for WGBS tracks) so that you could load these into 
+# to the original file (even for WGBS tracks) so that you could load these into
 # IGV if you want:
 
-filename_hack_link_file = bigbed_output_path + "/RRBS_cpgMethylation_" + args.sample_name + ".bb"
-cmd2 = "ln -sf " + bigbed_output_file + " " + filename_hack_link_file
+filename_hack_link_file = os.path.join(bigbed_output_path,"RRBS_cpgMethylation_" + args.sample_name + ".bb")
+cmd2 = "ln -sf " + os.path.relpath(bigbed_output_file, bigbed_output_path) + " " + filename_hack_link_file
 
 mypiper.call_lock([cmd, cmd2], bigbed_output_file)
 
@@ -443,10 +525,10 @@ mypiper.call_lock([cmd, cmd2], out_bigwig, shell=True)
 # Calculate neighbor methylation matching
 mypiper.timestamp("### Neighbor Methylation Matching: ")
 nmm_output_dir = os.path.join(paths.pipeline_outfolder_abs, "nmm_" + args.genome_assembly)
-ngstk.make_sure_path_exists (nmm_output_dir)
+myngstk.make_sure_path_exists (nmm_output_dir)
 nmm_outfile=os.path.join(nmm_output_dir, args.sample_name + ".nmm.bed")
 
-cmd = "python -u " + os.path.join(paths.scripts_dir, "methylMatch.py")
+cmd = paths.python + " -u " + os.path.join(paths.scripts_dir, "methylMatch.py")
 cmd += " --inFile=" + out_bsmap      # this is the absolute path to the bsmap aligned bam file
 cmd += " --methFile=" + biseq_methcall_file
 cmd += " --outFile=" + nmm_outfile
@@ -461,57 +543,49 @@ mypiper.timestamp("### Bismark spike-in alignment: ")
 
 # get unaligned reads out of BSMAP bam
 bsmap_unalignable_bam = os.path.join(bsmap_folder, args.sample_name + "_unalignable.bam")
-mypiper.call_lock("samtools view -bh -f 0x4 "+out_bsmap+" > " + bsmap_unalignable_bam, bsmap_unalignable_bam, shell=True)
+mypiper.call_lock(paths.samtools + " view -bh -f 4 -F 128 "+out_bsmap+" > " + bsmap_unalignable_bam, bsmap_unalignable_bam, shell=True)
+
+# Re-flag the unaligned paired-end reads to make them look like unpaired for Bismark
+if args.paired_end:
+	bsmap_unalignable_bam_output = os.path.join(bsmap_folder, args.sample_name + "_unalignable_reflagged.bam")
+	cmd = paths.python + " -u " + os.path.join(paths.scripts_dir, "pe_flag_changer.py")
+	cmd += " -i " + bsmap_unalignable_bam
+	cmd += " -o " + bsmap_unalignable_bam_output
+	mypiper.call_lock(cmd, bsmap_unalignable_bam_output)
+	mypiper.clean_add(bsmap_unalignable_bam, conditional=True)
+	bsmap_unalignable_bam = bsmap_unalignable_bam_output
 
 # convert BAM to fastq
 bsmap_fastq_unalignable_pre = os.path.join(bsmap_folder, args.sample_name + "_unalignable")
 bsmap_fastq_unalignable = bsmap_fastq_unalignable_pre  + "_R1.fastq"
-cmd = ngstk.bam_to_fastq(bsmap_unalignable_bam, bsmap_fastq_unalignable_pre, args.paired_end, paths)
+cmd = myngstk.bam_to_fastq(bsmap_unalignable_bam, bsmap_fastq_unalignable_pre, args.paired_end)
 mypiper.call_lock(cmd, bsmap_fastq_unalignable)
 
 # actual spike-in analysis
 spikein_folder = os.path.join(paths.pipeline_outfolder_abs, "bismark_spikein")
-ngstk.make_sure_path_exists(spikein_folder)
+myngstk.make_sure_path_exists(spikein_folder)
 spikein_temp = os.path.join(spikein_folder, "bismark_temp")
-ngstk.make_sure_path_exists(spikein_temp)
+myngstk.make_sure_path_exists(spikein_temp)
 out_spikein_base = args.sample_name + ".spikein.aln"
 
-if not args.paired_end:
-	out_spikein = os.path.join(spikein_folder, out_spikein_base + ".bam")
-	cmd = paths.bismark + " " + paths.bismark_spikein_genome + " "
-	cmd += bsmap_fastq_unalignable_pre + "_R1.fastq"
-	cmd += " --bam --unmapped"
-	cmd += " --path_to_bowtie " + paths.bowtie1
-	#	cmd += " --bowtie2"
-	cmd += " --temp_dir " + spikein_temp
-	cmd += " --output_dir " + spikein_folder
-	cmd += " --basename=" + out_spikein_base
-#	cmd += " -p 4"
-
-else:
-	raise NotImplementedError("Spike-in not implemented for paired-end RRBS")
-
-	# inaccessible code from here
-	out_spikein = os.path.join(spikein_folder, out_spikein_base + "_pe.bam")
-	cmd = paths.bismark + " " + paths.bismark_spikein_genome
-	cmd += " --1 " + unmapped_reads_pre + "_unmapped_reads_1.fq"    # filenames not updated as in SE case
-	cmd += " --2 " + unmapped_reads_pre + "_unmapped_reads_2.fq"
-	#cmd += " --1 " + unmapped_reads_pre + "_R1_trimmed.fastq_unmapped_reads_1.fq"
-	#cmd += " --2 " + unmapped_reads_pre + "_R2_trimmed.fastq_unmapped_reads_2.fq"
-	cmd += " --bam --unmapped"
-	cmd += " --path_to_bowtie " + paths.bowtie1
-	#	cmd += " --bowtie2"
-	cmd += " --temp_dir " + spikein_temp
-	cmd += " --output_dir " + spikein_folder
-	cmd += " --minins 0 --maxins 5000"
-	cmd += " --basename=" + out_spikein_base
-#	cmd += " -p 4"
+out_spikein = os.path.join(spikein_folder, out_spikein_base + ".bam")
+cmd = paths.bismark + " " + paths.bismark_spikein_genome + " "
+cmd += bsmap_fastq_unalignable_pre + "_R1.fastq"
+cmd += " --bam --unmapped"
+cmd += " --path_to_bowtie " + paths.bowtie1
+#	cmd += " --bowtie2"
+cmd += " --temp_dir " + spikein_temp
+cmd += " --output_dir " + spikein_folder
+cmd += " --basename=" + out_spikein_base
+#cmd += " -p 4"
+cmd += " -n 0" #allow no mismatches
 
 mypiper.call_lock(cmd, out_spikein, nofail=True)
 
 # Clean up the unmapped file which is copied from the parent
 # bismark folder to here:
-mypiper.clean_add(spikein_folder + "/*.fq", conditional=False)
+mypiper.clean_add(os.path.join(spikein_folder,"*.fastq"), conditional=True)
+mypiper.clean_add(os.path.join(spikein_folder,"*.fq"), conditional=True)
 mypiper.clean_add(spikein_temp) # For some reason, the temp folder is not deleted.
 
 
@@ -531,8 +605,8 @@ else:
 	cmd += " --bam"
 
 out_spikein_sorted = out_spikein_dedup.replace('.deduplicated.bam', '.deduplicated.sorted')
-cmd2 = "samtools sort " + out_spikein_dedup + " " + out_spikein_sorted
-cmd3 = "samtools index " + out_spikein_sorted + ".bam"
+cmd2 = paths.samtools + " sort " + out_spikein_dedup + " " + out_spikein_sorted
+cmd3 = paths.samtools + " index " + out_spikein_sorted + ".bam"
 cmd4 = "rm " + out_spikein_dedup
 mypiper.call_lock([cmd, cmd2, cmd3, cmd4], out_spikein_sorted + ".bam.bai", nofail=True)
 
@@ -540,7 +614,7 @@ mypiper.call_lock([cmd, cmd2, cmd3, cmd4], out_spikein_sorted + ".bam.bai", nofa
 ################################################################################
 mypiper.timestamp("### Methylation calling (testxmz) Spike-in: ")
 
-cmd1 = "python -u " + os.path.join(paths.scripts_dir, "testxmz.py")
+cmd1 = paths.python + " -u " + os.path.join(paths.scripts_dir, "testxmz.py")
 cmd1 += " " + out_spikein_sorted + ".bam" + " " + "K1_unmethylated"
 cmd1 += " >> " + mypiper.pipeline_stats_file
 cmd2 = cmd1.replace("K1_unmethylated", "K3_methylated")
@@ -553,45 +627,48 @@ mypiper.callprint(cmd2, shell=True, nofail=True)
 # PDR calculation:
 ################################################################################
 
-mypiper.timestamp("### PDR (Partial Disordered Methylation) analysis")
+# PDR not applied to PE case because bisulfiteReadConcordanceAnalysis.py crashes
+if not args.paired_end:
 
-pdr_output_dir = os.path.join(paths.pipeline_outfolder_abs, "pdr_" + args.genome_assembly)
-ngstk.make_sure_path_exists (pdr_output_dir)
+	mypiper.timestamp("### PDR (Partial Disordered Methylation) analysis")
 
-# convert aligned bam to sam
+	pdr_output_dir = os.path.join(paths.pipeline_outfolder_abs, "pdr_" + args.genome_assembly)
+	myngstk.make_sure_path_exists (pdr_output_dir)
 
-pdr_in_samfile = os.path.join(pdr_output_dir, args.sample_name + ".aligned.sam") # gets deleted after, see some lines below
-mypiper.call_lock("samtools view " + out_bsmap + " > " + pdr_in_samfile, pdr_in_samfile, shell=True)
+	# convert aligned bam to sam
 
-# PDR calculation:
-#
-# output files:
-pdr_bedfile=os.path.join(pdr_output_dir, args.sample_name + ".pdr.bed")
+	pdr_in_samfile = os.path.join(pdr_output_dir, args.sample_name + ".aligned.sam") # gets deleted after, see some lines below
+	mypiper.call_lock(paths.samtools + " view " + out_bsmap + " > " + pdr_in_samfile, pdr_in_samfile, shell=True)
 
-produce_sam = True  # TODO AS: make this an option somewhere
-concordsam=os.path.join(pdr_output_dir, args.sample_name + ".concordant.sam")
-discordsam=os.path.join(pdr_output_dir, args.sample_name + ".discordant.sam")
+	# PDR calculation:
+	#
+	# output files:
+	pdr_bedfile=os.path.join(pdr_output_dir, args.sample_name + ".pdr.bed")
 
-# command::
-cmd1 = "python -u " + os.path.join(paths.scripts_dir, "bisulfiteReadConcordanceAnalysis.py")
-cmd1 += " --infile=" + pdr_in_samfile
-cmd1 += " --outfile=" + pdr_bedfile
-cmd1 += " --skipHeaderLines=0"
-cmd1 += " --genome=" + args.genome_assembly
-cmd1 += " --genomeDir=" + paths.ref_genome
-cmd1 += " --minNonCpgSites=3"   # These two parameters are not relevant for PDR analysis
-cmd1 += " --minConversionRate=0.9"
+	produce_sam = True  # TODO AS: make this an option somewhere
+	concordsam=os.path.join(pdr_output_dir, args.sample_name + ".concordant.sam")
+	discordsam=os.path.join(pdr_output_dir, args.sample_name + ".discordant.sam")
 
-if produce_sam == True:
-	cmd1 += " --concordantOutfile=" + concordsam
-	cmd1 += " --discordantOutfile=" + discordsam
-	#TODO: perhaps convert them to bam *cough*
+	# command::
+	cmd1 = paths.python + " -u " + os.path.join(paths.scripts_dir, "bisulfiteReadConcordanceAnalysis.py")
+	cmd1 += " --infile=" + pdr_in_samfile
+	cmd1 += " --outfile=" + pdr_bedfile
+	cmd1 += " --skipHeaderLines=0"
+	cmd1 += " --genome=" + args.genome_assembly
+	cmd1 += " --genomeDir=" + paths.ref_genome
+	cmd1 += " --minNonCpgSites=3"   # These two parameters are not relevant for PDR analysis
+	cmd1 += " --minConversionRate=0.9"
 
-#call:
-mypiper.call_lock(cmd1, pdr_bedfile)
+	if produce_sam == True:
+		cmd1 += " --concordantOutfile=" + concordsam
+		cmd1 += " --discordantOutfile=" + discordsam
+		#TODO: perhaps convert them to bam *cough*
 
-# delete huge input SAM file
-mypiper.clean_add(pdr_in_samfile)
+	#call:
+	mypiper.call_lock(cmd1, pdr_bedfile)
+
+	# delete huge input SAM file
+	mypiper.clean_add(pdr_in_samfile)
 
 # Final sorting and indexing
 ################################################################################
