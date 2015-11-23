@@ -20,7 +20,7 @@ tools:
   deduplicate_bismark: /cm/shared/apps/bismark/0.12.2/deduplicate_bismark
   bsmap: /cm/shared/apps/bsmap/2.74/bsmap
   samtools: /cm/shared/apps/samtools/1.2/bin/samtools
-  biseqMethCalling_tools: /data/groups/lab_bock/shared/resources/tools
+  biseq_tools: /data/groups/lab_bock/shared/resources/tools
 
 parameters:
   # parameters passed to bioinformatic tools, subclassed by tool

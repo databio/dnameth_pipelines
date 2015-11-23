@@ -16,16 +16,15 @@ import os, re
 import sys
 import subprocess
 import yaml
-
 import pypiper
 
 parser = ArgumentParser(description='Pipeline')
 
-# First, add arguments from Pypiper
-# This handles 1. pypiper options, 2. looper connections, 3. common options,
+# First, add arguments from Pypiper, including
+# 1. pypiper options, 2. looper connections, 3. common options,
 # using the all_args=True flag (you can customize this).
 # Adds options including; for details, see:
-# http://github.com/epigen/pypiper/options.md
+# http://github.com/epigen/pypiper/command_line_args.md
 parser = pypiper.add_pypiper_args(parser, all_args=True)
 
 # Add any pipeline-specific arguments
@@ -40,7 +39,7 @@ else:
 	args.paired_end = False
 # Merging
 ################################################################################
-# If 2 unmapped bam files are given, then these are to be merged.
+# If 2 input files are given, then these are to be merged.
 # Must be done here to initialize the sample name correctly
 
 merge = False
@@ -50,25 +49,18 @@ if len(args.input) > 1:
 		args.sample_name = "merged"
 else:
 	if args.sample_name == "default":
+		# Default sample name is derived from the input file
 		args.sample_name = os.path.splitext(os.path.basename(args.input[0]))[0]
 
-# pm.config.tools.scripts_dir = os.path.dirname(os.path.realpath(__file__))
-
-# #Biseq paths:
-
-
-
-# tools.bismark_indexed_genome = os.path.join(pm.config.resources.resources, "genomes", args.genome_assembly, "indexed_bismark_bt2")
-# tools.bismark_spikein_genome = os.path.join(pm.config.resources.resources, "genomes", "meth_spikein_k1_k3", "indexed_bismark_bt1")
-
-
-
-# Create a PipelineManager object, forwarding args
-# Create a Pypiper object, and start the pipeline (runs initial setting and logging code to begin)
+# Create a PipelineManager object and start the pipeline
 pipeline_outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
-#pm = pypiper.PipelineManager(name="RRBS", outfolder=pipeline_outfolder, args=args)
-pm = pypiper.PipelineManager(name = "ExamplePipeline", outfolder = pipeline_outfolder, args = args)
+pm = pypiper.PipelineManager(name = "RRBS", outfolder = pipeline_outfolder, args = args)
 
+# HACK! delete this.
+if args.genome_assembly == "human":
+	args.genome_assembly = "hg19"
+
+# Set up a few additional paths not in the config file
 pm.config.tools.scripts_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tools")
 pm.config.resources.adapter_file = os.path.join(pm.config.resources.resources, "adapters", "epignome_adapters_2_add.fa")
 pm.config.resources.rrbs_adapter_file = os.path.join(pm.config.resources.resources, "adapters", "RRBS_adapters.fa")
@@ -77,9 +69,13 @@ pm.config.resources.ref_genome_fasta = os.path.join(pm.config.resources.resource
 pm.config.resources.chrom_sizes = os.path.join(pm.config.resources.resources, "genomes", args.genome_assembly, args.genome_assembly + ".chromSizes")
 pm.config.resources.genomes_split = os.path.join(pm.config.resources.resources, "genomes_split")
 
+pm.config.resources.methpositions = os.path.join(pm.config.resources.resources, "regions/cgs/" + args.genome_assembly + ".cgs.txt")
+
+
+pm.config.tools.bismark_spikein_genome = os.path.join(pm.config.resources.resources, "genomes", "meth_spikein_k1_k3", "indexed_bismark_bt1")
 
 print(pm.config)
-tools = pm.config.tools
+tools = pm.config.tools  # Convenience alias
 
 # Create a ngstk object
 myngstk = pypiper.NGSTk(pm.config)
@@ -87,16 +83,12 @@ myngstk = pypiper.NGSTk(pm.config)
 myngstk.make_sure_path_exists(os.path.join(pipeline_outfolder, "unmapped_bam"))
 
 if merge:
-	#raise NotImplementedError("Sample merging currently not implemented for RRBS")  # TODO AS: merge currently deactivated for RRBS
-
-	# inactive code
-	# There is no reason to deactivate the merge...
-	# But currently we can only merge bams, not fastq.gz inputs.
-	input_bams = args.input
+	if not args.input.endswith(".bam"):
+		raise NotImplementedError("Currently we can only merge bam inputs")
 	merge_folder = os.path.join(pipeline_outfolder, "unmapped_bam")
 	sample_merged_bam = args.sample_name + ".merged.bam"
 	output_merge = os.path.join(merge_folder, sample_merged_bam)
-	cmd = myngstk.merge_bams(input_bams, output_merge)
+	cmd = myngstk.merge_bams(args.input, output_merge)
 
 	pm.run(cmd, output_merge)
 	args.input = os.path.join(pipeline_outfolder, "unmapped_bam", sample_merged_bam)  #update unmapped bam reference
@@ -161,11 +153,8 @@ elif input_ext == ".fastq.gz":
 	print("Found gz fastq file")
 	cmd = "gunzip -c " + local_unmapped_bam_abs + " > " + unaligned_fastq
 	myngstk.make_sure_path_exists(fastq_folder)
-	pm.run(cmd, unaligned_fastq, shell=True)
-	if not args.no_check:
-		# Can't make a check here like we can for .bam files. oh well.
-		fastq_reads = myngstk.count_reads(unaligned_fastq, args.paired_end)
-		pm.report_result("Fastq_reads", fastq_reads)
+	pm.run(cmd, unaligned_fastq, shell=True, follow=lambda:
+		pm.report_result("Fastq_reads",  myngstk.count_reads(unaligned_fastq, args.paired_end)))
 
 
 # Adapter trimming (Trimmomatic)
@@ -304,9 +293,7 @@ if args.paired_end:
 	cmd += " -m " + str(pm.config.parameters.bsmap.minimal_insert_size)
 	cmd += " -x " + str(pm.config.parameters.bsmap.maximal_insert_size)
 
-pm.run(cmd, out_bsmap)
-
-if not args.no_check:
+def check_bsmap():
 	# BSMap apparently stores all the reads (mapped and unmapped) in
 	# its output bam; to count aligned reads, then, we have to use
 	# a -F4 flag (with count_mapped_reads instead of count_reads).
@@ -318,6 +305,8 @@ if not args.no_check:
 	x = myngstk.count_multimapping_reads(out_bsmap, args.paired_end)
 	pm.report_result("Multimap_reads", x)
 	pm.report_result("Multimap_rate", str(float(x)/float(trimmed_reads_count)))
+
+pm.run(cmd, out_bsmap, follow=check_bsmap)
 
 # Clean up big intermediate files:
 pm.clean_add(os.path.join(bsmap_folder, "*.fastq"))
@@ -491,6 +480,22 @@ cmd += " -q"
 pm.run(cmd, nmm_outfile)
 
 ################################################################################
+# Calculate neighbor methylation matching
+pm.timestamp("### Epilog Methcalling: ")
+epilog_output_dir = os.path.join(pipeline_outfolder, "epilog_" + args.genome_assembly)
+myngstk.make_sure_path_exists (epilog_output_dir)
+epilog_outfile=os.path.join(epilog_output_dir, args.sample_name + "_epilog.bed")
+
+cmd = tools.python + " -u " + os.path.join(pm.config.tools.scripts_dir, "epilog.py")
+cmd += " --infile=" + out_bsmap  # absolute path to the bsmap aligned bam
+cmd += " --p=" + pm.config.resources.methpositions
+cmd += " --outfile=" + epilog_outfile
+cmd += " --cores=4"
+
+pm.run(cmd, epilog_outfile)
+
+
+################################################################################
 pm.timestamp("### Bismark spike-in alignment: ")
 # currently using bowtie1 instead of bowtie2
 
@@ -598,7 +603,7 @@ if not args.paired_end:
 	# output files:
 	pdr_bedfile=os.path.join(pdr_output_dir, args.sample_name + ".pdr.bed")
 
-	produce_sam = True  # TODO AS: make this an option somewhere
+	produce_sam = False  # TODO AS: make this an option somewhere
 	concordsam=os.path.join(pdr_output_dir, args.sample_name + ".concordant.sam")
 	discordsam=os.path.join(pdr_output_dir, args.sample_name + ".discordant.sam")
 
