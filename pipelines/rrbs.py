@@ -55,8 +55,7 @@ else:
 # pm.config.tools.scripts_dir = os.path.dirname(os.path.realpath(__file__))
 
 # #Biseq paths:
-# paths.biseq_tools_dir = config["tools"]["biseqMethCalling_tools"]
-# paths.genomes_split = os.path.join(pm.config.resources.resources, "genomes_split")
+
 
 
 # tools.bismark_indexed_genome = os.path.join(pm.config.resources.resources, "genomes", args.genome_assembly, "indexed_bismark_bt2")
@@ -76,6 +75,8 @@ pm.config.resources.rrbs_adapter_file = os.path.join(pm.config.resources.resourc
 pm.config.resources.ref_genome = os.path.join(pm.config.resources.resources, "genomes")
 pm.config.resources.ref_genome_fasta = os.path.join(pm.config.resources.resources, "genomes", args.genome_assembly, args.genome_assembly + ".fa")
 pm.config.resources.chrom_sizes = os.path.join(pm.config.resources.resources, "genomes", args.genome_assembly, args.genome_assembly + ".chromSizes")
+pm.config.resources.genomes_split = os.path.join(pm.config.resources.resources, "genomes_split")
+
 
 print(pm.config)
 tools = pm.config.tools
@@ -324,9 +325,9 @@ pm.clean_add(os.path.join(bsmap_folder, "*.fq"))
 
 # Run biseq-methcalling:
 ################################################################################
-pm.timestamp("### biseqMethCalling: ")
+pm.timestamp("### biseq: ")
 
-# Python Software Requirements for biseqMethCalling
+# Python Software Requirements for biseq
 # REMARK AS: all packages are available via "easy_install --user <lib>"
 # pip is also a possibility if available (currently not on CeMM infrastructure)
 #
@@ -336,7 +337,7 @@ pm.timestamp("### biseqMethCalling: ")
 # - guppy: wget https://pypi.python.org/packages/source/g/guppy/guppy-0.1.10.tar.gz
 # - pysam: wget https://code.google.com/p/pysam/downloads/detail?name=pysam-0.7.5.tar.gz
 
-biseq_output_path = os.path.join(pipeline_outfolder, "biseqMethcalling_" + args.genome_assembly)
+biseq_output_path = os.path.join(pipeline_outfolder, "biseq_" + args.genome_assembly)
 biseq_output_path_web = os.path.join(biseq_output_path, "web")
 biseq_output_path_temp = os.path.join(biseq_output_path, "temp")
 
@@ -348,24 +349,24 @@ cmd += " --alignmentFile=" + out_bsmap      # this is the absolute path to the b
 cmd += " --methodPrefix=RRBS"
 cmd += " --rrbsMode"
 cmd += " --checkRestriction"
-cmd += " --minFragmentLength=" + str(config["parameters"]["biseqMethCalling"]["minFragmentLength"])
-cmd += " --maxFragmentLength=" + str(config["parameters"]["biseqMethCalling"]["maxFragmentLength"])
-cmd += " --pfStatus=" + str(config["parameters"]["biseqMethCalling"]["pfStatus"])
-cmd += " --maxMismatches=" + str(config["parameters"]["biseqMethCalling"]["maxMismatches"])
-cmd += " --baseQualityScoreC=" + str(config["parameters"]["biseqMethCalling"]["baseQualityScoreC"])
-cmd += " --baseQualityScoreNextToC=" + str(config["parameters"]["biseqMethCalling"]["baseQualityScoreNextToC"])
+cmd += " --minFragmentLength=" + str(pm.config.parameters.biseq.minFragmentLength)
+cmd += " --maxFragmentLength=" + str(pm.config.parameters.biseq.maxFragmentLength)
+cmd += " --pfStatus=" + str(pm.config.parameters.biseq.pfStatus)
+cmd += " --maxMismatches=" + str(pm.config.parameters.biseq.maxMismatches)
+cmd += " --baseQualityScoreC=" + str(pm.config.parameters.biseq.baseQualityScoreC)
+cmd += " --baseQualityScoreNextToC=" + str(pm.config.parameters.biseq.baseQualityScoreNextToC)
 cmd += " --laneSpecificStatistics"
 cmd += " --bigBedFormat"
 cmd += " --deleteTemp"
-cmd += " --toolsDir=" + tools.biseqMethCalling_tools
+cmd += " --toolsDir=" + tools.biseq_tools
 cmd += " --outputDir=" + biseq_output_path
 cmd += " --webOutputDir=" + biseq_output_path_web
 cmd += " --tempDir=" + biseq_output_path_temp
-cmd += " --timeDelay=" + str(config["parameters"]["biseqMethCalling"]["timeDelay"])
-cmd += " --genomeFraction=" + str(config["parameters"]["biseqMethCalling"]["genomeFraction"])
-cmd += " --smartWindows=" + str(config["parameters"]["biseqMethCalling"]["smartWindows"])
-cmd += " --maxProcesses=" + str(config["parameters"]["biseqMethCalling"]["maxProcesses"])
-cmd += " --genomeDir=" + paths.genomes_split
+cmd += " --timeDelay=" + str(pm.config.parameters.biseq.timeDelay)
+cmd += " --genomeFraction=" + str(pm.config.parameters.biseq.genomeFraction)
+cmd += " --smartWindows=" + str(pm.config.parameters.biseq.smartWindows)
+cmd += " --maxProcesses=" + str(pm.config.parameters.biseq.maxProcesses)
+cmd += " --genomeDir=" + pm.config.resources.genomes_split
 cmd += " --inGenome=" + args.genome_assembly
 cmd += " --outGenome=" + args.genome_assembly
 # TODO AS: Investigate what happens with biseq in the case of paired-end data
@@ -373,7 +374,7 @@ cmd += " --outGenome=" + args.genome_assembly
 # The dog genome has 38 chromosomes (plus one X chromosome). It's probably best to check here for these rarely used
 # reference genomes:
 # The default value for includedChromosomes is chr1-30, X, Y, Z (sufficient for human and mouse genomes)
-# REMARK NS: This is a hack to account for the way biseqMethCalling restricts to
+# REMARK NS: This is a hack to account for the way biseq restricts to
 # default chroms. THis should be fixed in biseq in the future, but for now, this
 # lets us run dog samples using the default pipeline. hack!
 if args.genome_assembly == "canFam3":

@@ -26,7 +26,7 @@ parameters:
   # parameters passed to bioinformatic tools, subclassed by tool
 
   trimmomatic:
-    memory: 4  # memory allocated to java VM in GB 
+    memory: 4  # memory allocated to java VM in GB
     threads: 4
     illuminaclip: ":2:40:7 SLIDINGWINDOW:4:15 MAXINFO:20:0.50 MINLEN:18"   # new set
     #illuminaclip: ":2:40:7 SLIDINGWINDOW:4:1 MAXINFO:20:0.50 MINLEN:16"   # old set
@@ -45,7 +45,7 @@ parameters:
     minimal_insert_size: 28     # option for pair-end alignment: minimal insert size allowed, default=28
     maximal_insert_size: 500    # option for pair-end alignment: maximal insert size allowed, default=500
 
-  biseqMethCalling:
+  biseq:
     minFragmentLength: 20
     maxFragmentLength: 1000
     pfStatus: "All"
