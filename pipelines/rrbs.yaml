@@ -1,0 +1,58 @@
+resources:
+  # paths to reference genomes, adapter files, and other required shared data
+  resources: /data/groups/lab_bock/shared/resources
+  genomes: /data/groups/lab_bock/shared/resources/genomes/
+  adapters: /data/groups/lab_bock/shared/resources/adapters/
+
+tools:
+  # absolute paths to required tools
+  python: /cm/shared/apps/python/2.7.6/bin/python
+  java: /cm/shared/apps/java/jdk/1.7.0_80/bin/java
+  picard: /cm/shared/apps/picard-tools/1.140/picard.jar
+  trimmomatic: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32.jar
+  trimmomatic_epignome: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32-epignome.jar
+  trimgalore: /cm/shared/apps/trim_galore/0.3.3/trim_galore
+  bowtie1: /cm/shared/apps/bowtie/1.1.1/bin
+  bowtie2: /cm/shared/apps/bowtie/2.2.4/bin
+  bed2bigBed: /data/groups/lab_bock/shared/resources/tools/bedToBigBed
+  bed2bigWig: /data/groups/lab_bock/shared/resources/tools/bedGraphToBigWig
+  bismark: /cm/shared/apps/bismark/0.12.2/bismark
+  deduplicate_bismark: /cm/shared/apps/bismark/0.12.2/deduplicate_bismark
+  bsmap: /cm/shared/apps/bsmap/2.74/bsmap
+  samtools: /cm/shared/apps/samtools/1.2/bin/samtools
+  biseq_tools: /data/groups/lab_bock/shared/resources/tools
+
+parameters:
+  # parameters passed to bioinformatic tools, subclassed by tool
+
+  trimmomatic:
+    memory: 4  # memory allocated to java VM in GB
+    threads: 4
+    illuminaclip: ":2:40:7 SLIDINGWINDOW:4:15 MAXINFO:20:0.50 MINLEN:18"   # new set
+    #illuminaclip: ":2:40:7 SLIDINGWINDOW:4:1 MAXINFO:20:0.50 MINLEN:16"   # old set
+
+  bsmap:
+    rrbs_mapping_mode: "C-CGG"    # " -D C-CGG "  # set to " " to disable!
+    equal_best_hits: 100          # number of equal best hits to count; smaller will be faster
+    mismatch_rate: 0.08           # if this value is between 0 and 1, it's interpreted as the mismatch rate w.r.t to the read length
+    report_repeat: 1              # how to report repeat hits, 0=none(unique hit/pair only); 1=random one, default:1
+    processors: 4                 # number of processors to use
+    map_to_strands: 0             # 0 to map only to forward strands: ++ and -+; 1 to map to all four strands: ++, +-, -+, --
+    seed_size:  12                # fixed to 12 for RRBS mode
+    random_number_seed: 0         # seed for random number generation when selecting position for multimappers; for reproducible results
+    filter: 5                     # filter low-quality reads containing >n Ns, default=5
+    quality_threshold: 0          # quality threshold in trimming the 3' end of reads [0-40], defaults to 0 (no trimming)
+    minimal_insert_size: 28     # option for pair-end alignment: minimal insert size allowed, default=28
+    maximal_insert_size: 500    # option for pair-end alignment: maximal insert size allowed, default=500
+
+  biseq:
+    minFragmentLength: 20
+    maxFragmentLength: 1000
+    pfStatus: "All"
+    maxMismatches: 0.1
+    baseQualityScoreC: 20
+    baseQualityScoreNextToC: 10
+    timeDelay: 0
+    genomeFraction: 50
+    smartWindows: 250000
+    maxProcesses: 4
