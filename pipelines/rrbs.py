@@ -242,7 +242,6 @@ else: # use trim_galore
 # Trimming command has been constructed, using either trimming options.
 # The code to run it is the same either way:
 
-# TODO AS: maybe another lock_name?
 pm.run(cmd, trimmed_fastq, follow= lambda:
 	pm.report_result("Trimmed_reads",  myngstk.count_reads(trimmed_fastq, args.paired_end)))
 
@@ -299,12 +298,11 @@ def check_bsmap():
 	# a -F4 flag (with count_mapped_reads instead of count_reads).
 	x = myngstk.count_mapped_reads(out_bsmap, args.paired_end)
 	pm.report_result("Aligned_reads", x)
-	pm.report_result("Aligned_rate", str(float(x)/float(trimmed_reads_count)))
 	# In addition, BSMap can (if instructed by parameters) randomly assign
 	# multimapping reads. It's useful to know how many in the final bam were such.
 	x = myngstk.count_multimapping_reads(out_bsmap, args.paired_end)
 	pm.report_result("Multimap_reads", x)
-	pm.report_result("Multimap_rate", str(float(x)/float(trimmed_reads_count)))
+
 
 pm.run(cmd, out_bsmap, follow=check_bsmap)
 
@@ -596,7 +594,7 @@ if not args.paired_end:
 	# convert aligned bam to sam
 
 	pdr_in_samfile = os.path.join(pdr_output_dir, args.sample_name + ".aligned.sam") # gets deleted after, see some lines below
-	pm.run(tools.samtools + " view " + out_bsmap + " > " + pdr_in_samfile, pdr_in_samfile, shell=True)
+	#pm.run(tools.samtools + " view " + out_bsmap + " > " + pdr_in_samfile, pdr_in_samfile, shell=True)
 
 	# PDR calculation:
 	#
@@ -617,13 +615,13 @@ if not args.paired_end:
 	cmd1 += " --minNonCpgSites=3"   # These two parameters are not relevant for PDR analysis
 	cmd1 += " --minConversionRate=0.9"
 
-	if produce_sam == True:
+	if produce_sam:
 		cmd1 += " --concordantOutfile=" + concordsam
 		cmd1 += " --discordantOutfile=" + discordsam
 		#TODO: perhaps convert them to bam *cough*
 
 	#call:
-	pm.run(cmd1, pdr_bedfile)
+	#pm.run(cmd1, pdr_bedfile)
 
 	# delete huge input SAM file
 	pm.clean_add(pdr_in_samfile)
