@@ -33,10 +33,11 @@ parser.add_argument('-t', '--trimgalore', dest='trimmomatic', action="store_fals
 
 args = parser.parse_args()
 
-if (args.single_or_paired is "paired"):
+if args.single_or_paired == "paired":
 	args.paired_end = True
 else:
 	args.paired_end = False
+
 # Merging
 ################################################################################
 # If 2 input files are given, then these are to be merged.
@@ -56,10 +57,6 @@ else:
 pipeline_outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
 pm = pypiper.PipelineManager(name = "RRBS", outfolder = pipeline_outfolder, args = args)
 
-# HACK! delete this.
-if args.genome_assembly == "human":
-	args.genome_assembly = "hg19"
-
 # Set up a few additional paths not in the config file
 pm.config.tools.scripts_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tools")
 pm.config.resources.adapter_file = os.path.join(pm.config.resources.resources, "adapters", "epignome_adapters_2_add.fa")
@@ -69,13 +66,13 @@ pm.config.resources.ref_genome_fasta = os.path.join(pm.config.resources.resource
 pm.config.resources.chrom_sizes = os.path.join(pm.config.resources.resources, "genomes", args.genome_assembly, args.genome_assembly + ".chromSizes")
 pm.config.resources.genomes_split = os.path.join(pm.config.resources.resources, "genomes_split")
 
-pm.config.resources.methpositions = os.path.join(pm.config.resources.resources, "regions/cgs/" + args.genome_assembly + ".cgs.txt")
-
+pm.config.resources.methpositions = os.path.join(pm.config.resources.resources, "regions", "cgs", args.genome_assembly + ".cgs.txt")
 
 pm.config.tools.bismark_spikein_genome = os.path.join(pm.config.resources.resources, "genomes", "meth_spikein_k1_k3", "indexed_bismark_bt1")
 
 print(pm.config)
 tools = pm.config.tools  # Convenience alias
+param = pm.config.parameters
 
 # Create a ngstk object
 myngstk = pypiper.NGSTk(pm.config)
@@ -162,7 +159,7 @@ elif input_ext == ".fastq.gz":
 pm.timestamp("### Adapter trimming: ")
 
 # We need to detect the quality encoding type of the fastq.
-cmd = tools.python + " -u " + os.path.join(pm.config.tools.scripts_dir, "detect_quality_code.py") + " -f " + unaligned_fastq
+cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "detect_quality_code.py") + " -f " + unaligned_fastq
 
 encoding_string = pm.checkprint(cmd)
 
@@ -191,13 +188,13 @@ if args.trimmomatic:
 	# use more memory on systems that have more memory, leading to node-dependent
 	# killing effects that are hard to trace.
 
-	cmd = tools.java + " -Xmx" + str(pm.config.parameters.trimmomatic.memory) + "g -jar " + tools.trimmomatic_epignome
+	cmd = tools.java + " -Xmx" + str(param.trimmomatic.memory) + "g -jar " + tools.trimmomatic_epignome
 	if args.paired_end:
 		cmd += " PE"
 	else:
 		cmd += " SE"
 	cmd += " -" + encoding
-	cmd += " -threads " + str(pm.config.parameters.trimmomatic.threads) + " "
+	cmd += " -threads " + str(param.trimmomatic.threads) + " "
 	#cmd += " -trimlog " + os.path.join(fastq_folder, "trimlog.log") + " "
 	if args.paired_end:
 		cmd += out_fastq_pre + "_R1.fastq "
@@ -209,7 +206,7 @@ if args.trimmomatic:
 	else:
 		cmd += out_fastq_pre + "_R1.fastq "
 		cmd += out_fastq_pre + "_R1_trimmed.fq "
-	cmd += "ILLUMINACLIP:" + pm.config.resources.rrbs_adapter_file + pm.config.parameters.trimmomatic.illuminaclip
+	cmd += "ILLUMINACLIP:" + pm.config.resources.rrbs_adapter_file + param.trimmomatic.illuminaclip
 
 else: # use trim_galore
 	# Trim galore requires biopython, cutadapt modules. RSeQC as well (maybe?)
@@ -245,13 +242,10 @@ else: # use trim_galore
 pm.run(cmd, trimmed_fastq, follow= lambda:
 	pm.report_result("Trimmed_reads",  myngstk.count_reads(trimmed_fastq, args.paired_end)))
 
-
 pm.clean_add(os.path.join(fastq_folder, "*.fastq"), conditional=True)
 pm.clean_add(os.path.join(fastq_folder, "*.fq"), conditional=True)
 pm.clean_add(os.path.join(fastq_folder, "*.log"), conditional=True)
 pm.clean_add(fastq_folder, conditional=True)
-
-
 
 
 # RRBS alignment with BSMAP.
@@ -277,20 +271,20 @@ if args.paired_end:
 	cmd += " -b " + out_fastq_pre + "_R2_trimmed.fq"
 cmd += " -d " + pm.config.resources.ref_genome_fasta
 cmd += " -o " + out_bsmap
-cmd += " -D " + str(pm.config.parameters.bsmap.rrbs_mapping_mode)
-cmd += " -w " + str(pm.config.parameters.bsmap.equal_best_hits)
-cmd += " -v " + str(pm.config.parameters.bsmap.mismatch_rate)
-cmd += " -r " + str(pm.config.parameters.bsmap.report_repeat)
-cmd += " -p " + str(pm.config.parameters.bsmap.processors)
-cmd += " -n " + str(pm.config.parameters.bsmap.map_to_strands)
-cmd += " -s " + str(pm.config.parameters.bsmap.seed_size)
-cmd += " -S " + str(pm.config.parameters.bsmap.random_number_seed)
-cmd += " -f " + str(pm.config.parameters.bsmap.filter)
-cmd += " -q " + str(pm.config.parameters.bsmap.quality_threshold)
+cmd += " -D " + str(param.bsmap.rrbs_mapping_mode)
+cmd += " -w " + str(param.bsmap.equal_best_hits)
+cmd += " -v " + str(param.bsmap.mismatch_rate)
+cmd += " -r " + str(param.bsmap.report_repeat)
+cmd += " -p " + str(param.bsmap.processors)
+cmd += " -n " + str(param.bsmap.map_to_strands)
+cmd += " -s " + str(param.bsmap.seed_size)
+cmd += " -S " + str(param.bsmap.random_number_seed)
+cmd += " -f " + str(param.bsmap.filter)
+cmd += " -q " + str(param.bsmap.quality_threshold)
 cmd += " -u"       # report unmapped reads (into same bam file)
 if args.paired_end:
-	cmd += " -m " + str(pm.config.parameters.bsmap.minimal_insert_size)
-	cmd += " -x " + str(pm.config.parameters.bsmap.maximal_insert_size)
+	cmd += " -m " + str(param.bsmap.minimal_insert_size)
+	cmd += " -x " + str(param.bsmap.maximal_insert_size)
 
 def check_bsmap():
 	# BSMap apparently stores all the reads (mapped and unmapped) in
@@ -330,18 +324,18 @@ biseq_output_path_temp = os.path.join(biseq_output_path, "temp")
 
 myngstk.make_sure_path_exists (biseq_output_path)
 
-cmd = tools.python + " -u " + os.path.join(pm.config.tools.scripts_dir, "biseqMethCalling.py")
+cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "biseqMethCalling.py")
 cmd += " --sampleName=" + args.sample_name
 cmd += " --alignmentFile=" + out_bsmap      # this is the absolute path to the bsmap aligned bam file
 cmd += " --methodPrefix=RRBS"
 cmd += " --rrbsMode"
 cmd += " --checkRestriction"
-cmd += " --minFragmentLength=" + str(pm.config.parameters.biseq.minFragmentLength)
-cmd += " --maxFragmentLength=" + str(pm.config.parameters.biseq.maxFragmentLength)
-cmd += " --pfStatus=" + str(pm.config.parameters.biseq.pfStatus)
-cmd += " --maxMismatches=" + str(pm.config.parameters.biseq.maxMismatches)
-cmd += " --baseQualityScoreC=" + str(pm.config.parameters.biseq.baseQualityScoreC)
-cmd += " --baseQualityScoreNextToC=" + str(pm.config.parameters.biseq.baseQualityScoreNextToC)
+cmd += " --minFragmentLength=" + str(param.biseq.minFragmentLength)
+cmd += " --maxFragmentLength=" + str(param.biseq.maxFragmentLength)
+cmd += " --pfStatus=" + str(param.biseq.pfStatus)
+cmd += " --maxMismatches=" + str(param.biseq.maxMismatches)
+cmd += " --baseQualityScoreC=" + str(param.biseq.baseQualityScoreC)
+cmd += " --baseQualityScoreNextToC=" + str(param.biseq.baseQualityScoreNextToC)
 cmd += " --laneSpecificStatistics"
 cmd += " --bigBedFormat"
 cmd += " --deleteTemp"
@@ -349,10 +343,10 @@ cmd += " --toolsDir=" + tools.biseq_tools
 cmd += " --outputDir=" + biseq_output_path
 cmd += " --webOutputDir=" + biseq_output_path_web
 cmd += " --tempDir=" + biseq_output_path_temp
-cmd += " --timeDelay=" + str(pm.config.parameters.biseq.timeDelay)
-cmd += " --genomeFraction=" + str(pm.config.parameters.biseq.genomeFraction)
-cmd += " --smartWindows=" + str(pm.config.parameters.biseq.smartWindows)
-cmd += " --maxProcesses=" + str(pm.config.parameters.biseq.maxProcesses)
+cmd += " --timeDelay=" + str(param.biseq.timeDelay)
+cmd += " --genomeFraction=" + str(param.biseq.genomeFraction)
+cmd += " --smartWindows=" + str(param.biseq.smartWindows)
+cmd += " --maxProcesses=" + str(param.biseq.maxProcesses)
 cmd += " --genomeDir=" + pm.config.resources.genomes_split
 cmd += " --inGenome=" + args.genome_assembly
 cmd += " --outGenome=" + args.genome_assembly
@@ -383,8 +377,8 @@ read_variables = ['uniqueSeqMotifCount','totalSeqMotifCount','bisulfiteConversio
 totalSeqMotifCount = 0.0
 uniqueSeqMotifCount = 0.0
 for var in read_variables:
-	cmd = tools.python + " -u " + os.path.join(pm.config.tools.scripts_dir, "tsv_parser.py")
-	cmd += " -i " + biseq_output_path + "/RRBS_statistics_" + args.sample_name + ".txt"
+	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "tsv_parser.py")
+	cmd += " -i " + os.path.join(biseq_output_path, "RRBS_statistics_" + args.sample_name + ".txt")
 	cmd += " -c " + var
 	x = pm.checkprint(cmd, shell=True)
 
@@ -414,7 +408,7 @@ pm.timestamp("### Make bigbed: ")
 
 
 # bigbed conversion input file is the biseq methylation calls output file
-biseq_methcall_file = biseq_output_path + "/RRBS_cpgMethylation_" + args.sample_name + ".bed"
+biseq_methcall_file = os.path.join(biseq_output_path, "RRBS_cpgMethylation_" + args.sample_name + ".bed")
 
 bigbed_output_path = os.path.join(pipeline_outfolder, "bigbed_" + args.genome_assembly)
 bigwig_output_path = os.path.join(pipeline_outfolder, "bigwig_" + args.genome_assembly)
@@ -468,7 +462,7 @@ nmm_output_dir = os.path.join(pipeline_outfolder, "nmm_" + args.genome_assembly)
 myngstk.make_sure_path_exists (nmm_output_dir)
 nmm_outfile=os.path.join(nmm_output_dir, args.sample_name + ".nmm.bed")
 
-cmd = tools.python + " -u " + os.path.join(pm.config.tools.scripts_dir, "methylMatch.py")
+cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "methylMatch.py")
 cmd += " --inFile=" + out_bsmap      # this is the absolute path to the bsmap aligned bam file
 cmd += " --methFile=" + biseq_methcall_file
 cmd += " --outFile=" + nmm_outfile
@@ -484,7 +478,7 @@ epilog_output_dir = os.path.join(pipeline_outfolder, "epilog_" + args.genome_ass
 myngstk.make_sure_path_exists (epilog_output_dir)
 epilog_outfile=os.path.join(epilog_output_dir, args.sample_name + "_epilog.bed")
 
-cmd = tools.python + " -u " + os.path.join(pm.config.tools.scripts_dir, "epilog.py")
+cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
 cmd += " --infile=" + out_bsmap  # absolute path to the bsmap aligned bam
 cmd += " --p=" + pm.config.resources.methpositions
 cmd += " --outfile=" + epilog_outfile
@@ -504,7 +498,7 @@ pm.run(tools.samtools + " view -bh -f 4 -F 128 "+out_bsmap+" > " + bsmap_unalign
 # Re-flag the unaligned paired-end reads to make them look like unpaired for Bismark
 if args.paired_end:
 	bsmap_unalignable_bam_output = os.path.join(bsmap_folder, args.sample_name + "_unalignable_reflagged.bam")
-	cmd = tools.python + " -u " + os.path.join(pm.config.tools.scripts_dir, "pe_flag_changer.py")
+	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "pe_flag_changer.py")
 	cmd += " -i " + bsmap_unalignable_bam
 	cmd += " -o " + bsmap_unalignable_bam_output
 	pm.run(cmd, bsmap_unalignable_bam_output)
@@ -542,7 +536,8 @@ pm.run(cmd, out_spikein, nofail=True)
 # bismark folder to here:
 pm.clean_add(os.path.join(spikein_folder,"*.fastq"), conditional=True)
 pm.clean_add(os.path.join(spikein_folder,"*.fq"), conditional=True)
-pm.clean_add(spikein_temp) # For some reason, the temp folder is not deleted.
+pm.clean_add(out_spikein, conditional=True)
+pm.clean_add(spikein_temp)
 
 
 
@@ -563,14 +558,14 @@ else:
 out_spikein_sorted = out_spikein_dedup.replace('.deduplicated.bam', '.deduplicated.sorted')
 cmd2 = tools.samtools + " sort " + out_spikein_dedup + " " + out_spikein_sorted
 cmd3 = tools.samtools + " index " + out_spikein_sorted + ".bam"
-cmd4 = "rm " + out_spikein_dedup
-pm.run([cmd, cmd2, cmd3, cmd4], out_spikein_sorted + ".bam.bai", nofail=True)
+pm.run([cmd, cmd2, cmd3], out_spikein_sorted + ".bam.bai", nofail=True)
+pm.clean_add(out_spikein_dedup, conditional=False)
 
 # Spike-in methylation calling
 ################################################################################
 pm.timestamp("### Methylation calling (testxmz) Spike-in: ")
 
-cmd1 = tools.python + " -u " + os.path.join(pm.config.tools.scripts_dir, "testxmz.py")
+cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "testxmz.py")
 cmd1 += " " + out_spikein_sorted + ".bam" + " " + "K1_unmethylated"
 cmd1 += " >> " + pm.pipeline_stats_file
 cmd2 = cmd1.replace("K1_unmethylated", "K3_methylated")
@@ -606,7 +601,7 @@ if not args.paired_end:
 	discordsam=os.path.join(pdr_output_dir, args.sample_name + ".discordant.sam")
 
 	# command::
-	cmd1 = tools.python + " -u " + os.path.join(pm.config.tools.scripts_dir, "bisulfiteReadConcordanceAnalysis.py")
+	cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "bisulfiteReadConcordanceAnalysis.py")
 	cmd1 += " --infile=" + pdr_in_samfile
 	cmd1 += " --outfile=" + pdr_bedfile
 	cmd1 += " --skipHeaderLines=0"

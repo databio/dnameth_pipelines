@@ -5,9 +5,10 @@ resources:
   adapters: /data/groups/lab_bock/shared/resources/adapters/
 
 tools:
-  # absolute paths to required tools
-  python: /cm/shared/apps/python/2.7.6/bin/python
-  java: /cm/shared/apps/java/jdk/1.7.0_80/bin/java
+  # paths to required tools
+  python: python
+  java: java
+  samtools: samtools
   picard: /cm/shared/apps/picard-tools/1.140/picard.jar
   trimmomatic: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32.jar
   trimmomatic_epignome: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32-epignome.jar
@@ -19,7 +20,7 @@ tools:
   bismark: /cm/shared/apps/bismark/0.12.2/bismark
   deduplicate_bismark: /cm/shared/apps/bismark/0.12.2/deduplicate_bismark
   bsmap: /cm/shared/apps/bsmap/2.74/bsmap
-  samtools: /cm/shared/apps/samtools/1.2/bin/samtools
+  #bsmap: /cm/shared/apps/bsmap/2.90/bin/bsmap
   biseq_tools: /data/groups/lab_bock/shared/resources/tools
 
 parameters:
@@ -42,8 +43,8 @@ parameters:
     random_number_seed: 0         # seed for random number generation when selecting position for multimappers; for reproducible results
     filter: 5                     # filter low-quality reads containing >n Ns, default=5
     quality_threshold: 0          # quality threshold in trimming the 3' end of reads [0-40], defaults to 0 (no trimming)
-    minimal_insert_size: 28     # option for pair-end alignment: minimal insert size allowed, default=28
-    maximal_insert_size: 500    # option for pair-end alignment: maximal insert size allowed, default=500
+    minimal_insert_size: 28       # option for pair-end alignment: minimal insert size allowed, default=28
+    maximal_insert_size: 500      # option for pair-end alignment: maximal insert size allowed, default=500
 
   biseq:
     minFragmentLength: 20
