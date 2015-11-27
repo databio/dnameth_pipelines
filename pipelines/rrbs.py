@@ -75,7 +75,7 @@ tools = pm.config.tools  # Convenience alias
 param = pm.config.parameters
 
 # Create a ngstk object
-myngstk = pypiper.NGSTk(pm.config)
+myngstk = pypiper.NGSTk(args.config_file)
 
 myngstk.make_sure_path_exists(os.path.join(pipeline_outfolder, "unmapped_bam"))
 
