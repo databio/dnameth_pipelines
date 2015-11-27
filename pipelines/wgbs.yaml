@@ -6,9 +6,9 @@ resources:
 
 tools:
   # absolute paths to required tools
-  python: /cm/shared/apps/python/2.7.6/bin/python
-  java: /cm/shared/apps/java/jdk/1.7.0_80/bin/java
-  Rscript: /cm/shared/apps/R/3.1.0/bin/Rscript
+  python: python
+  java: java
+  Rscript: Rscript
   picard: /cm/shared/apps/picard-tools/1.140/picard.jar
   trimmomatic: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32.jar
   trimmomatic_epignome: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32-epignome.jar

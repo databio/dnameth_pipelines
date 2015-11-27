@@ -6,7 +6,7 @@ RRBS pipeline
 
 __author__ = "Nathan Sheffield"
 __email__ = "nathan@code.databio.org"
-__credits__ = ["Charles Dietz", "Johanna Klughammer", "Christoph Bock", "Andreas Schoeneggar"]
+__credits__ = ["Charles Dietz", "Johanna Klughammer", "Christoph Bock", "Andreas Schoenegger"]
 __license__ = "GPL3"
 __version__ = "0.1"
 __status__ = "Development"
@@ -54,8 +54,8 @@ else:
 		args.sample_name = os.path.splitext(os.path.basename(args.input[0]))[0]
 
 # Create a PipelineManager object and start the pipeline
-pipeline_outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
-pm = pypiper.PipelineManager(name = "RRBS", outfolder = pipeline_outfolder, args = args)
+
+pm = pypiper.PipelineManager(name = "RRBS", outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name)), args = args)
 
 # Set up a few additional paths not in the config file
 pm.config.tools.scripts_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tools")
@@ -68,28 +68,31 @@ pm.config.resources.genomes_split = os.path.join(pm.config.resources.resources, 
 
 pm.config.resources.methpositions = os.path.join(pm.config.resources.resources, "regions", "cgs", args.genome_assembly + ".cgs.txt")
 
-pm.config.tools.bismark_spikein_genome = os.path.join(pm.config.resources.resources, "genomes", "meth_spikein_k1_k3", "indexed_bismark_bt1")
+pm.config.resources.bismark_spikein_genome = os.path.join(pm.config.resources.resources, "genomes", "meth_spikein_k1_k3", "indexed_bismark_bt1")
+
+pm.config.parameters.pipeline_outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
 
 print(pm.config)
 tools = pm.config.tools  # Convenience alias
 param = pm.config.parameters
+resources = pm.config.resources
 
 # Create a ngstk object
 myngstk = pypiper.NGSTk(args.config_file)
 
-myngstk.make_sure_path_exists(os.path.join(pipeline_outfolder, "unmapped_bam"))
+myngstk.make_sure_path_exists(os.path.join(param.pipeline_outfolder, "unmapped_bam"))
 
 if merge:
 	if not args.input.endswith(".bam"):
 		raise NotImplementedError("Currently we can only merge bam inputs")
-	merge_folder = os.path.join(pipeline_outfolder, "unmapped_bam")
+	merge_folder = os.path.join(param.pipeline_outfolder, "unmapped_bam")
 	sample_merged_bam = args.sample_name + ".merged.bam"
 	output_merge = os.path.join(merge_folder, sample_merged_bam)
 	cmd = myngstk.merge_bams(args.input, output_merge)
 
 	pm.run(cmd, output_merge)
-	args.input = os.path.join(pipeline_outfolder, "unmapped_bam", sample_merged_bam)  #update unmapped bam reference
-	local_unmapped_bam_abs = os.path.join(pipeline_outfolder, "unmapped_bam", sample_merged_bam)
+	args.input = os.path.join(param.pipeline_outfolder, "unmapped_bam", sample_merged_bam)  #update unmapped bam reference
+	local_unmapped_bam_abs = os.path.join(param.pipeline_outfolder, "unmapped_bam", sample_merged_bam)
 	input_ext = ".bam"
 else:
 	# Link the file into the unmapped_bam directory
@@ -106,7 +109,7 @@ else:
 	else:
 		raise NotImplementedError("This pipeline can only deal with .bam or .fastq.gz files")
 
-	local_unmapped_bam_abs = os.path.join(pipeline_outfolder, "unmapped_bam", args.sample_name + input_ext)
+	local_unmapped_bam_abs = os.path.join(param.pipeline_outfolder, "unmapped_bam", args.sample_name + input_ext)
 	pm.callprint("ln -sf " + args.input + " " + local_unmapped_bam_abs, shell=True)
 
 #check for file exists:
@@ -127,7 +130,7 @@ pm.report_result("Genome",args.genome_assembly)
 # Fastq conversion
 ################################################################################
 pm.timestamp("### Fastq conversion: ")
-fastq_folder = os.path.join(pipeline_outfolder, "fastq")
+fastq_folder = os.path.join(param.pipeline_outfolder, "fastq")
 out_fastq_pre = os.path.join(fastq_folder, args.sample_name)
 unaligned_fastq = out_fastq_pre + "_R1.fastq"
 
@@ -160,9 +163,7 @@ pm.timestamp("### Adapter trimming: ")
 
 # We need to detect the quality encoding type of the fastq.
 cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "detect_quality_code.py") + " -f " + unaligned_fastq
-
 encoding_string = pm.checkprint(cmd)
-
 if encoding_string.find("phred33") != -1:
 	encoding = "phred33"
 elif encoding_string.find("phred64") != -1:
@@ -206,7 +207,7 @@ if args.trimmomatic:
 	else:
 		cmd += out_fastq_pre + "_R1.fastq "
 		cmd += out_fastq_pre + "_R1_trimmed.fq "
-	cmd += "ILLUMINACLIP:" + pm.config.resources.rrbs_adapter_file + param.trimmomatic.illuminaclip
+	cmd += "ILLUMINACLIP:" + resources.rrbs_adapter_file + param.trimmomatic.illuminaclip
 
 else: # use trim_galore
 	# Trim galore requires biopython, cutadapt modules. RSeQC as well (maybe?)
@@ -251,7 +252,7 @@ pm.clean_add(fastq_folder, conditional=True)
 # RRBS alignment with BSMAP.
 ################################################################################
 pm.timestamp("### BSMAP alignment: ")
-bsmap_folder = os.path.join(pipeline_outfolder, "bsmap_" + args.genome_assembly)  # e.g. bsmap_hg19
+bsmap_folder = os.path.join(param.pipeline_outfolder, "bsmap_" + args.genome_assembly)  # e.g. bsmap_hg19
 myngstk.make_sure_path_exists(bsmap_folder)
 # no tmp folder needed for BSMAP alignment
 
@@ -269,7 +270,7 @@ cmd = tools.bsmap
 cmd += " -a " + out_fastq_pre + "_R1_trimmed.fq"
 if args.paired_end:
 	cmd += " -b " + out_fastq_pre + "_R2_trimmed.fq"
-cmd += " -d " + pm.config.resources.ref_genome_fasta
+cmd += " -d " + resources.ref_genome_fasta
 cmd += " -o " + out_bsmap
 cmd += " -D " + str(param.bsmap.rrbs_mapping_mode)
 cmd += " -w " + str(param.bsmap.equal_best_hits)
@@ -318,7 +319,7 @@ pm.timestamp("### biseq: ")
 # - guppy: wget https://pypi.python.org/packages/source/g/guppy/guppy-0.1.10.tar.gz
 # - pysam: wget https://code.google.com/p/pysam/downloads/detail?name=pysam-0.7.5.tar.gz
 
-biseq_output_path = os.path.join(pipeline_outfolder, "biseq_" + args.genome_assembly)
+biseq_output_path = os.path.join(param.pipeline_outfolder, "biseq_" + args.genome_assembly)
 biseq_output_path_web = os.path.join(biseq_output_path, "web")
 biseq_output_path_temp = os.path.join(biseq_output_path, "temp")
 
@@ -347,7 +348,7 @@ cmd += " --timeDelay=" + str(param.biseq.timeDelay)
 cmd += " --genomeFraction=" + str(param.biseq.genomeFraction)
 cmd += " --smartWindows=" + str(param.biseq.smartWindows)
 cmd += " --maxProcesses=" + str(param.biseq.maxProcesses)
-cmd += " --genomeDir=" + pm.config.resources.genomes_split
+cmd += " --genomeDir=" + resources.genomes_split
 cmd += " --inGenome=" + args.genome_assembly
 cmd += " --outGenome=" + args.genome_assembly
 # TODO AS: Investigate what happens with biseq in the case of paired-end data
@@ -410,8 +411,8 @@ pm.timestamp("### Make bigbed: ")
 # bigbed conversion input file is the biseq methylation calls output file
 biseq_methcall_file = os.path.join(biseq_output_path, "RRBS_cpgMethylation_" + args.sample_name + ".bed")
 
-bigbed_output_path = os.path.join(pipeline_outfolder, "bigbed_" + args.genome_assembly)
-bigwig_output_path = os.path.join(pipeline_outfolder, "bigwig_" + args.genome_assembly)
+bigbed_output_path = os.path.join(param.pipeline_outfolder, "bigbed_" + args.genome_assembly)
+bigwig_output_path = os.path.join(param.pipeline_outfolder, "bigwig_" + args.genome_assembly)
 
 
 # bedToBigBed RRBS_cpgMethylation_01_2276TU.bed ~/linkto/resources/genomes/hg19/hg19.chromSizes RRBS_cpgMethylation_test2.bb
@@ -424,7 +425,7 @@ out_bigwig = os.path.join(bigwig_output_path, "RRBS_" + args.sample_name + ".bw"
 
 cmd = tools.bed2bigBed
 cmd += " " + biseq_methcall_file
-cmd += " " + pm.config.resources.chrom_sizes
+cmd += " " + resources.chrom_sizes
 cmd += " " + bigbed_output_file
 
 # REMARK NS: As of June 2015, IGV will load bigBed files for methylation
@@ -450,7 +451,7 @@ cmd += " > " + out_bedGraph
 
 cmd2 = tools.bed2bigWig
 cmd2 += " " + out_bedGraph
-cmd2 += " " + pm.config.resources.chrom_sizes
+cmd2 += " " + resources.chrom_sizes
 cmd2 += " " + out_bigwig
 
 pm.run([cmd, cmd2], out_bigwig, shell=True)
@@ -458,7 +459,7 @@ pm.run([cmd, cmd2], out_bigwig, shell=True)
 ################################################################################
 # Calculate neighbor methylation matching
 pm.timestamp("### Neighbor Methylation Matching: ")
-nmm_output_dir = os.path.join(pipeline_outfolder, "nmm_" + args.genome_assembly)
+nmm_output_dir = os.path.join(param.pipeline_outfolder, "nmm_" + args.genome_assembly)
 myngstk.make_sure_path_exists (nmm_output_dir)
 nmm_outfile=os.path.join(nmm_output_dir, args.sample_name + ".nmm.bed")
 
@@ -474,13 +475,13 @@ pm.run(cmd, nmm_outfile)
 ################################################################################
 # Calculate neighbor methylation matching
 pm.timestamp("### Epilog Methcalling: ")
-epilog_output_dir = os.path.join(pipeline_outfolder, "epilog_" + args.genome_assembly)
+epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
 myngstk.make_sure_path_exists (epilog_output_dir)
 epilog_outfile=os.path.join(epilog_output_dir, args.sample_name + "_epilog.bed")
 
 cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
 cmd += " --infile=" + out_bsmap  # absolute path to the bsmap aligned bam
-cmd += " --p=" + pm.config.resources.methpositions
+cmd += " --p=" + resources.methpositions
 cmd += " --outfile=" + epilog_outfile
 cmd += " --cores=4"
 
@@ -512,14 +513,14 @@ cmd = myngstk.bam_to_fastq(bsmap_unalignable_bam, bsmap_fastq_unalignable_pre, a
 pm.run(cmd, bsmap_fastq_unalignable)
 
 # actual spike-in analysis
-spikein_folder = os.path.join(pipeline_outfolder, "bismark_spikein")
+spikein_folder = os.path.join(param.pipeline_outfolder, "bismark_spikein")
 myngstk.make_sure_path_exists(spikein_folder)
 spikein_temp = os.path.join(spikein_folder, "bismark_temp")
 myngstk.make_sure_path_exists(spikein_temp)
 out_spikein_base = args.sample_name + ".spikein.aln"
 
 out_spikein = os.path.join(spikein_folder, out_spikein_base + ".bam")
-cmd = tools.bismark + " " + tools.bismark_spikein_genome + " "
+cmd = tools.bismark + " " + resources.bismark_spikein_genome + " "
 cmd += bsmap_fastq_unalignable_pre + "_R1.fastq"
 cmd += " --bam --unmapped"
 cmd += " --path_to_bowtie " + tools.bowtie1
@@ -583,7 +584,7 @@ if not args.paired_end:
 
 	pm.timestamp("### PDR (Partial Disordered Methylation) analysis")
 
-	pdr_output_dir = os.path.join(pipeline_outfolder, "pdr_" + args.genome_assembly)
+	pdr_output_dir = os.path.join(param.pipeline_outfolder, "pdr_" + args.genome_assembly)
 	myngstk.make_sure_path_exists (pdr_output_dir)
 
 	# convert aligned bam to sam
@@ -606,7 +607,7 @@ if not args.paired_end:
 	cmd1 += " --outfile=" + pdr_bedfile
 	cmd1 += " --skipHeaderLines=0"
 	cmd1 += " --genome=" + args.genome_assembly
-	cmd1 += " --genomeDir=" + pm.config.resources.ref_genome
+	cmd1 += " --genomeDir=" + resources.ref_genome
 	cmd1 += " --minNonCpgSites=3"   # These two parameters are not relevant for PDR analysis
 	cmd1 += " --minConversionRate=0.9"
 
@@ -619,7 +620,8 @@ if not args.paired_end:
 	#pm.run(cmd1, pdr_bedfile)
 
 	# delete huge input SAM file
-	pm.clean_add(pdr_in_samfile)
+	pm.clean_add(os.path.join(pdr_output_dir,"*.sam"), conditional=True)
+	pm.clean_add(pdr_output_dir, conditional=True)
 
 # Final sorting and indexing
 ################################################################################
