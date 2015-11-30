@@ -27,10 +27,6 @@ parser = ArgumentParser(description='Pipeline')
 # http://github.com/epigen/pypiper/command_line_args.md
 parser = pypiper.add_pypiper_args(parser, all_args=True)
 
-# Add any pipeline-specific arguments
-parser.add_argument('-t', '--trimgalore', dest='trimmomatic', action="store_false", default=True,
-	help='Use trimgalore instead of trimmomatic?')
-
 args = parser.parse_args()
 
 if args.single_or_paired == "paired":
@@ -56,7 +52,7 @@ else:
 
 
 # Create a PipelineManager object and start the pipeline
-pm = pypiper.PipelineManager(name = "RRBS", outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name), args = args)
+pm = pypiper.PipelineManager(name = "RRBS", outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name)), args = args)
 
 # Set up a few additional paths not in the config file
 pm.config.tools.scripts_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tools")
@@ -361,7 +357,7 @@ pm.run(cmd,  out_cpg_report_filt, shell=True)
 
 # convert the bismark report to the simpler coverage format and adjust the coordinates
 # of CpG's on the reverse strand while doing so (by substracting 1 from the start):
-cmd = tools.Rscript + " " + os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "bin", "convertBismarkReport.R") # disable coverage filter, because we have already used `awk` to achieve this result
+cmd = tools.Rscript + " " + os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "scripts", "convertBismarkReport.R") # disable coverage filter, because we have already used `awk` to achieve this result
 cmd += " --formats=cov,min,gibberish"
 cmd += " --noCovFilter"
 if keep_non_standard_chromosomes:
@@ -474,7 +470,7 @@ cmd = tools.java + " -Xmx4g -jar"
 # This sort can run out of temp space on big jobs; this puts the temp to a
 # local spot.
 #cmd += " -Djava.io.tmpdir=`pwd`/tmp"
-cmd += " " + tools.picard_jar + " SortSam"
+cmd += " " + tools.picard + " SortSam"
 cmd += " I=" + out_sam_filter
 cmd += " O=" + out_final
 cmd += " SORT_ORDER=coordinate"
