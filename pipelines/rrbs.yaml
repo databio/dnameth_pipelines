@@ -19,8 +19,8 @@ tools:
   bed2bigWig: /data/groups/lab_bock/shared/resources/tools/bedGraphToBigWig
   bismark: /cm/shared/apps/bismark/0.12.2/bismark
   deduplicate_bismark: /cm/shared/apps/bismark/0.12.2/deduplicate_bismark
-  bsmap: /cm/shared/apps/bsmap/2.74/bsmap
-  #bsmap: /cm/shared/apps/bsmap/2.90/bin/bsmap
+  #bsmap: /cm/shared/apps/bsmap/2.74/bsmap
+  bsmap: /cm/shared/apps/bsmap/2.90/bin/bsmap
   biseq_tools: /data/groups/lab_bock/shared/resources/tools
 
 parameters:

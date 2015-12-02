@@ -283,6 +283,7 @@ cmd += " -S " + str(param.bsmap.random_number_seed)
 cmd += " -f " + str(param.bsmap.filter)
 cmd += " -q " + str(param.bsmap.quality_threshold)
 cmd += " -u"       # report unmapped reads (into same bam file)
+cmd += " -V 2"     # bsmap2.90 feature
 if args.paired_end:
 	cmd += " -m " + str(param.bsmap.minimal_insert_size)
 	cmd += " -x " + str(param.bsmap.maximal_insert_size)
@@ -300,6 +301,11 @@ def check_bsmap():
 
 
 pm.run(cmd, out_bsmap, follow=check_bsmap)
+
+# bsmap2.90 requires that
+cmd2 = tools.samtools + " sort -f " + out_bsmap + " " + out_bsmap
+cmd3 = tools.samtools + " index " + out_bsmap
+pm.run([cmd2, cmd3], out_bsmap + ".bai", nofail=True)
 
 # Clean up big intermediate files:
 pm.clean_add(os.path.join(bsmap_folder, "*.fastq"))
