@@ -257,8 +257,6 @@ myngstk.make_sure_path_exists(bsmap_folder)
 # no tmp folder needed for BSMAP alignment
 
 out_bsmap = os.path.join(bsmap_folder, args.sample_name + ".bam")
-#original filename in bash version of pipeline:
-#bsmap_aligned_bam=$align_dir/$sample.all.aligned.bsmap.$mismatches.mism.$allow_multimapper.r.bam
 
 
 # REMARK NS: In previous versions of the pipeline, TRIMGALORE used a .fq
@@ -420,9 +418,6 @@ biseq_methcall_file = os.path.join(biseq_output_path, "RRBS_cpgMethylation_" + a
 bigbed_output_path = os.path.join(param.pipeline_outfolder, "bigbed_" + args.genome_assembly)
 bigwig_output_path = os.path.join(param.pipeline_outfolder, "bigwig_" + args.genome_assembly)
 
-
-# bedToBigBed RRBS_cpgMethylation_01_2276TU.bed ~/linkto/resources/genomes/hg19/hg19.chromSizes RRBS_cpgMethylation_test2.bb
-
 myngstk.make_sure_path_exists (bigbed_output_path)
 myngstk.make_sure_path_exists (bigwig_output_path)
 bigbed_output_file = os.path.join(bigbed_output_path,"RRBS_" + args.sample_name + ".bb")
@@ -449,11 +444,11 @@ pm.run([cmd, cmd2], bigbed_output_file)
 # Let's also make bigwigs:
 
 # First convert to bedGraph
-# hard coding tabs doesn't seem to work:
-#cmd = "awk '{ printf \\\"%s\t%s\t%s\t%s\n\\\", $1, $2, $3, $5/10 }'"
 cmd = "awk -v OFS='\t' '{ print $1, $2, $3, $5/10 }'"
 cmd += " " + biseq_methcall_file
 cmd += " > " + out_bedGraph
+
+pm.clean_add(out_bedGraph, conditional=True)
 
 cmd2 = tools.bed2bigWig
 cmd2 += " " + out_bedGraph
@@ -461,6 +456,7 @@ cmd2 += " " + resources.chrom_sizes
 cmd2 += " " + out_bigwig
 
 pm.run([cmd, cmd2], out_bigwig, shell=True)
+
 
 ################################################################################
 # Calculate neighbor methylation matching
