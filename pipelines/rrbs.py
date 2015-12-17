@@ -485,14 +485,12 @@ myngstk.make_sure_path_exists (epilog_output_dir)
 epilog_outfile=os.path.join(epilog_output_dir, args.sample_name + "_epilog.bed")
 epilog_summary_file=os.path.join(epilog_output_dir, args.sample_name + "_epilog_summary.bed")
 
-
-
 cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
 cmd += " --infile=" + out_bsmap  # absolute path to the bsmap aligned bam
 cmd += " --p=" + resources.methpositions
 cmd += " --outfile=" + epilog_outfile
 cmd += " --summary-file=" + epilog_summary_file
-cmd += " --cores=" + args.cores
+cmd += " --cores=" + str(args.cores)
 
 pm.run(cmd, epilog_outfile)
 
@@ -596,7 +594,7 @@ cmd += " --infile=" + out_spikein_sorted + ".bam"  # absolute path to the bsmap 
 cmd += " --p=" + resources.spikein_methpositions
 cmd += " --outfile=" + epilog_spike_outfile
 cmd += " --summary=" + epilog_spike_summary_file
-cmd += " --cores=" + args.cores
+cmd += " --cores=" + str(args.cores)
 cmd += " -t=" + str(30)  # quality_threshold
 cmd += " -l=" + str(30)  # read length cutoff
 
