@@ -31,6 +31,9 @@ parser = pypiper.add_pypiper_args(parser, all_args=True)
 parser.add_argument('-t', '--trimgalore', dest='trimmomatic', action="store_false", default=True,
 	help='Use trimgalore instead of trimmomatic?')
 
+parser.add_argument('-e', '--epilog', dest='epilog', action="store_true", default=False,
+	help='Use epilog for meth calling?')
+
 args = parser.parse_args()
 
 if args.single_or_paired == "paired":
@@ -66,9 +69,13 @@ pm.config.resources.ref_genome_fasta = os.path.join(pm.config.resources.resource
 pm.config.resources.chrom_sizes = os.path.join(pm.config.resources.resources, "genomes", args.genome_assembly, args.genome_assembly + ".chromSizes")
 pm.config.resources.genomes_split = os.path.join(pm.config.resources.resources, "genomes_split")
 
-pm.config.resources.methpositions = os.path.join(pm.config.resources.resources, "regions", "cgs", args.genome_assembly + ".cgs.txt")
+pm.config.resources.methpositions = pm.config.resources.ref_genome_fasta + "_index.txt"
+# Old way:
+# os.path.join(pm.config.resources.resources, "regions", "cgs", args.genome_assembly + ".cgs.txt")
 
 pm.config.resources.bismark_spikein_genome = os.path.join(pm.config.resources.resources, "genomes", "meth_spikein_k1_k3", "indexed_bismark_bt1")
+
+pm.config.resources.spikein_methpositions = os.path.join(pm.config.resources.resources, "genomes", "meth_spikein_k1_k3", "k1_k3.fa" + "_index.txt")
 
 pm.config.parameters.pipeline_outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
 
@@ -475,20 +482,22 @@ cmd += " -q"
 pm.run(cmd, nmm_outfile)
 
 ################################################################################
-# Calculate neighbor methylation matching
-pm.timestamp("### Epilog Methcalling: ")
-epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
-myngstk.make_sure_path_exists (epilog_output_dir)
-epilog_outfile=os.path.join(epilog_output_dir, args.sample_name + "_epilog.bed")
 
-cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
-cmd += " --infile=" + out_bsmap  # absolute path to the bsmap aligned bam
-cmd += " --p=" + resources.methpositions
-cmd += " --outfile=" + epilog_outfile
-cmd += " --cores=4"
+if args.epilog:
+	pm.timestamp("### Epilog Methcalling: ")
+	epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+	myngstk.make_sure_path_exists (epilog_output_dir)
+	epilog_outfile=os.path.join(epilog_output_dir, args.sample_name + "_epilog.bed")
+	epilog_summary_file=os.path.join(epilog_output_dir, args.sample_name + "_epilog_summary.bed")
 
-pm.run(cmd, epilog_outfile)
+	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
+	cmd += " --infile=" + out_bsmap  # absolute path to the bsmap aligned bam
+	cmd += " --p=" + resources.methpositions
+	cmd += " --outfile=" + epilog_outfile
+	cmd += " --summary-file=" + epilog_summary_file
+	cmd += " --cores=" + args.cores
 
+	pm.run(cmd, epilog_outfile, nofail=True)
 
 ################################################################################
 pm.timestamp("### Bismark spike-in alignment: ")
@@ -576,6 +585,24 @@ pm.callprint(cmd1, shell=True, nofail=True)
 pm.callprint(cmd2, shell=True, nofail=True)
 
 # TODO: check if results file exists already...
+
+# spike in conversion efficiency calculation with epilog
+epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+myngstk.make_sure_path_exists (epilog_output_dir)
+epilog_spike_outfile=os.path.join(spikein_folder, args.sample_name + "_epilog.bed")
+epilog_spike_summary_file=os.path.join(spikein_folder, args.sample_name + "_epilog_summary.bed")
+
+
+cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
+cmd += " --infile=" + out_spikein_sorted + ".bam"  # absolute path to the bsmap aligned bam
+cmd += " --p=" + resources.spikein_methpositions
+cmd += " --outfile=" + epilog_spike_outfile
+cmd += " --summary=" + epilog_spike_summary_file
+cmd += " --cores=" + str(args.cores)
+cmd += " -t=" + str(30)  # quality_threshold
+cmd += " -l=" + str(30)  # read length cutoff
+
+pm.run(cmd, epilog_spike_outfile, nofail=True)
 
 
 # PDR calculation:
