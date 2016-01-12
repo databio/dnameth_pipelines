@@ -69,13 +69,15 @@ pm.config.resources.ref_genome_fasta = os.path.join(pm.config.resources.resource
 pm.config.resources.chrom_sizes = os.path.join(pm.config.resources.resources, "genomes", args.genome_assembly, args.genome_assembly + ".chromSizes")
 pm.config.resources.genomes_split = os.path.join(pm.config.resources.resources, "genomes_split")
 
-pm.config.resources.methpositions = pm.config.resources.ref_genome_fasta + "_index.txt"
+
+pm.config.resources.methpositions = os.path.join(pm.config.resources.resources, "genomes", args.genome_assembly, "indexed_epilog", args.genome_assembly + "_index.tsv.gz")
+# pm.config.resources.methpositions = pm.config.resources.ref_genome_fasta + "_index.txt"
 # Old way:
 # os.path.join(pm.config.resources.resources, "regions", "cgs", args.genome_assembly + ".cgs.txt")
 
 pm.config.resources.bismark_spikein_genome = os.path.join(pm.config.resources.resources, "genomes", "meth_spikein_k1_k3", "indexed_bismark_bt1")
 
-pm.config.resources.spikein_methpositions = os.path.join(pm.config.resources.resources, "genomes", "meth_spikein_k1_k3", "k1_k3.fa" + "_index.txt")
+pm.config.resources.spikein_methpositions = os.path.join(pm.config.resources.resources, "genomes", "meth_spikein_k1_k3", "indexed_epilog", "k1_k3_index.tsv.gz")
 
 pm.config.parameters.pipeline_outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
 
