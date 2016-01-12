@@ -587,8 +587,6 @@ cmd2 = cmd1.replace("K1_unmethylated", "K3_methylated")
 pm.callprint(cmd1, shell=True, nofail=True)
 pm.callprint(cmd2, shell=True, nofail=True)
 
-# TODO: check if results file exists already...
-
 # spike in conversion efficiency calculation with epilog
 epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
 myngstk.make_sure_path_exists (epilog_output_dir)
@@ -607,6 +605,20 @@ cmd += " -l=" + str(30)  # read length cutoff
 
 pm.run(cmd, epilog_spike_outfile, nofail=True)
 
+# Now parse some results for pypiper result reporting.
+
+spike_chroms = myngstk.get_chrs_from_bam(out_spikein_sorted + ".bam")
+for chrom in spike_chroms:
+	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "tsv_parser.py")
+	cmd += " -i " + os.path.join(biseq_output_path, epilog_spike_summary_file)
+	cmd += " -r context=C chr=" + chrom
+
+	cmd_total = cmd + " -c " + "total"
+	x = pm.checkprint(cmd_total, shell=True)
+	pm.report_result(chrom+'_count_EL', x)
+	cmd_rate = cmd + " -c " + "rate"
+	x = pm.checkprint(cmd_rate, shell=True)
+	pm.report_result(chrom+'_meth_EL', x)
 
 # PDR calculation:
 ################################################################################
