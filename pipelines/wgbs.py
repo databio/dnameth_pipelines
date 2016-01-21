@@ -52,7 +52,7 @@ else:
 
 
 # Create a PipelineManager object and start the pipeline
-pm = pypiper.PipelineManager(name = "RRBS", outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name)), args = args)
+pm = pypiper.PipelineManager(name = "WGBS", outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name)), args = args)
 
 # Set up a few additional paths not in the config file
 pm.config.tools.scripts_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tools")
