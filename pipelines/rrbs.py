@@ -57,25 +57,19 @@ else:
 		args.sample_name = os.path.splitext(os.path.basename(args.input[0]))[0]
 
 # Create a PipelineManager object and start the pipeline
-
 pm = pypiper.PipelineManager(name = "RRBS", outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name)), args = args)
 
 # Set up a few additional paths not in the config file
 pm.config.tools.scripts_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tools")
-pm.config.resources.ref_genome = os.path.join(pm.config.resources.resources, "genomes")
-pm.config.resources.ref_genome_fasta = os.path.join(pm.config.resources.resources, "genomes", args.genome_assembly, args.genome_assembly + ".fa")
-pm.config.resources.chrom_sizes = os.path.join(pm.config.resources.resources, "genomes", args.genome_assembly, args.genome_assembly + ".chromSizes")
+pm.config.resources.ref_genome = os.path.join(pm.config.resources.genomes)
+pm.config.resources.ref_genome_fasta = os.path.join(pm.config.resources.genomes, args.genome_assembly, args.genome_assembly + ".fa")
+pm.config.resources.chrom_sizes = os.path.join(pm.config.resources.genomes, args.genome_assembly, args.genome_assembly + ".chromSizes")
 pm.config.resources.genomes_split = os.path.join(pm.config.resources.resources, "genomes_split")
+pm.config.resources.bismark_spikein_genome = os.path.join(pm.config.resources.genomes, pm.config.resources.spikein_genome, "indexed_bismark_bt1")
 
-
-pm.config.resources.methpositions = os.path.join(pm.config.resources.resources, "genomes", args.genome_assembly, "indexed_epilog", args.genome_assembly + "_index.tsv.gz")
-# pm.config.resources.methpositions = pm.config.resources.ref_genome_fasta + "_index.txt"
-# Old way:
-# os.path.join(pm.config.resources.resources, "regions", "cgs", args.genome_assembly + ".cgs.txt")
-
-pm.config.resources.bismark_spikein_genome = os.path.join(pm.config.resources.resources, "genomes", "meth_spikein_k1_k3", "indexed_bismark_bt1")
-
-pm.config.resources.spikein_methpositions = os.path.join(pm.config.resources.resources, "genomes", "meth_spikein_k1_k3", "indexed_epilog", "k1_k3_index.tsv.gz")
+# Epilog indexes
+pm.config.resources.methpositions = os.path.join(pm.config.resources.genomes, args.genome_assembly, "indexed_epilog", args.genome_assembly + "_index.tsv.gz")
+pm.config.resources.spikein_methpositions = os.path.join(pm.config.resources.genomes, pm.config.resources.spikein_genome, "indexed_epilog", pm.config.resources.spikein_genome + "_index.tsv.gz")
 
 pm.config.parameters.pipeline_outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
 

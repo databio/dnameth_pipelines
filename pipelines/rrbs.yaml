@@ -3,6 +3,7 @@ resources:
   resources: /data/groups/lab_bock/shared/resources
   genomes: /data/groups/lab_bock/shared/resources/genomes/
   adapter_file: /data/groups/lab_bock/shared/resources/adapters/RRBS_adapters.fa
+  spikein_genome: meth_spikein_k1_k3
 
 tools:
   # paths to required tools
