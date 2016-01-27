@@ -56,8 +56,6 @@ pm = pypiper.PipelineManager(name = "WGBS", outfolder = os.path.abspath(os.path.
 
 # Set up a few additional paths not in the config file
 pm.config.tools.scripts_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tools")
-pm.config.resources.adapter_file = os.path.join(pm.config.resources.resources, "adapters", "epignome_adapters_2_add.fa")
-pm.config.resources.rrbs_adapter_file = os.path.join(pm.config.resources.resources, "adapters", "RRBS_adapters.fa")
 pm.config.resources.ref_genome = os.path.join(pm.config.resources.resources, "genomes")
 pm.config.resources.ref_genome_fasta = os.path.join(pm.config.resources.resources, "genomes", args.genome_assembly, args.genome_assembly + ".fa")
 pm.config.resources.chrom_sizes = os.path.join(pm.config.resources.resources, "genomes", args.genome_assembly, args.genome_assembly + ".chromSizes")
