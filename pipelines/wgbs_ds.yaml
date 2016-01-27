@@ -1,9 +1,12 @@
+# An alternative config file to turn off the epignome head clip in the primary
+# WGBS config.
+
 resources:
   # paths to reference genomes, adapter files, and other required shared data
   resources: /data/groups/lab_bock/shared/resources
   genomes: /data/groups/lab_bock/shared/resources/genomes/
-  adapter_file: /data/groups/lab_bock/shared/resources/adapters/epignome_adapters.fa
-  spikein_genome: meth_spikein_k1_k3
+  adapter_file: /data/groups/lab_bock/shared/resources/adapters/ATAC_stanford.fa
+  spikein_genome: meth_spikein_CEGX
 
 tools:
   # absolute paths to required tools
@@ -29,4 +32,5 @@ parameters:
   trimmomatic:
     memory: 4  # memory allocated to java VM in GB
     threads: 30
-    illuminaclip: ":2:10:4:1:true:epignome:5 SLIDINGWINDOW:4:1 MAXINFO:16:0.40 MINLEN:25"
+    #illuminaclip: ":2:10:4:1:true:epignome:5 SLIDINGWINDOW:4:1 MAXINFO:16:0.40 MINLEN:25"
+    illuminaclip: ":2:10:4:1:true:epignome:0 SLIDINGWINDOW:4:1 MAXINFO:16:0.40 MINLEN:25"
