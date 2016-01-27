@@ -79,7 +79,8 @@ myngstk = pypiper.NGSTk(args.config_file)
 myngstk.make_sure_path_exists(os.path.join(param.pipeline_outfolder, "unmapped_bam"))
 
 if merge:
-	if not args.input.endswith(".bam"):
+	if not all([x.endswith(".bam") for x in args.input]):
+#	if not args.input.endswith(".bam"):
 		raise NotImplementedError("Currently we can only merge bam inputs")
 	merge_folder = os.path.join(param.pipeline_outfolder, "unmapped_bam")
 	sample_merged_bam = args.sample_name + ".merged.bam"
