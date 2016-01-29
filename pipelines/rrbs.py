@@ -61,11 +61,11 @@ pm = pypiper.PipelineManager(name = "RRBS", outfolder = os.path.abspath(os.path.
 
 # Set up a few additional paths not in the config file
 pm.config.tools.scripts_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tools")
-pm.config.resources.ref_genome = os.path.join(pm.config.resources.genomes)
 pm.config.resources.ref_genome_fasta = os.path.join(pm.config.resources.genomes, args.genome_assembly, args.genome_assembly + ".fa")
 pm.config.resources.chrom_sizes = os.path.join(pm.config.resources.genomes, args.genome_assembly, args.genome_assembly + ".chromSizes")
 pm.config.resources.genomes_split = os.path.join(pm.config.resources.resources, "genomes_split")
 pm.config.resources.bismark_spikein_genome = os.path.join(pm.config.resources.genomes, pm.config.resources.spikein_genome, "indexed_bismark_bt1")
+
 
 # Epilog indexes
 pm.config.resources.methpositions = os.path.join(pm.config.resources.genomes, args.genome_assembly, "indexed_epilog", args.genome_assembly + "_index.tsv.gz")
@@ -647,7 +647,7 @@ if not args.paired_end:
 	cmd1 += " --outfile=" + pdr_bedfile
 	cmd1 += " --skipHeaderLines=0"
 	cmd1 += " --genome=" + args.genome_assembly
-	cmd1 += " --genomeDir=" + resources.ref_genome
+	cmd1 += " --genomeDir=" + resources.genomes
 	cmd1 += " --minNonCpgSites=3"   # These two parameters are not relevant for PDR analysis
 	cmd1 += " --minConversionRate=0.9"
 

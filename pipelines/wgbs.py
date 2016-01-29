@@ -56,7 +56,6 @@ pm = pypiper.PipelineManager(name = "WGBS", outfolder = os.path.abspath(os.path.
 
 # Set up a few additional paths not in the config file
 pm.config.tools.scripts_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tools")
-pm.config.resources.ref_genome = os.path.join(pm.config.resources.genomes)
 pm.config.resources.ref_genome_fasta = os.path.join(pm.config.resources.genomes, args.genome_assembly, args.genome_assembly + ".fa")
 pm.config.resources.chrom_sizes = os.path.join(pm.config.resources.genomes, args.genome_assembly, args.genome_assembly + ".chromSizes")
 pm.config.resources.genomes_split = os.path.join(pm.config.resources.resources, "genomes_split")
@@ -282,7 +281,7 @@ cmd += " --infile=" + out_sam
 cmd += " --outfile=" + out_sam_filter
 cmd += " --skipHeaderLines=" + headerLines
 cmd += " --genome=" + args.genome_assembly
-cmd += " --genomeDir=" + resources.ref_genome
+cmd += " --genomeDir=" + resources.genomes
 cmd += " --minNonCpgSites=3"
 cmd += " --minConversionRate=0.9"
 if args.paired_end:
