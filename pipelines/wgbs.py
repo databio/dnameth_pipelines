@@ -147,7 +147,14 @@ if input_ext ==".bam":
 	pm.run(cmd, unaligned_fastq, follow=check_fastq)
 elif input_ext == ".fastq.gz":
 	print("Found gz fastq file")
-	cmd = "gunzip -c " + local_unmapped_bam_abs + " > " + unaligned_fastq
+	if args.paired_end:
+		# For paired-end reads in one fastq file, we must split the file into 2.
+		cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "fastq_split.py")
+		cmd += " -i " + local_unmapped_bam_abs
+		cmd += " -o " + out_fastq_pre
+	else:
+		# For single-end reads, we just unzip the fastq.gz file.
+		cmd = "gunzip -c " + local_unmapped_bam_abs + " > " + unaligned_fastq
 	myngstk.make_sure_path_exists(fastq_folder)
 	pm.run(cmd, unaligned_fastq, shell=True, follow=lambda:
 		pm.report_result("Fastq_reads",  myngstk.count_reads(unaligned_fastq, args.paired_end)))
