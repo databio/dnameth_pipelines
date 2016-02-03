@@ -453,13 +453,46 @@ pm.run([cmd, cmd2, cmd3, cmd4], out_spikein_sorted +".bam.bai", nofail=True)
 # Spike-in methylation calling
 ################################################################################
 pm.timestamp("### Methylation calling (testxmz) Spike-in: ")
+spike_chroms = myngstk.get_chrs_from_bam(out_spikein_sorted + ".bam")
 
-cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "testxmz.py")
-cmd1 += " " + out_spikein_sorted + ".bam" + " " + "K1_unmethylated"
-cmd1 += " >> " + pm.pipeline_stats_file
-cmd2 = cmd1.replace("K1_unmethylated", "K3_methylated")
-pm.callprint(cmd1, shell=True, nofail=True)
-pm.callprint(cmd2, shell=True, nofail=True)
+for chrom in spike_chroms:
+	cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "testxmz.py")
+	cmd1 += " " + out_spikein_sorted + ".bam" + " " + chrom
+	cmd1 += " >> " + pm.pipeline_stats_file
+	pm.callprint(cmd1, shell=True, nofail=True)
+
+
+# spike in conversion efficiency calculation with epilog
+epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+myngstk.make_sure_path_exists (epilog_output_dir)
+epilog_spike_outfile=os.path.join(spikein_folder, args.sample_name + "_epilog.bed")
+epilog_spike_summary_file=os.path.join(spikein_folder, args.sample_name + "_epilog_summary.bed")
+
+
+cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
+cmd += " --infile=" + out_spikein_sorted + ".bam"  # absolute path to the bsmap aligned bam
+cmd += " --p=" + resources.spikein_methpositions
+cmd += " --outfile=" + epilog_spike_outfile
+cmd += " --summary=" + epilog_spike_summary_file
+cmd += " --cores=" + str(args.cores)
+cmd += " -t=" + str(30)  # quality_threshold
+cmd += " -l=" + str(30)  # read length cutoff
+
+pm.run(cmd, epilog_spike_outfile, nofail=True)
+
+# Now parse some results for pypiper result reporting.
+
+for chrom in spike_chroms:
+	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "tsv_parser.py")
+	cmd += " -i " + os.path.join(biseq_output_path, epilog_spike_summary_file)
+	cmd += " -r context=C chr=" + chrom
+
+	cmd_total = cmd + " -c " + "total"
+	x = pm.checkprint(cmd_total, shell=True)
+	pm.report_result(chrom+'_count_EL', x)
+	cmd_rate = cmd + " -c " + "rate"
+	x = pm.checkprint(cmd_rate, shell=True)
+	pm.report_result(chrom+'_meth_EL', x)
 
 
 # Final sorting and indexing

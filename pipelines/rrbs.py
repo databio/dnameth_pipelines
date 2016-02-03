@@ -575,13 +575,13 @@ pm.clean_add(out_spikein_dedup, conditional=False)
 # Spike-in methylation calling
 ################################################################################
 pm.timestamp("### Methylation calling (testxmz) Spike-in: ")
+spike_chroms = myngstk.get_chrs_from_bam(out_spikein_sorted + ".bam")
 
-cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "testxmz.py")
-cmd1 += " " + out_spikein_sorted + ".bam" + " " + "K1_unmethylated"
-cmd1 += " >> " + pm.pipeline_stats_file
-cmd2 = cmd1.replace("K1_unmethylated", "K3_methylated")
-pm.callprint(cmd1, shell=True, nofail=True)
-pm.callprint(cmd2, shell=True, nofail=True)
+for chrom in spike_chroms:
+	cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "testxmz.py")
+	cmd1 += " " + out_spikein_sorted + ".bam" + " " + chrom
+	cmd1 += " >> " + pm.pipeline_stats_file
+	pm.callprint(cmd1, shell=True, nofail=True)
 
 # spike in conversion efficiency calculation with epilog
 epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
@@ -603,7 +603,6 @@ pm.run(cmd, epilog_spike_outfile, nofail=True)
 
 # Now parse some results for pypiper result reporting.
 
-spike_chroms = myngstk.get_chrs_from_bam(out_spikein_sorted + ".bam")
 for chrom in spike_chroms:
 	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "tsv_parser.py")
 	cmd += " -i " + os.path.join(biseq_output_path, epilog_spike_summary_file)
