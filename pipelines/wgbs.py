@@ -27,6 +27,10 @@ parser = ArgumentParser(description='Pipeline')
 # http://github.com/epigen/pypiper/command_line_args.md
 parser = pypiper.add_pypiper_args(parser, all_args=True)
 
+
+parser.add_argument('-e', '--epilog', dest='epilog', action="store_true", default=False,
+	help='Use epilog for meth calling?')
+
 args = parser.parse_args()
 
 if args.single_or_paired == "paired":
@@ -390,6 +394,23 @@ cmd += " " + out_bigwig
 
 pm.run(cmd, out_bigwig, shell=False)
 
+################################################################################
+
+if args.epilog:
+	pm.timestamp("### Epilog Methcalling: ")
+	epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+	myngstk.make_sure_path_exists (epilog_output_dir)
+	epilog_outfile=os.path.join(epilog_output_dir, args.sample_name + "_epilog.bed")
+	epilog_summary_file=os.path.join(epilog_output_dir, args.sample_name + "_epilog_summary.bed")
+
+	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
+	cmd += " --infile=" + out_bsmap  # absolute path to the bsmap aligned bam
+	cmd += " --p=" + resources.methpositions
+	cmd += " --outfile=" + epilog_outfile
+	cmd += " --summary-file=" + epilog_summary_file
+	cmd += " --cores=" + args.cores
+
+	pm.run(cmd, epilog_outfile, nofail=True)
 
 # Spike-in alignment
 ################################################################################
