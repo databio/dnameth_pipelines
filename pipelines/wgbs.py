@@ -398,8 +398,9 @@ pm.run(cmd, out_bigwig, shell=False)
 
 if args.epilog:
 	# out_bismark must be indexed in order for epilog to use it
-	cmd = tools.samtools + " index " + out_bismark
-	pm.run(cmd, out_bismark + ".bai")
+	cmd2 = tools.samtools + " sort -f " + out_bismark + " " + out_bismark
+	cmd3 = tools.samtools + " index " + out_bismark
+	pm.run([cmd2, cmd3], out_bismark + ".bai")
 
 	pm.timestamp("### Epilog Methcalling: ")
 	epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
