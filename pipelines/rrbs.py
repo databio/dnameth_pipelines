@@ -605,7 +605,7 @@ pm.run(cmd, epilog_spike_outfile, nofail=True)
 
 for chrom in spike_chroms:
 	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "tsv_parser.py")
-	cmd += " -i " + os.path.join(biseq_output_path, epilog_spike_summary_file)
+	cmd += " -i " + os.path.join(spikein_folder, epilog_spike_summary_file)
 	cmd += " -r context=C chr=" + chrom
 
 	cmd_total = cmd + " -c " + "total"
