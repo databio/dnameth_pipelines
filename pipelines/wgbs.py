@@ -243,9 +243,9 @@ cmd += " --basename=" +args.sample_name
 pm.run(cmd, out_bismark)
 
 def check_bismark():
-	x = myngstk.count_mapped_reads(out_bsmap, args.paired_end)
+	x = myngstk.count_mapped_reads(out_bismark, args.paired_end)
 	pm.report_result("Aligned_reads", x)
-	x = myngstk.count_multimapping_reads(out_bsmap, args.paired_end)
+	x = myngstk.count_multimapping_reads(out_bismark, args.paired_end)
 	pm.report_result("Multimap_reads", x)
 
 
@@ -404,7 +404,7 @@ if args.epilog:
 	epilog_summary_file=os.path.join(epilog_output_dir, args.sample_name + "_epilog_summary.bed")
 
 	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
-	cmd += " --infile=" + out_bsmap  # absolute path to the bsmap aligned bam
+	cmd += " --infile=" + out_bismark  # absolute path to the aligned bam
 	cmd += " --p=" + resources.methpositions
 	cmd += " --outfile=" + epilog_outfile
 	cmd += " --summary-file=" + epilog_summary_file
