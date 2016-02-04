@@ -414,6 +414,7 @@ if args.epilog:
 	cmd += " --outfile=" + epilog_outfile
 	cmd += " --summary-file=" + epilog_summary_file
 	cmd += " --cores=" + args.cores
+	cmd += " -r=" + 0  # Turn off RRBS mode
 
 	pm.run(cmd, epilog_outfile, nofail=True)
 
@@ -505,6 +506,7 @@ cmd += " --summary=" + epilog_spike_summary_file
 cmd += " --cores=" + str(args.cores)
 cmd += " -t=" + str(30)  # quality_threshold
 cmd += " -l=" + str(30)  # read length cutoff
+cmd += " -r=" + str(0)  # no rrbs mode for WGBS pipeline
 
 pm.run(cmd, epilog_spike_outfile, nofail=True)
 
