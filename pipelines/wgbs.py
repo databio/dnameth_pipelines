@@ -425,8 +425,10 @@ out_spikein_base = args.sample_name + ".spikein.aln"
 #out_spikein = spikein_folder + args.sample_name + "_R1_trimmed.fastq_unmapped_reads_1.fq_bismark_pe.bam"
 
 unmapped_reads_pre = os.path.join(bismark_folder, args.sample_name)
-
-out_spikein = os.path.join(spikein_folder, out_spikein_base + ".bam")
+if args.paired_end:
+	out_spikein = os.path.join(spikein_folder, out_spikein_base + "_pe.bam")
+else:
+	out_spikein = os.path.join(spikein_folder, out_spikein_base + ".bam")
 cmd = tools.bismark + " " + resources.bismark_spikein_genome + " "
 if args.paired_end:
 	cmd += " --1 " + unmapped_reads_pre + "_unmapped_reads_1.fq"
