@@ -156,11 +156,14 @@ elif input_ext == ".fastq.gz":
 		cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "fastq_split.py")
 		cmd += " -i " + local_unmapped_bam_abs
 		cmd += " -o " + out_fastq_pre
+		fq_shell = False  # No shell necessary here
 	else:
 		# For single-end reads, we just unzip the fastq.gz file.
 		cmd = "gunzip -c " + local_unmapped_bam_abs + " > " + unaligned_fastq
+		fq_shell = True  # For this command we need shell.
+
 	myngstk.make_sure_path_exists(fastq_folder)
-	pm.run(cmd, unaligned_fastq, shell=True, follow=lambda:
+	pm.run(cmd, unaligned_fastq, shell=fq_shell, follow=lambda:
 		pm.report_result("Fastq_reads",  myngstk.count_reads(unaligned_fastq, args.paired_end)))
 
 # Adapter trimming
