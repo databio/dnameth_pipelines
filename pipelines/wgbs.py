@@ -417,7 +417,7 @@ if args.epilog:
 	cmd += " --outfile=" + epilog_outfile
 	cmd += " --summary-file=" + epilog_summary_file
 	cmd += " --cores=" + args.cores
-	cmd += " -r=" + 0  # Turn off RRBS mode
+	cmd += " -r=" + str(0)  # Turn off RRBS mode
 
 	pm.run(cmd, epilog_outfile, nofail=True)
 
