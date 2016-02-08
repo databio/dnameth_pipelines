@@ -243,6 +243,11 @@ if args.paired_end:
 cmd += " -p 8 " # Number of processors
 cmd += " --basename=" +args.sample_name
 
+# By default, BS-seq libraries are directional, but this can be turned off
+# in bismark for non-directional protocols
+if param.bismark.nondirectional:
+	cmd += " --non-directional"
+
 pm.run(cmd, out_bismark)
 
 def check_bismark():
@@ -414,7 +419,7 @@ if args.epilog:
 	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
 	cmd += " --infile=" + out_bismark  # absolute path to the aligned bam
 	cmd += " --p=" + resources.methpositions
-	cmd += " --outfile=" + epilog_outfile
+	cmd += " --outfil e=" + epilog_outfile
 	cmd += " --summary-file=" + epilog_summary_file
 	cmd += " --cores=" + args.cores
 	cmd += " -r=" + str(0)  # Turn off RRBS mode
