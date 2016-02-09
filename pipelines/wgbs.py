@@ -246,7 +246,7 @@ cmd += " --basename=" +args.sample_name
 # By default, BS-seq libraries are directional, but this can be turned off
 # in bismark for non-directional protocols
 if param.bismark.nondirectional:
-	cmd += " --non-directional"
+	cmd += " --non_directional"
 
 pm.run(cmd, out_bismark)
 
