@@ -240,7 +240,7 @@ cmd += " --output_dir " + bismark_folder
 if args.paired_end:
 	cmd += " --minins 0"
 	cmd += " --maxins 5000"
-cmd += " -p 8 " # Number of processors
+cmd += " -p " + str(args.cores) # Number of processors
 cmd += " --basename=" +args.sample_name
 
 # By default, BS-seq libraries are directional, but this can be turned off
