@@ -127,11 +127,6 @@ pm.report_result("File_mb", round((input_size/1024)/1024,2))
 pm.report_result("Read_type",args.single_or_paired)
 pm.report_result("Genome",args.genome_assembly)
 
-# Increase mem for big files... 
-# maybe take this out now that I pass in mem from looper.
-if input_size > 10000:
-	myngstk.set_java_mem("16g")
-
 
 # Fastq conversion
 ################################################################################
