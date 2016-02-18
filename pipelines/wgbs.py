@@ -78,8 +78,7 @@ param = pm.config.parameters
 resources = pm.config.resources
 
 # Create a ngstk object
-myngstk = pypiper.NGSTk(args.config_file)
-myngstk.set_java_mem(pm.mem)
+myngstk = pypiper.NGSTk(pm=pm)
 
 myngstk.make_sure_path_exists(os.path.join(param.pipeline_outfolder, "unmapped_bam"))
 
