@@ -80,6 +80,8 @@ resources = pm.config.resources
 
 # Create a ngstk object
 myngstk = pypiper.NGSTk(args.config_file)
+myngstk.set_java_mem(pm.mem)
+
 
 myngstk.make_sure_path_exists(os.path.join(param.pipeline_outfolder, "unmapped_bam"))
 
@@ -130,8 +132,12 @@ pm.report_result("Genome",args.genome_assembly)
 
 # Fastq conversion can run out of heap space with the default java memory
 # parameter for large input files.
+
 if input_size > 10000:
 	myngstk.set_java_mem("16g")
+
+
+
 
 # Fastq conversion
 ################################################################################
@@ -195,13 +201,13 @@ if args.trimmomatic:
 	# use more memory on systems that have more memory, leading to node-dependent
 	# killing effects that are hard to trace.
 
-	cmd = tools.java + " -Xmx" + str(param.trimmomatic.memory) + "g -jar " + tools.trimmomatic_epignome
+	cmd = tools.java + " -Xmx" + str(param.java.mem) + " -jar " + tools.trimmomatic_epignome
 	if args.paired_end:
 		cmd += " PE"
 	else:
 		cmd += " SE"
 	cmd += " -" + encoding
-	cmd += " -threads " + str(param.trimmomatic.threads) + " "
+	cmd += " -threads " + str(args.cores) + " "
 	#cmd += " -trimlog " + os.path.join(fastq_folder, "trimlog.log") + " "
 	if args.paired_end:
 		cmd += out_fastq_pre + "_R1.fastq "
@@ -475,7 +481,7 @@ cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "methylMatch.py")
 cmd += " --inFile=" + out_bsmap      # this is the absolute path to the bsmap aligned bam file
 cmd += " --methFile=" + biseq_methcall_file
 cmd += " --outFile=" + nmm_outfile
-cmd += " --cores=4"
+cmd += " --cores=" + str(args.cores)
 cmd += " -q"
 
 pm.run(cmd, nmm_outfile)
@@ -494,7 +500,7 @@ if args.epilog:
 	cmd += " --p=" + resources.methpositions
 	cmd += " --outfile=" + epilog_outfile
 	cmd += " --summary-file=" + epilog_summary_file
-	cmd += " --cores=" + args.cores
+	cmd += " --cores=" + str(args.cores)
 
 	pm.run(cmd, epilog_outfile, nofail=True)
 

@@ -79,6 +79,7 @@ resources = pm.config.resources
 
 # Create a ngstk object
 myngstk = pypiper.NGSTk(args.config_file)
+myngstk.set_java_mem(pm.mem)
 
 myngstk.make_sure_path_exists(os.path.join(param.pipeline_outfolder, "unmapped_bam"))
 
@@ -126,6 +127,12 @@ input_size = float(input_size.replace("'",""))
 pm.report_result("File_mb", round((input_size/1024)/1024,2))
 pm.report_result("Read_type",args.single_or_paired)
 pm.report_result("Genome",args.genome_assembly)
+
+# Increase mem for big files... 
+# maybe take this out now that I pass in mem from looper.
+if input_size > 10000:
+	myngstk.set_java_mem("16g")
+
 
 # Fastq conversion
 ################################################################################
@@ -184,13 +191,13 @@ else:
 trimmed_fastq = out_fastq_pre + "_R1_trimmed.fq"
 trimmed_fastq_R2 = out_fastq_pre + "_R2_trimmed.fq"
 
-cmd = tools.java + " -Xmx" + str(param.trimmomatic.memory) + "g -jar " + tools.trimmomatic_epignome
+cmd = tools.java + " -Xmx" + str(pm.mem) + " -jar " + tools.trimmomatic_epignome
 if args.paired_end:
 	cmd += " PE"
 else:
 	cmd += " SE"
 cmd += " -" + encoding
-cmd += " -threads " + str(param.trimmomatic.threads) + " "
+cmd += " -threads " + str(args.cores) + " "
 #cmd += " -trimlog " + os.path.join(fastq_folder, "trimlog.log") + " "
 if args.paired_end:
 	cmd += out_fastq_pre + "_R1.fastq "
@@ -202,7 +209,8 @@ if args.paired_end:
 else:
 	cmd += out_fastq_pre + "_R1.fastq "
 	cmd += out_fastq_pre + "_R1_trimmed.fq "
-cmd += " HEADCROP:6 ILLUMINACLIP:" + resources.adapter_file + param.trimmomatic.illuminaclip
+cmd += " " + param.trimmomatic.trimsteps
+cmd += " ILLUMINACLIP:" + resources.adapter_file + param.trimmomatic.illuminaclip
 
 pm.run(cmd, trimmed_fastq, follow=lambda:
 	pm.report_result("Trimmed_reads",  myngstk.count_reads(trimmed_fastq, args.paired_end)))
@@ -421,7 +429,7 @@ if args.epilog:
 	cmd += " --p=" + resources.methpositions
 	cmd += " --outfil e=" + epilog_outfile
 	cmd += " --summary-file=" + epilog_summary_file
-	cmd += " --cores=" + args.cores
+	cmd += " --cores=" + str(args.cores)
 	cmd += " -r=" + str(0)  # Turn off RRBS mode
 
 	pm.run(cmd, epilog_outfile, nofail=True)
