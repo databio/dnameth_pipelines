@@ -305,7 +305,7 @@ if args.paired_end and secondary_single:
 	if param.bismark.nondirectional:
 		cmd += " --non_directional"
 
-
+	pm.run(cmd, out_bismark2)
 
 
 
