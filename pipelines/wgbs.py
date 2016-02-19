@@ -228,10 +228,10 @@ if param.bismark.nondirectional:
 else:
 	bismark_bowtie_threads = 2
 
-bismark_cores = pm.cores // bismark_bowtie_threads
+bismark_cores = int(pm.cores) // bismark_bowtie_threads
 
-if pm.cores % bismark_bowtie_threads != 0:
-	print("inefficient core request; make divisible by " + 	bismark_bowtie_threads)
+if int(pm.cores) % bismark_bowtie_threads != 0:
+	print("inefficient core request; make divisible by " + 	str(bismark_bowtie_threads))
 
 bismark_folder = os.path.join(param.pipeline_outfolder, "bismark_" + args.genome_assembly )
 myngstk.make_sure_path_exists(bismark_folder)
