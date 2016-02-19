@@ -30,3 +30,4 @@ parameters:
     illuminaclip: ":2:10:4:1:true:epignome:5 SLIDINGWINDOW:4:1 MAXINFO:16:0.40 MINLEN:25"
   bismark:
     nondirectional: false
+    maxins: 5000

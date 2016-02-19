@@ -241,7 +241,7 @@ cmd += " --temp_dir " + bismark_temp
 cmd += " --output_dir " + bismark_folder
 if args.paired_end:
 	cmd += " --minins 0"
-	cmd += " --maxins 5000"
+	cmd += " --maxins " + str(param.bismark.maxins)
 cmd += " -p " + str(pm.cores) # Number of processors
 cmd += " --basename=" +args.sample_name
 
