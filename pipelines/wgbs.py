@@ -218,6 +218,21 @@ pm.clean_add(fastq_folder, conditional=True)
 # WGBS alignment with bismark.
 ################################################################################
 pm.timestamp("### Bismark alignment: ")
+# Bismark will start multiple instances of bowtie, so we have to split
+# the alotted cores among the instances. Otherwise we will use 2x or 4x the number
+# of cores that we aresupposed to. It will start 2 threads in
+# normal mode, and 4 in --non-directional mode.
+
+if param.bismark.nondirectional:
+	bismark_bowtie_threads = 4
+else:
+	bismark_bowtie_threads = 2
+
+bismark_cores = pm.cores // bismark_bowtie_threads
+
+if pm.cores % bismark_bowtie_threads != 0:
+	print("inefficient core request; make divisible by " + 	bismark_bowtie_threads)
+
 bismark_folder = os.path.join(param.pipeline_outfolder, "bismark_" + args.genome_assembly )
 myngstk.make_sure_path_exists(bismark_folder)
 bismark_temp = os.path.join(bismark_folder, "bismark_temp" )
@@ -242,7 +257,7 @@ cmd += " --output_dir " + bismark_folder
 if args.paired_end:
 	cmd += " --minins 0"
 	cmd += " --maxins " + str(param.bismark.maxins)
-cmd += " -p " + str(pm.cores) # Number of processors
+cmd += " -p " + str(bismark cores) # Number of processors
 cmd += " --basename=" +args.sample_name
 
 # By default, BS-seq libraries are directional, but this can be turned off
