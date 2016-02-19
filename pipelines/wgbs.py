@@ -191,7 +191,7 @@ if args.paired_end:
 else:
 	cmd += " SE"
 cmd += " -" + encoding
-cmd += " -threads " + str(args.cores) + " "
+cmd += " -threads " + str(pm.cores) + " "
 #cmd += " -trimlog " + os.path.join(fastq_folder, "trimlog.log") + " "
 if args.paired_end:
 	cmd += out_fastq_pre + "_R1.fastq "
@@ -242,7 +242,7 @@ cmd += " --output_dir " + bismark_folder
 if args.paired_end:
 	cmd += " --minins 0"
 	cmd += " --maxins 5000"
-cmd += " -p " + str(args.cores) # Number of processors
+cmd += " -p " + str(pm.cores) # Number of processors
 cmd += " --basename=" +args.sample_name
 
 # By default, BS-seq libraries are directional, but this can be turned off
@@ -423,7 +423,7 @@ if args.epilog:
 	cmd += " --p=" + resources.methpositions
 	cmd += " --outfil e=" + epilog_outfile
 	cmd += " --summary-file=" + epilog_summary_file
-	cmd += " --cores=" + str(args.cores)
+	cmd += " --cores=" + str(pm.cores)
 	cmd += " -r=" + str(0)  # Turn off RRBS mode
 
 	pm.run(cmd, epilog_outfile, nofail=True)
@@ -513,7 +513,7 @@ cmd += " --infile=" + out_spikein_sorted + ".bam"  # absolute path to the bsmap 
 cmd += " --p=" + resources.spikein_methpositions
 cmd += " --outfile=" + epilog_spike_outfile
 cmd += " --summary=" + epilog_spike_summary_file
-cmd += " --cores=" + str(args.cores)
+cmd += " --cores=" + str(pm.cores)
 cmd += " -t=" + str(30)  # quality_threshold
 cmd += " -l=" + str(30)  # read length cutoff
 cmd += " -r=" + str(0)  # no rrbs mode for WGBS pipeline
@@ -545,7 +545,7 @@ out_final = os.path.join(bismark_folder, args.sample_name + ".final.bam")
 
 
 # Sort
-cmd = tools.java + " -Xmx4g -jar"
+cmd = tools.java + " -Xmx" + str(pm.mem)
 # This sort can run out of temp space on big jobs; this puts the temp to a
 # local spot.
 #cmd += " -Djava.io.tmpdir=`pwd`/tmp"

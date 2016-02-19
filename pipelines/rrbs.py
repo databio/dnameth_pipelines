@@ -79,9 +79,7 @@ param = pm.config.parameters
 resources = pm.config.resources
 
 # Create a ngstk object
-myngstk = pypiper.NGSTk(args.config_file)
-myngstk.set_java_mem(pm.mem)
-
+myngstk = pypiper.NGSTk(pm=pm)
 
 myngstk.make_sure_path_exists(os.path.join(param.pipeline_outfolder, "unmapped_bam"))
 
@@ -129,15 +127,6 @@ input_size = float(input_size.replace("'",""))
 pm.report_result("File_mb", round((input_size/1024)/1024,2))
 pm.report_result("Read_type",args.single_or_paired)
 pm.report_result("Genome",args.genome_assembly)
-
-# Fastq conversion can run out of heap space with the default java memory
-# parameter for large input files.
-
-if input_size > 10000:
-	myngstk.set_java_mem("16g")
-
-
-
 
 # Fastq conversion
 ################################################################################
@@ -201,13 +190,13 @@ if args.trimmomatic:
 	# use more memory on systems that have more memory, leading to node-dependent
 	# killing effects that are hard to trace.
 
-	cmd = tools.java + " -Xmx" + str(param.java.mem) + " -jar " + tools.trimmomatic_epignome
+	cmd = tools.java + " -Xmx" + str(pm.mem) + " -jar " + tools.trimmomatic_epignome
 	if args.paired_end:
 		cmd += " PE"
 	else:
 		cmd += " SE"
 	cmd += " -" + encoding
-	cmd += " -threads " + str(args.cores) + " "
+	cmd += " -threads " + str(pm.cores) + " "
 	#cmd += " -trimlog " + os.path.join(fastq_folder, "trimlog.log") + " "
 	if args.paired_end:
 		cmd += out_fastq_pre + "_R1.fastq "
@@ -481,7 +470,7 @@ cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "methylMatch.py")
 cmd += " --inFile=" + out_bsmap      # this is the absolute path to the bsmap aligned bam file
 cmd += " --methFile=" + biseq_methcall_file
 cmd += " --outFile=" + nmm_outfile
-cmd += " --cores=" + str(args.cores)
+cmd += " --cores=" + str(pm.cores)
 cmd += " -q"
 
 pm.run(cmd, nmm_outfile)
@@ -500,7 +489,7 @@ if args.epilog:
 	cmd += " --p=" + resources.methpositions
 	cmd += " --outfile=" + epilog_outfile
 	cmd += " --summary-file=" + epilog_summary_file
-	cmd += " --cores=" + str(args.cores)
+	cmd += " --cores=" + str(pm.cores)
 
 	pm.run(cmd, epilog_outfile, nofail=True)
 
@@ -601,7 +590,7 @@ cmd += " --infile=" + out_spikein_sorted + ".bam"  # absolute path to the bsmap 
 cmd += " --p=" + resources.spikein_methpositions
 cmd += " --outfile=" + epilog_spike_outfile
 cmd += " --summary=" + epilog_spike_summary_file
-cmd += " --cores=" + str(args.cores)
+cmd += " --cores=" + str(pm.cores)
 cmd += " -t=" + str(30)  # quality_threshold
 cmd += " -l=" + str(30)  # read length cutoff
 
