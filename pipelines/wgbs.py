@@ -282,7 +282,7 @@ if args.paired_end and secondary_single:
 	pm.timestamp("### Bismark secondary single-end alignment: ")
 	bismark2_folder = os.path.join(param.pipeline_outfolder, "bismark2_" + args.genome_assembly )
 	myngstk.make_sure_path_exists(bismark2_folder)
-	bismark_temp = os.path.join(bismark2_folder, "bismark2_temp" )
+	bismark2_temp = os.path.join(bismark2_folder, "bismark2_temp" )
 	myngstk.make_sure_path_exists(bismark2_temp)
 	out_bismark2 = os.path.join(bismark2_folder, args.sample_name + "_pe.bam")
 
