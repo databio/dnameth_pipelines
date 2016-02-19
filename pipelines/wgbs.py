@@ -257,7 +257,7 @@ cmd += " --output_dir " + bismark_folder
 if args.paired_end:
 	cmd += " --minins 0"
 	cmd += " --maxins " + str(param.bismark.maxins)
-cmd += " -p " + str(bismark cores) # Number of processors
+cmd += " -p " + str(bismark_cores) # Number of processors
 cmd += " --basename=" +args.sample_name
 
 # By default, BS-seq libraries are directional, but this can be turned off
@@ -275,6 +275,43 @@ def check_bismark():
 
 
 pm.run(cmd, out_bismark, follow=check_bismark)
+
+# align unmapped in single end mode?
+secondary_single = True
+if args.paired_end and secondary_single:
+	pm.timestamp("### Bismark secondary single-end alignment: ")
+	bismark2_folder = os.path.join(param.pipeline_outfolder, "bismark2_" + args.genome_assembly )
+	myngstk.make_sure_path_exists(bismark2_folder)
+	bismark_temp = os.path.join(bismark2_folder, "bismark2_temp" )
+	myngstk.make_sure_path_exists(bismark2_temp)
+	out_bismark2 = os.path.join(bismark2_folder, args.sample_name + "_pe.bam")
+
+	unmapped_reads_pre = os.path.join(bismark_folder, args.sample_name)
+
+	cmd = tools.bismark + " " + resources.bismark_indexed_genome + " "
+	cmd += " --1 " + unmapped_reads_pre + "_unmapped_reads_1.fq"
+	cmd += " --2 " + unmapped_reads_pre + "_unmapped_reads_2.fq"
+
+	cmd += " --bam --unmapped"
+	cmd += " --path_to_bowtie " + tools.bowtie2
+	cmd += " --bowtie2"
+	cmd += " --temp_dir " + bismark2_temp
+	cmd += " --output_dir " + bismark2_folder
+	if args.paired_end:
+		cmd += " --minins 0"
+		cmd += " --maxins " + str(param.bismark.maxins)
+	cmd += " --basename="  + out_spikein_base
+	cmd += " -p " + str(bismark_cores)
+	if param.bismark.nondirectional:
+		cmd += " --non_directional"
+
+
+
+
+
+
+
+
 
 pm.timestamp("### PCR duplicate removal: ")
 # Bismark's deduplication forces output naming, how annoying.
@@ -473,9 +510,12 @@ cmd += " --temp_dir " + spikein_temp
 cmd += " --output_dir " + spikein_folder
 if args.paired_end:
 	cmd += " --minins 0"
-	cmd += " --maxins 5000"
+	cmd += " --maxins " + str(param.bismark.maxins)
 cmd += " --basename="  + out_spikein_base
-#cmd += " -p 4"
+cmd += " -p " + str(bismark_cores)
+if param.bismark.nondirectional:
+	cmd += " --non_directional"
+
 
 pm.run(cmd, out_spikein, nofail=True)
 # Clean up the unmapped file which is copied from the parent
@@ -564,7 +604,7 @@ cmd = tools.java + " -Xmx" + str(pm.mem)
 # This sort can run out of temp space on big jobs; this puts the temp to a
 # local spot.
 #cmd += " -Djava.io.tmpdir=`pwd`/tmp"
-cmd += " " + tools.picard + " SortSam"
+cmd += " -jar " + tools.picard + " SortSam"
 cmd += " I=" + out_sam_filter
 cmd += " O=" + out_final
 cmd += " SORT_ORDER=coordinate"
