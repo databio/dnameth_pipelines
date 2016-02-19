@@ -258,7 +258,7 @@ if args.paired_end:
 	cmd += " --minins 0"
 	cmd += " --maxins " + str(param.bismark.maxins)
 cmd += " -p " + str(bismark_cores) # Number of processors
-cmd += " --basename=" +args.sample_name
+cmd += " --basename=" + args.sample_name
 
 # By default, BS-seq libraries are directional, but this can be turned off
 # in bismark for non-directional protocols
@@ -300,7 +300,7 @@ if args.paired_end and secondary_single:
 	if args.paired_end:
 		cmd += " --minins 0"
 		cmd += " --maxins " + str(param.bismark.maxins)
-	cmd += " --basename="  + out_spikein_base
+	cmd += " --basename="  + args.sample_name
 	cmd += " -p " + str(bismark_cores)
 	if param.bismark.nondirectional:
 		cmd += " --non_directional"
