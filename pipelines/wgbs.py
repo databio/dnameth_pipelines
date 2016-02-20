@@ -309,7 +309,7 @@ if args.paired_end and secondary_single:
 	# Now merge, sort, and analyze the single-end data
 	merged_bismark = args.sample_name + "_SEmerged.bam"
 	output_merge = os.path.join(bismark_folder, merged_bismark)
-	cmd = myngstk.merge_bams(out_bismark_se, output_merge)
+	cmd = myngstk.merge_bams(out_bismark_se, output_merge, in_sorted="FALSE")
 
 	pm.run(cmd, output_merge)
 	# Sort by read name
