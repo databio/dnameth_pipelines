@@ -322,7 +322,7 @@ if args.paired_end and secondary_single:
 	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "rematch_pairs.py")
 	cmd += " -i " + output_sort
 
-	pm.run(cmd)
+	pm.run(cmd, lock_name="rematch")
 
 
 
