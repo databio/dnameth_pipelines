@@ -280,6 +280,7 @@ pm.run(cmd, out_bismark, follow=check_bismark)
 secondary_single = True
 if args.paired_end and secondary_single:
 	pm.timestamp("### Bismark secondary single-end alignment: ")
+	out_bismark_se =[]
 	for read_n in ["1", "2"]:  # Align each read in single end mode
 		read_string = "R" + str(read_n)
 		bismark2_folder = os.path.join(param.pipeline_outfolder, "bismark2_" + str(read_string) + "_" + args.genome_assembly )
@@ -303,9 +304,25 @@ if args.paired_end and secondary_single:
 			cmd += " --non_directional"
 
 		pm.run(cmd, out_bismark2)
+		out_bismark_se.append(out_bismark2)
 
+	# Now merge, sort, and analyze the single-end data
+	merged_bismark = args.sample_name + "_SEmerged.bam"
+	output_merge = os.path.join(bismark_folder, merged_bismark)
+	cmd = myngstk.merge_bams(out_bismark_se, output_merge)
 
+	pm.run(cmd, output_merge)
+	# Sort by read name
+	sorted_bismark = args.sample_name + "_SEsorted.bam"
+	output_sort = os.path.join(bismark_folder, sorted_bismark)
 
+	cmd = tools.samtools + " sort -n " + output_merge + " -f " + output_sort
+	pm.run(cmd, output_sort)
+
+	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "rematch_pairs.py")
+	cmd += " -i " + output_sort
+
+	pm.run(cmd)
 
 
 
