@@ -280,32 +280,29 @@ pm.run(cmd, out_bismark, follow=check_bismark)
 secondary_single = True
 if args.paired_end and secondary_single:
 	pm.timestamp("### Bismark secondary single-end alignment: ")
-	bismark2_folder = os.path.join(param.pipeline_outfolder, "bismark2_" + args.genome_assembly )
-	myngstk.make_sure_path_exists(bismark2_folder)
-	bismark2_temp = os.path.join(bismark2_folder, "bismark2_temp" )
-	myngstk.make_sure_path_exists(bismark2_temp)
-	out_bismark2 = os.path.join(bismark2_folder, args.sample_name + "_pe.bam")
+	for read_n in list("1", "2"):  # Align each read in single end mode
+		read_string = "R" + str(read)
+		bismark2_folder = os.path.join(param.pipeline_outfolder, "bismark2_" + str(read_string) + "_" + args.genome_assembly )
+		myngstk.make_sure_path_exists(bismark2_folder)
+		bismark2_temp = os.path.join(bismark2_folder, "bismark2_temp" )
+		myngstk.make_sure_path_exists(bismark2_temp)
+		out_bismark2 = os.path.join(bismark2_folder, args.sample_name + read_string +  ".bam")
 
-	unmapped_reads_pre = os.path.join(bismark_folder, args.sample_name)
+		unmapped_reads_pre = os.path.join(bismark_folder, args.sample_name)
 
-	cmd = tools.bismark + " " + resources.bismark_indexed_genome + " "
-	cmd += " --1 " + unmapped_reads_pre + "_unmapped_reads_1.fq"
-	cmd += " --2 " + unmapped_reads_pre + "_unmapped_reads_2.fq"
+		cmd = tools.bismark + " " + resources.bismark_indexed_genome + " "
+		cmd += unmapped_reads_pre + "_unmapped_reads_" + str(read_n) + ".fq"
+		cmd += " --bam --unmapped"
+		cmd += " --path_to_bowtie " + tools.bowtie2
+		cmd += " --bowtie2"
+		cmd += " --temp_dir " + bismark2_temp
+		cmd += " --output_dir " + bismark2_folder
+		cmd += " --basename="  + args.sample_name + read_string
+		cmd += " -p " + str(bismark_cores)
+		if param.bismark.nondirectional:
+			cmd += " --non_directional"
 
-	cmd += " --bam --unmapped"
-	cmd += " --path_to_bowtie " + tools.bowtie2
-	cmd += " --bowtie2"
-	cmd += " --temp_dir " + bismark2_temp
-	cmd += " --output_dir " + bismark2_folder
-	if args.paired_end:
-		cmd += " --minins 0"
-		cmd += " --maxins " + str(param.bismark.maxins)
-	cmd += " --basename="  + args.sample_name
-	cmd += " -p " + str(bismark_cores)
-	if param.bismark.nondirectional:
-		cmd += " --non_directional"
-
-	pm.run(cmd, out_bismark2)
+		pm.run(cmd, out_bismark2)
 
 
 
