@@ -281,7 +281,7 @@ secondary_single = True
 if args.paired_end and secondary_single:
 	pm.timestamp("### Bismark secondary single-end alignment: ")
 	for read_n in ["1", "2"]:  # Align each read in single end mode
-		read_string = "R" + str(read)
+		read_string = "R" + str(read_n)
 		bismark2_folder = os.path.join(param.pipeline_outfolder, "bismark2_" + str(read_string) + "_" + args.genome_assembly )
 		myngstk.make_sure_path_exists(bismark2_folder)
 		bismark2_temp = os.path.join(bismark2_folder, "bismark2_temp" )
