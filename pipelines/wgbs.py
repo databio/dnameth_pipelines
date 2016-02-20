@@ -283,7 +283,7 @@ if args.paired_end and secondary_single:
 	out_bismark_se =[]
 	for read_n in ["1", "2"]:  # Align each read in single end mode
 		read_string = "R" + str(read_n)
-		bismark2_folder = os.path.join(param.pipeline_outfolder, "bismark2_" + str(read_string) + "_" + args.genome_assembly )
+		bismark2_folder = os.path.join(bismark_folder, "se" + str(read_string))
 		myngstk.make_sure_path_exists(bismark2_folder)
 		bismark2_temp = os.path.join(bismark2_folder, "bismark2_temp" )
 		myngstk.make_sure_path_exists(bismark2_temp)
