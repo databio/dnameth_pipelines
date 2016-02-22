@@ -31,6 +31,12 @@ parser = pypiper.add_pypiper_args(parser, all_args=True)
 parser.add_argument('-e', '--epilog', dest='epilog', action="store_true", default=False,
 	help='Use epilog for meth calling?')
 
+parser.add_argument('--single2', dest='single2', action="store_true", default=False,
+	help='Single secondary mode: any reads not mapping in paired-end mode will \
+			be aligned using single-end mode, and then analyzed. Only valid for \
+			paired-end mode. ')
+
+
 args = parser.parse_args()
 
 if args.single_or_paired == "paired":
@@ -276,9 +282,10 @@ def check_bismark():
 
 pm.run(cmd, out_bismark, follow=check_bismark)
 
+
+# Secondary single mode:
 # align unmapped in single end mode?
-secondary_single = True
-if args.paired_end and secondary_single:
+if args.paired_end and args.single2:
 	pm.timestamp("### Bismark secondary single-end alignment: ")
 	out_bismark_se =[]
 	for read_n in ["1", "2"]:  # Align each read in single end mode
@@ -487,7 +494,7 @@ if args.epilog:
 	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
 	cmd += " --infile=" + out_bismark  # absolute path to the aligned bam
 	cmd += " --p=" + resources.methpositions
-	cmd += " --outfil e=" + epilog_outfile
+	cmd += " --outfile=" + epilog_outfile
 	cmd += " --summary-file=" + epilog_summary_file
 	cmd += " --cores=" + str(pm.cores)
 	cmd += " -r=" + str(0)  # Turn off RRBS mode
