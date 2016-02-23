@@ -533,7 +533,6 @@ if args.paired_end:
 	cmd += " --minins 0"
 	cmd += " --maxins " + str(param.bismark.maxins)
 cmd += " --basename="  + out_spikein_base
-cmd += " -p " + str(bismark_cores)
 if param.bismark.nondirectional:
 	cmd += " --non_directional"
 
