@@ -617,13 +617,13 @@ pm.timestamp("### Final sorting and indexing: ")
 
 #out_header = bismark_folder + args.sample_name + ".reheader.bam"
 out_final = os.path.join(bismark_folder, args.sample_name + ".final.bam")
-
+temp_folder = os.path.join(bismark_folder, "tmp")
 
 # Sort
 cmd = tools.java + " -Xmx" + str(pm.mem)
 # This sort can run out of temp space on big jobs; this puts the temp to a
 # local spot.
-#cmd += " -Djava.io.tmpdir=`pwd`/tmp"
+cmd += " -Djava.io.tmpdir=" + str(temp_folder)
 cmd += " -jar " + tools.picard + " SortSam"
 cmd += " I=" + out_sam_filter
 cmd += " O=" + out_final
