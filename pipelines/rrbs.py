@@ -624,7 +624,7 @@ if not args.paired_end:
 	# convert aligned bam to sam
 
 	pdr_in_samfile = os.path.join(pdr_output_dir, args.sample_name + ".aligned.sam") # gets deleted after, see some lines below
-	#pm.run(tools.samtools + " view " + out_bsmap + " > " + pdr_in_samfile, pdr_in_samfile, shell=True)
+	pm.run(tools.samtools + " view " + out_bsmap + " > " + pdr_in_samfile, pdr_in_samfile, shell=True)
 
 	# PDR calculation:
 	#
@@ -644,14 +644,15 @@ if not args.paired_end:
 	cmd1 += " --genomeDir=" + resources.genomes
 	cmd1 += " --minNonCpgSites=3"   # These two parameters are not relevant for PDR analysis
 	cmd1 += " --minConversionRate=0.9"
-
+	
 	if produce_sam:
+		cmd1 += " --produce_sam"
 		cmd1 += " --concordantOutfile=" + concordsam
 		cmd1 += " --discordantOutfile=" + discordsam
 		#TODO: perhaps convert them to bam *cough*
 
 	#call:
-	#pm.run(cmd1, pdr_bedfile)
+	pm.run(cmd1, pdr_bedfile)
 
 	# delete huge input SAM file
 	pm.clean_add(os.path.join(pdr_output_dir,"*.sam"), conditional=True)
