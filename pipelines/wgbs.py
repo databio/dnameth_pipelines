@@ -27,6 +27,16 @@ parser = ArgumentParser(description='Pipeline')
 # http://github.com/epigen/pypiper/command_line_args.md
 parser = pypiper.add_pypiper_args(parser, all_args=True)
 
+
+parser.add_argument('-e', '--epilog', dest='epilog', action="store_true", default=False,
+	help='Use epilog for meth calling?')
+
+parser.add_argument('--single2', dest='single2', action="store_true", default=False,
+	help='Single secondary mode: any reads not mapping in paired-end mode will \
+			be aligned using single-end mode, and then analyzed. Only valid for \
+			paired-end mode. ')
+
+
 args = parser.parse_args()
 
 if args.single_or_paired == "paired":
@@ -74,7 +84,7 @@ param = pm.config.parameters
 resources = pm.config.resources
 
 # Create a ngstk object
-myngstk = pypiper.NGSTk(args.config_file)
+myngstk = pypiper.NGSTk(pm=pm)
 
 myngstk.make_sure_path_exists(os.path.join(param.pipeline_outfolder, "unmapped_bam"))
 
@@ -123,6 +133,7 @@ pm.report_result("File_mb", round((input_size/1024)/1024,2))
 pm.report_result("Read_type",args.single_or_paired)
 pm.report_result("Genome",args.genome_assembly)
 
+
 # Fastq conversion
 ################################################################################
 pm.timestamp("### Fastq conversion: ")
@@ -152,11 +163,14 @@ elif input_ext == ".fastq.gz":
 		cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "fastq_split.py")
 		cmd += " -i " + local_unmapped_bam_abs
 		cmd += " -o " + out_fastq_pre
+		fq_shell = False  # No shell necessary here
 	else:
 		# For single-end reads, we just unzip the fastq.gz file.
 		cmd = "gunzip -c " + local_unmapped_bam_abs + " > " + unaligned_fastq
+		fq_shell = True  # For this command we need shell.
+
 	myngstk.make_sure_path_exists(fastq_folder)
-	pm.run(cmd, unaligned_fastq, shell=True, follow=lambda:
+	pm.run(cmd, unaligned_fastq, shell=fq_shell, follow=lambda:
 		pm.report_result("Fastq_reads",  myngstk.count_reads(unaligned_fastq, args.paired_end)))
 
 # Adapter trimming
@@ -177,13 +191,13 @@ else:
 trimmed_fastq = out_fastq_pre + "_R1_trimmed.fq"
 trimmed_fastq_R2 = out_fastq_pre + "_R2_trimmed.fq"
 
-cmd = tools.java + " -Xmx" + str(param.trimmomatic.memory) + "g -jar " + tools.trimmomatic_epignome
+cmd = tools.java + " -Xmx" + str(pm.mem) + " -jar " + tools.trimmomatic_epignome
 if args.paired_end:
 	cmd += " PE"
 else:
 	cmd += " SE"
 cmd += " -" + encoding
-cmd += " -threads " + str(param.trimmomatic.threads) + " "
+cmd += " -threads " + str(pm.cores) + " "
 #cmd += " -trimlog " + os.path.join(fastq_folder, "trimlog.log") + " "
 if args.paired_end:
 	cmd += out_fastq_pre + "_R1.fastq "
@@ -195,7 +209,8 @@ if args.paired_end:
 else:
 	cmd += out_fastq_pre + "_R1.fastq "
 	cmd += out_fastq_pre + "_R1_trimmed.fq "
-cmd += " HEADCROP:6 ILLUMINACLIP:" + resources.adapter_file + param.trimmomatic.illuminaclip
+cmd += " " + param.trimmomatic.trimsteps
+cmd += " ILLUMINACLIP:" + resources.adapter_file + param.trimmomatic.illuminaclip
 
 pm.run(cmd, trimmed_fastq, follow=lambda:
 	pm.report_result("Trimmed_reads",  myngstk.count_reads(trimmed_fastq, args.paired_end)))
@@ -209,6 +224,21 @@ pm.clean_add(fastq_folder, conditional=True)
 # WGBS alignment with bismark.
 ################################################################################
 pm.timestamp("### Bismark alignment: ")
+# Bismark will start multiple instances of bowtie, so we have to split
+# the alotted cores among the instances. Otherwise we will use 2x or 4x the number
+# of cores that we aresupposed to. It will start 2 threads in
+# normal mode, and 4 in --non-directional mode.
+
+if param.bismark.nondirectional:
+	bismark_bowtie_threads = 4
+else:
+	bismark_bowtie_threads = 2
+
+bismark_cores = int(pm.cores) // bismark_bowtie_threads
+
+if int(pm.cores) % bismark_bowtie_threads != 0:
+	print("inefficient core request; make divisible by " + 	str(bismark_bowtie_threads))
+
 bismark_folder = os.path.join(param.pipeline_outfolder, "bismark_" + args.genome_assembly )
 myngstk.make_sure_path_exists(bismark_folder)
 bismark_temp = os.path.join(bismark_folder, "bismark_temp" )
@@ -232,20 +262,77 @@ cmd += " --temp_dir " + bismark_temp
 cmd += " --output_dir " + bismark_folder
 if args.paired_end:
 	cmd += " --minins 0"
-	cmd += " --maxins 5000"
-cmd += " -p 8 " # Number of processors
-cmd += " --basename=" +args.sample_name
+	cmd += " --maxins " + str(param.bismark.maxins)
+cmd += " -p " + str(bismark_cores) # Number of processors
+cmd += " --basename=" + args.sample_name
+
+# By default, BS-seq libraries are directional, but this can be turned off
+# in bismark for non-directional protocols
+if param.bismark.nondirectional:
+	cmd += " --non_directional"
 
 pm.run(cmd, out_bismark)
 
 def check_bismark():
-	x = myngstk.count_mapped_reads(out_bsmap, args.paired_end)
+	x = myngstk.count_mapped_reads(out_bismark, args.paired_end)
 	pm.report_result("Aligned_reads", x)
-	x = myngstk.count_multimapping_reads(out_bsmap, args.paired_end)
+	x = myngstk.count_multimapping_reads(out_bismark, args.paired_end)
 	pm.report_result("Multimap_reads", x)
 
 
 pm.run(cmd, out_bismark, follow=check_bismark)
+
+
+# Secondary single mode:
+# align unmapped in single end mode?
+if args.paired_end and args.single2:
+	pm.timestamp("### Bismark secondary single-end alignment: ")
+	out_bismark_se =[]
+	for read_n in ["1", "2"]:  # Align each read in single end mode
+		read_string = "R" + str(read_n)
+		bismark2_folder = os.path.join(bismark_folder, "se" + str(read_string))
+		myngstk.make_sure_path_exists(bismark2_folder)
+		bismark2_temp = os.path.join(bismark2_folder, "bismark2_temp" )
+		myngstk.make_sure_path_exists(bismark2_temp)
+		out_bismark2 = os.path.join(bismark2_folder, args.sample_name + read_string +  ".bam")
+
+		unmapped_reads_pre = os.path.join(bismark_folder, args.sample_name)
+
+		cmd = tools.bismark + " " + resources.bismark_indexed_genome + " "
+		cmd += unmapped_reads_pre + "_unmapped_reads_" + str(read_n) + ".fq"
+		cmd += " --bam --unmapped"
+		cmd += " --path_to_bowtie " + tools.bowtie2
+		cmd += " --bowtie2"
+		cmd += " --temp_dir " + bismark2_temp
+		cmd += " --output_dir " + bismark2_folder
+		cmd += " --basename="  + args.sample_name + read_string
+		cmd += " -p " + str(bismark_cores)
+		if param.bismark.nondirectional:
+			cmd += " --non_directional"
+
+		pm.run(cmd, out_bismark2)
+		out_bismark_se.append(out_bismark2)
+
+	# Now merge, sort, and analyze the single-end data
+	merged_bismark = args.sample_name + "_SEmerged.bam"
+	output_merge = os.path.join(bismark_folder, merged_bismark)
+	cmd = myngstk.merge_bams(out_bismark_se, output_merge, in_sorted="FALSE")
+
+	pm.run(cmd, output_merge)
+	# Sort by read name
+	sorted_bismark = args.sample_name + "_SEsorted.bam"
+	output_sort = os.path.join(bismark_folder, sorted_bismark)
+
+	cmd = tools.samtools + " sort -n " + output_merge + " -f " + output_sort
+	pm.run(cmd, output_sort)
+
+	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "rematch_pairs.py")
+	cmd += " -i " + output_sort
+
+	pm.run(cmd, lock_name="rematch")
+
+
+
 
 pm.timestamp("### PCR duplicate removal: ")
 # Bismark's deduplication forces output naming, how annoying.
@@ -390,6 +477,29 @@ cmd += " " + out_bigwig
 
 pm.run(cmd, out_bigwig, shell=False)
 
+################################################################################
+
+if args.epilog:
+	# out_bismark must be indexed in order for epilog to use it
+	cmd2 = tools.samtools + " sort -f " + out_bismark + " " + out_bismark
+	cmd3 = tools.samtools + " index " + out_bismark
+	pm.run([cmd2, cmd3], out_bismark + ".bai")
+
+	pm.timestamp("### Epilog Methcalling: ")
+	epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+	myngstk.make_sure_path_exists (epilog_output_dir)
+	epilog_outfile=os.path.join(epilog_output_dir, args.sample_name + "_epilog.bed")
+	epilog_summary_file=os.path.join(epilog_output_dir, args.sample_name + "_epilog_summary.bed")
+
+	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
+	cmd += " --infile=" + out_bismark  # absolute path to the aligned bam
+	cmd += " --p=" + resources.methpositions
+	cmd += " --outfile=" + epilog_outfile
+	cmd += " --summary-file=" + epilog_summary_file
+	cmd += " --cores=" + str(pm.cores)
+	cmd += " -r=" + str(0)  # Turn off RRBS mode
+
+	pm.run(cmd, epilog_outfile, nofail=True)
 
 # Spike-in alignment
 ################################################################################
@@ -404,8 +514,10 @@ out_spikein_base = args.sample_name + ".spikein.aln"
 #out_spikein = spikein_folder + args.sample_name + "_R1_trimmed.fastq_unmapped_reads_1.fq_bismark_pe.bam"
 
 unmapped_reads_pre = os.path.join(bismark_folder, args.sample_name)
-
-out_spikein = os.path.join(spikein_folder, out_spikein_base + ".bam")
+if args.paired_end:
+	out_spikein = os.path.join(spikein_folder, out_spikein_base + "_pe.bam")
+else:
+	out_spikein = os.path.join(spikein_folder, out_spikein_base + ".bam")
 cmd = tools.bismark + " " + resources.bismark_spikein_genome + " "
 if args.paired_end:
 	cmd += " --1 " + unmapped_reads_pre + "_unmapped_reads_1.fq"
@@ -419,9 +531,11 @@ cmd += " --temp_dir " + spikein_temp
 cmd += " --output_dir " + spikein_folder
 if args.paired_end:
 	cmd += " --minins 0"
-	cmd += " --maxins 5000"
+	cmd += " --maxins " + str(param.bismark.maxins)
 cmd += " --basename="  + out_spikein_base
-#cmd += " -p 4"
+if param.bismark.nondirectional:
+	cmd += " --non_directional"
+
 
 pm.run(cmd, out_spikein, nofail=True)
 # Clean up the unmapped file which is copied from the parent
@@ -453,13 +567,47 @@ pm.run([cmd, cmd2, cmd3, cmd4], out_spikein_sorted +".bam.bai", nofail=True)
 # Spike-in methylation calling
 ################################################################################
 pm.timestamp("### Methylation calling (testxmz) Spike-in: ")
+spike_chroms = myngstk.get_chrs_from_bam(out_spikein_sorted + ".bam")
 
-cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "testxmz.py")
-cmd1 += " " + out_spikein_sorted + ".bam" + " " + "K1_unmethylated"
-cmd1 += " >> " + pm.pipeline_stats_file
-cmd2 = cmd1.replace("K1_unmethylated", "K3_methylated")
-pm.callprint(cmd1, shell=True, nofail=True)
-pm.callprint(cmd2, shell=True, nofail=True)
+for chrom in spike_chroms:
+	cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "testxmz.py")
+	cmd1 += " " + out_spikein_sorted + ".bam" + " " + chrom
+	cmd1 += " >> " + pm.pipeline_stats_file
+	pm.callprint(cmd1, shell=True, nofail=True)
+
+
+# spike in conversion efficiency calculation with epilog
+epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+myngstk.make_sure_path_exists (epilog_output_dir)
+epilog_spike_outfile=os.path.join(spikein_folder, args.sample_name + "_epilog.bed")
+epilog_spike_summary_file=os.path.join(spikein_folder, args.sample_name + "_epilog_summary.bed")
+
+
+cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
+cmd += " --infile=" + out_spikein_sorted + ".bam"  # absolute path to the bsmap aligned bam
+cmd += " --p=" + resources.spikein_methpositions
+cmd += " --outfile=" + epilog_spike_outfile
+cmd += " --summary=" + epilog_spike_summary_file
+cmd += " --cores=" + str(pm.cores)
+cmd += " -t=" + str(30)  # quality_threshold
+cmd += " -l=" + str(30)  # read length cutoff
+cmd += " -r=" + str(0)  # no rrbs mode for WGBS pipeline
+
+pm.run(cmd, epilog_spike_outfile, nofail=True)
+
+# Now parse some results for pypiper result reporting.
+
+for chrom in spike_chroms:
+	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "tsv_parser.py")
+	cmd += " -i " + os.path.join(spikein_folder, epilog_spike_summary_file)
+	cmd += " -r context=C chr=" + chrom
+
+	cmd_total = cmd + " -c " + "total"
+	x = pm.checkprint(cmd_total, shell=True)
+	pm.report_result(chrom+'_count_EL', x)
+	cmd_rate = cmd + " -c " + "rate"
+	x = pm.checkprint(cmd_rate, shell=True)
+	pm.report_result(chrom+'_meth_EL', x)
 
 
 # Final sorting and indexing
@@ -469,14 +617,14 @@ pm.timestamp("### Final sorting and indexing: ")
 
 #out_header = bismark_folder + args.sample_name + ".reheader.bam"
 out_final = os.path.join(bismark_folder, args.sample_name + ".final.bam")
-
+temp_folder = os.path.join(bismark_folder, "tmp")
 
 # Sort
-cmd = tools.java + " -Xmx4g -jar"
+cmd = tools.java + " -Xmx" + str(pm.mem)
 # This sort can run out of temp space on big jobs; this puts the temp to a
 # local spot.
-#cmd += " -Djava.io.tmpdir=`pwd`/tmp"
-cmd += " " + tools.picard + " SortSam"
+cmd += " -Djava.io.tmpdir=" + str(temp_folder)
+cmd += " -jar " + tools.picard + " SortSam"
 cmd += " I=" + out_sam_filter
 cmd += " O=" + out_final
 cmd += " SORT_ORDER=coordinate"

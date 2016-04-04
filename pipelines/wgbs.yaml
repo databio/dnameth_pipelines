@@ -25,8 +25,9 @@ tools:
 
 parameters:
   # parameters passed to bioinformatic tools, subclassed by tool
-
   trimmomatic:
-    memory: 4  # memory allocated to java VM in GB
-    threads: 30
+    trimsteps: "HEADCROP:6"  # Epignome requires a HEADCROP:6
     illuminaclip: ":2:10:4:1:true:epignome:5 SLIDINGWINDOW:4:1 MAXINFO:16:0.40 MINLEN:25"
+  bismark:
+    nondirectional: false
+    maxins: 5000
