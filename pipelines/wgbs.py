@@ -271,8 +271,6 @@ cmd += " --basename=" + args.sample_name
 if param.bismark.nondirectional:
 	cmd += " --non_directional"
 
-pm.run(cmd, out_bismark)
-
 def check_bismark():
 	x = myngstk.count_mapped_reads(out_bismark, args.paired_end)
 	pm.report_result("Aligned_reads", x)
