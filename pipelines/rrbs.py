@@ -196,9 +196,16 @@ else: # use trim_galore
 
 # Trimming command has been constructed, using either trimming options.
 # The code to run it is the same either way:
+def check_trim():
+	n_trim = float(myngstk.count_reads(trimmed_fastq, args.paired_end))
+	rr = float(pm.get_stat("Raw_reads"))
+	pm.report_result("Trimmed_reads", n_trim)
+	
+	pm.report_result("Trim_loss_rate", round((rr - n_trim) * 100 / rr, 2))
 
-pm.run(cmd, trimmed_fastq, follow= lambda:
-	pm.report_result("Trimmed_reads",  myngstk.count_reads(trimmed_fastq, args.paired_end)))
+pm.run(cmd, trimmed_fastq, follow = check_trim)
+
+
 
 pm.clean_add(os.path.join(fastq_folder, "*.fastq"), conditional=True)
 pm.clean_add(os.path.join(fastq_folder, "*.fq"), conditional=True)
@@ -247,12 +254,21 @@ def check_bsmap():
 	# BSMap apparently stores all the reads (mapped and unmapped) in
 	# its output bam; to count aligned reads, then, we have to use
 	# a -F4 flag (with count_mapped_reads instead of count_reads).
-	x = myngstk.count_mapped_reads(out_bsmap, args.paired_end)
-	pm.report_result("Aligned_reads", x)
+	ar = myngstk.count_mapped_reads(out_bsmap, args.paired_end)
+	pm.report_result("Aligned_reads", ar)
+	rr = float(pm.get_stat("Raw_reads"))
+	tr = float(pm.get_stat("Trimmed_reads"))
+	pm.report_result("Alignment_rate", round(float(ar) *
+ 100 / float(tr), 2))
+	pm.report_result("Total_efficiency", round(float(ar) * 100 / float(rr), 2))
+
 	# In addition, BSMap can (if instructed by parameters) randomly assign
 	# multimapping reads. It's useful to know how many in the final bam were such.
 	x = myngstk.count_multimapping_reads(out_bsmap, args.paired_end)
 	pm.report_result("Multimap_reads", x)
+
+pm.run(cmd, trimmed_fastq, follow = check_trim)
+
 
 
 pm.run(cmd, out_bsmap, follow=check_bsmap)
@@ -532,7 +548,7 @@ for chrom in spike_chroms:
 	cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "testxmz.py")
 	cmd1 += " " + out_spikein_sorted + ".bam" + " " + chrom
 	cmd1 += " >> " + pm.pipeline_stats_file
-	pm.callprint(cmd1, shell=True, nofail=True)
+	pm.run(cmd1, lock_name="spikein", nofail=True)
 
 # spike in conversion efficiency calculation with epilog
 epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
@@ -622,3 +638,4 @@ if not args.paired_end:
 # Cleanup
 ################################################################################
 pm.stop_pipeline()
+
