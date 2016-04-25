@@ -614,49 +614,49 @@ for chrom in spike_chroms:
 ################################################################################
 
 # PDR not applied to PE case because bisulfiteReadConcordanceAnalysis.py crashes
-if not args.paired_end:
+#if not args.paired_end:
 
-	pm.timestamp("### PDR (Partial Disordered Methylation) analysis")
+pm.timestamp("### PDR (Partial Disordered Methylation) analysis")
 
-	pdr_output_dir = os.path.join(param.pipeline_outfolder, "pdr_" + args.genome_assembly)
-	myngstk.make_sure_path_exists (pdr_output_dir)
+pdr_output_dir = os.path.join(param.pipeline_outfolder, "pdr_" + args.genome_assembly)
+myngstk.make_sure_path_exists (pdr_output_dir)
 
-	# convert aligned bam to sam
+# convert aligned bam to sam
 
-	pdr_in_samfile = os.path.join(pdr_output_dir, args.sample_name + ".aligned.sam") # gets deleted after, see some lines below
-	pm.run(tools.samtools + " view " + out_bsmap + " > " + pdr_in_samfile, pdr_in_samfile, shell=True)
+pdr_in_samfile = os.path.join(pdr_output_dir, args.sample_name + ".aligned.sam") # gets deleted after, see some lines below
+pm.run(tools.samtools + " view " + out_bsmap + " > " + pdr_in_samfile, pdr_in_samfile, shell=True)
 
-	# PDR calculation:
-	#
-	# output files:
-	pdr_bedfile=os.path.join(pdr_output_dir, args.sample_name + ".pdr.bed")
+# PDR calculation:
+#
+# output files:
+pdr_bedfile=os.path.join(pdr_output_dir, args.sample_name + ".pdr.bed")
 
-	produce_sam = False  # TODO AS: make this an option somewhere
-	concordsam=os.path.join(pdr_output_dir, args.sample_name + ".concordant.sam")
-	discordsam=os.path.join(pdr_output_dir, args.sample_name + ".discordant.sam")
+produce_sam = False  # TODO AS: make this an option somewhere
+concordsam=os.path.join(pdr_output_dir, args.sample_name + ".concordant.sam")
+discordsam=os.path.join(pdr_output_dir, args.sample_name + ".discordant.sam")
 
-	# command::
-	cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "bisulfiteReadConcordanceAnalysis.py")
-	cmd1 += " --infile=" + pdr_in_samfile
-	cmd1 += " --outfile=" + pdr_bedfile
-	cmd1 += " --skipHeaderLines=0"
-	cmd1 += " --genome=" + args.genome_assembly
-	cmd1 += " --genomeDir=" + resources.genomes
-	cmd1 += " --minNonCpgSites=3"   # These two parameters are not relevant for PDR analysis
-	cmd1 += " --minConversionRate=0.9"
-	
-	if produce_sam:
-		cmd1 += " --produce_sam"
-		cmd1 += " --concordantOutfile=" + concordsam
-		cmd1 += " --discordantOutfile=" + discordsam
-		#TODO: perhaps convert them to bam *cough*
+# command::
+cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "bisulfiteReadConcordanceAnalysis.py")
+cmd1 += " --infile=" + pdr_in_samfile
+cmd1 += " --outfile=" + pdr_bedfile
+cmd1 += " --skipHeaderLines=0"
+cmd1 += " --genome=" + args.genome_assembly
+cmd1 += " --genomeDir=" + resources.genomes
+cmd1 += " --minNonCpgSites=3"   # These two parameters are not relevant for PDR analysis
+cmd1 += " --minConversionRate=0.9"
 
-	#call:
-	pm.run(cmd1, pdr_bedfile)
+if produce_sam:
+    cmd1 += " --produce_sam"
+    cmd1 += " --concordantOutfile=" + concordsam
+    cmd1 += " --discordantOutfile=" + discordsam
+    #TODO: perhaps convert them to bam *cough*
 
-	# delete huge input SAM file
-	pm.clean_add(os.path.join(pdr_output_dir,"*.sam"), conditional=True)
-	pm.clean_add(pdr_output_dir, conditional=True)
+#call:
+pm.run(cmd1, pdr_bedfile)
+
+# delete huge input SAM file
+pm.clean_add(os.path.join(pdr_output_dir,"*.sam"), conditional=True)
+pm.clean_add(pdr_output_dir, conditional=True)
 
 # Final sorting and indexing
 ################################################################################
