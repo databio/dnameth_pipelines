@@ -45,16 +45,16 @@ else:
 ################################################################################
 # If 2 input files are given, then these are to be merged.
 # Must be done here to initialize the sample name correctly
-
-merge = False
-if len(args.input) > 1:
-	merge = True
-	if args.sample_name == "default":
-		args.sample_name = "merged"
-else:
-	if args.sample_name == "default":
-		# Default sample name is derived from the input file
-		args.sample_name = os.path.splitext(os.path.basename(args.input[0]))[0]
+# This is now deprecated (there is no default sample name implemented)
+#merge = False
+#if len(args.input) > 1:
+#	merge = True
+#	if args.sample_name == "default":
+#		args.sample_name = "merged"
+#else:
+#	if args.sample_name == "default":
+#		# Default sample name is derived from the input file
+#		args.sample_name = os.path.splitext(os.path.basename(args.input[0]))[0]
 
 # Create a PipelineManager object and start the pipeline
 pm = pypiper.PipelineManager(name = "RRBS", outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name)), args = args)
@@ -81,46 +81,20 @@ resources = pm.config.resources
 # Create a ngstk object
 myngstk = pypiper.NGSTk(pm=pm)
 
-myngstk.make_sure_path_exists(os.path.join(param.pipeline_outfolder, "unmapped_bam"))
+# Merge/Link sample input
+################################################################################
+# This command should now handle all the merging.
+local_input_file = myngstk.create_local_input(param.pipeline_outfolder, args.input, args.sample_name)
 
-if merge:
-	# args.input is a list if merge is true;
-	if not all([x.endswith(".bam") for x in args.input]):
-		raise NotImplementedError("Currently we can only merge bam inputs")
-	merge_folder = os.path.join(param.pipeline_outfolder, "unmapped_bam")
-	sample_merged_bam = args.sample_name + ".merged.bam"
-	output_merge = os.path.join(merge_folder, sample_merged_bam)
-	cmd = myngstk.merge_bams(args.input, output_merge)
+print("Local input file: " + local_input_file) 
 
-	pm.run(cmd, output_merge)
-	args.input = os.path.join(param.pipeline_outfolder, "unmapped_bam", sample_merged_bam)  #update unmapped bam reference
-	local_unmapped_bam_abs = os.path.join(param.pipeline_outfolder, "unmapped_bam", sample_merged_bam)
-	input_ext = ".bam"
-else:
-	# Link the file into the unmapped_bam directory
-	args.input = args.input[0]
-
-	if not os.path.isabs(args.input):
-		args.input = os.path.abspath(args.input)
-		print args.input
-
-	if args.input.endswith(".bam"):
-		input_ext = ".bam"
-	elif args.input.endswith(".fastq.gz"):
-		input_ext = ".fastq.gz"
-	else:
-		raise NotImplementedError("This pipeline can only deal with .bam or .fastq.gz files")
-
-	local_unmapped_bam_abs = os.path.join(param.pipeline_outfolder, "unmapped_bam", args.sample_name + input_ext)
-	pm.callprint("ln -sf " + args.input + " " + local_unmapped_bam_abs, shell=True)
-
-#check for file exists:
-if not os.path.exists(local_unmapped_bam_abs):
-	raise Exception(local_unmapped_bam_abs + " is not a file")
+# Make sure file exists:
+if not os.path.exists(local_input_file):
+	raise Exception(local_input_file + " is not a file")
 
 # Record file size of input file
 
-cmd = "stat -Lc '%s' " + local_unmapped_bam_abs
+cmd = "stat -Lc '%s' " + local_input_file
 input_size = pm.checkprint(cmd)
 input_size = float(input_size.replace("'",""))
 
@@ -131,31 +105,13 @@ pm.report_result("Genome",args.genome_assembly)
 # Fastq conversion
 ################################################################################
 pm.timestamp("### Fastq conversion: ")
-fastq_folder = os.path.join(param.pipeline_outfolder, "fastq")
-out_fastq_pre = os.path.join(fastq_folder, args.sample_name)
-unaligned_fastq = out_fastq_pre + "_R1.fastq"
+# New fastq conversion (can handle .bam or .fastq.gz files)
 
-def check_fastq():
-	raw_reads = myngstk.count_reads(local_unmapped_bam_abs, args.paired_end)
-	pm.report_result("Raw_reads", str(raw_reads))
-	fastq_reads = myngstk.count_reads(unaligned_fastq, args.paired_end)
-	pm.report_result("Fastq_reads", fastq_reads)
-	fail_filter_reads = myngstk.count_fail_reads(local_unmapped_bam_abs, args.paired_end)
-	pf_reads = int(raw_reads) - int(fail_filter_reads)
-	pm.report_result("PF_reads", str(pf_reads))
-	if fastq_reads != int(raw_reads):
-		raise Exception("Fastq conversion error? Number of reads doesn't match unaligned bam")
+cmd, fastq_folder, out_fastq_pre, unaligned_fastq = myngstk.input_to_fastq(local_input_file, param.pipeline_outfolder, args.sample_name, args.paired_end)
 
-if input_ext ==".bam":
-	print("Found bam file")
-	cmd = myngstk.bam_to_fastq(local_unmapped_bam_abs, out_fastq_pre, args.paired_end)
-	pm.run(cmd, unaligned_fastq, follow=check_fastq)
-elif input_ext == ".fastq.gz":
-	print("Found gz fastq file")
-	cmd = "gunzip -c " + local_unmapped_bam_abs + " > " + unaligned_fastq
-	myngstk.make_sure_path_exists(fastq_folder)
-	pm.run(cmd, unaligned_fastq, shell=True, follow=lambda:
-		pm.report_result("Fastq_reads",  myngstk.count_reads(unaligned_fastq, args.paired_end)))
+myngstk.make_sure_path_exists(fastq_folder)
+
+pm.run(cmd, unaligned_fastq, follow=myngstk.check_fastq(local_input_file, unaligned_fastq, args.paired_end))
 
 
 # Adapter trimming (Trimmomatic)
@@ -240,9 +196,16 @@ else: # use trim_galore
 
 # Trimming command has been constructed, using either trimming options.
 # The code to run it is the same either way:
+def check_trim():
+	n_trim = float(myngstk.count_reads(trimmed_fastq, args.paired_end))
+	rr = float(pm.get_stat("Raw_reads"))
+	pm.report_result("Trimmed_reads", n_trim)
+	
+	pm.report_result("Trim_loss_rate", round((rr - n_trim) * 100 / rr, 2))
 
-pm.run(cmd, trimmed_fastq, follow= lambda:
-	pm.report_result("Trimmed_reads",  myngstk.count_reads(trimmed_fastq, args.paired_end)))
+pm.run(cmd, trimmed_fastq, follow = check_trim)
+
+
 
 pm.clean_add(os.path.join(fastq_folder, "*.fastq"), conditional=True)
 pm.clean_add(os.path.join(fastq_folder, "*.fq"), conditional=True)
@@ -291,12 +254,21 @@ def check_bsmap():
 	# BSMap apparently stores all the reads (mapped and unmapped) in
 	# its output bam; to count aligned reads, then, we have to use
 	# a -F4 flag (with count_mapped_reads instead of count_reads).
-	x = myngstk.count_mapped_reads(out_bsmap, args.paired_end)
-	pm.report_result("Aligned_reads", x)
+	ar = myngstk.count_mapped_reads(out_bsmap, args.paired_end)
+	pm.report_result("Aligned_reads", ar)
+	rr = float(pm.get_stat("Raw_reads"))
+	tr = float(pm.get_stat("Trimmed_reads"))
+	pm.report_result("Alignment_rate", round(float(ar) *
+ 100 / float(tr), 2))
+	pm.report_result("Total_efficiency", round(float(ar) * 100 / float(rr), 2))
+
 	# In addition, BSMap can (if instructed by parameters) randomly assign
 	# multimapping reads. It's useful to know how many in the final bam were such.
 	x = myngstk.count_multimapping_reads(out_bsmap, args.paired_end)
 	pm.report_result("Multimap_reads", x)
+
+pm.run(cmd, trimmed_fastq, follow = check_trim)
+
 
 
 pm.run(cmd, out_bsmap, follow=check_bsmap)
@@ -576,7 +548,7 @@ for chrom in spike_chroms:
 	cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "testxmz.py")
 	cmd1 += " " + out_spikein_sorted + ".bam" + " " + chrom
 	cmd1 += " >> " + pm.pipeline_stats_file
-	pm.callprint(cmd1, shell=True, nofail=True)
+	pm.run(cmd1, lock_name="spikein", nofail=True)
 
 # spike in conversion efficiency calculation with epilog
 epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
@@ -666,3 +638,4 @@ pm.clean_add(pdr_output_dir, conditional=True)
 # Cleanup
 ################################################################################
 pm.stop_pipeline()
+
