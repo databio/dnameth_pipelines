@@ -84,13 +84,21 @@ myngstk = pypiper.NGSTk(pm=pm)
 # Merge/Link sample input
 ################################################################################
 # This command should now handle all the merging.
-local_input_file = myngstk.create_local_input(param.pipeline_outfolder, args.input, args.sample_name)
 
-print("Local input file: " + local_input_file) 
+# Merge/Link sample input and Fastq conversion
+# These commands merge (if required) or link, then ensure any (bam, fastq, or gz)
+# files are correctly converted to fastq/*.fastq files.
+################################################################################
+mypiper.timestamp("### Merging/Linking and fastq conversion: ")
 
-# Make sure file exists:
-if not os.path.exists(local_input_file):
-	raise Exception(local_input_file + " is not a file")
+local_input_files = ngstk.create_multiple_local_inputs(paths.pipeline_outfolder, [args.input, args.input2], args.sample_name)
+
+fastq_folder = os.path.join(paths.pipeline_outfolder, "fastq/")
+
+cmd, out_fastq_pre, unaligned_fastq = ngstk.input_to_fastq(local_input_files, args.sample_name, args.paired_end, fastq_folder)
+
+mypiper.run(cmd, unaligned_fastq, follow=ngstk.check_fastq(local_input_files, unaligned_fastq, args.paired_end))
+
 
 # Record file size of input file
 
@@ -101,17 +109,6 @@ input_size = float(input_size.replace("'",""))
 pm.report_result("File_mb", round((input_size/1024)/1024,2))
 pm.report_result("Read_type",args.single_or_paired)
 pm.report_result("Genome",args.genome_assembly)
-
-# Fastq conversion
-################################################################################
-pm.timestamp("### Fastq conversion: ")
-# New fastq conversion (can handle .bam or .fastq.gz files)
-
-cmd, fastq_folder, out_fastq_pre, unaligned_fastq = myngstk.input_to_fastq(local_input_file, param.pipeline_outfolder, args.sample_name, args.paired_end)
-
-myngstk.make_sure_path_exists(fastq_folder)
-
-pm.run(cmd, unaligned_fastq, follow=myngstk.check_fastq(local_input_file, unaligned_fastq, args.paired_end))
 
 
 # Adapter trimming (Trimmomatic)
