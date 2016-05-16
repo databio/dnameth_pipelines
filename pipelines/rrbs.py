@@ -81,9 +81,8 @@ resources = pm.config.resources
 # Create a ngstk object
 myngstk = pypiper.NGSTk(pm=pm)
 
-# Merge/Link sample input
-################################################################################
-# This command should now handle all the merging.
+raw_folder = os.path.join(paths.pipeline_outfolder, "raw/")
+fastq_folder = os.path.join(paths.pipeline_outfolder, "fastq/")
 
 # Merge/Link sample input and Fastq conversion
 # These commands merge (if required) or link, then ensure any (bam, fastq, or gz)
@@ -91,14 +90,13 @@ myngstk = pypiper.NGSTk(pm=pm)
 ################################################################################
 mypiper.timestamp("### Merging/Linking and fastq conversion: ")
 
-local_input_files = ngstk.create_multiple_local_inputs(paths.pipeline_outfolder, [args.input, args.input2], args.sample_name)
-
-fastq_folder = os.path.join(paths.pipeline_outfolder, "fastq/")
+local_input_files = ngstk.merge_or_link([args.input, args.input2], raw_folder, args.sample_name)
 
 cmd, out_fastq_pre, unaligned_fastq = ngstk.input_to_fastq(local_input_files, args.sample_name, args.paired_end, fastq_folder)
 
 mypiper.run(cmd, unaligned_fastq, follow=ngstk.check_fastq(local_input_files, unaligned_fastq, args.paired_end))
 
+mypiper.clean_add(out_fastq_pre + "*.fastq", conditional=True)
 
 # Record file size of input file
 
@@ -107,6 +105,7 @@ input_size = pm.checkprint(cmd)
 input_size = float(input_size.replace("'",""))
 
 pm.report_result("File_mb", round((input_size/1024)/1024,2))
+
 pm.report_result("Read_type",args.single_or_paired)
 pm.report_result("Genome",args.genome_assembly)
 
