@@ -84,94 +84,27 @@ param = pm.config.parameters
 resources = pm.config.resources
 
 # Create a ngstk object
-myngstk = pypiper.NGSTk(pm=pm)
+ngstk = pypiper.NGSTk(pm=pm)
 
-myngstk.make_sure_path_exists(os.path.join(param.pipeline_outfolder, "unmapped_bam"))
+raw_folder = os.path.join(param.pipeline_outfolder, "raw/")
+fastq_folder = os.path.join(param.pipeline_outfolder, "fastq/")
 
-if merge:
-	if not all([x.endswith(".bam") for x in args.input]):
-#	if not args.input.endswith(".bam"):
-		raise NotImplementedError("Currently we can only merge bam inputs")
-	merge_folder = os.path.join(param.pipeline_outfolder, "unmapped_bam")
-	sample_merged_bam = args.sample_name + ".merged.bam"
-	output_merge = os.path.join(merge_folder, sample_merged_bam)
-	cmd = myngstk.merge_bams(args.input, output_merge)
-
-	pm.run(cmd, output_merge)
-	args.input = os.path.join(param.pipeline_outfolder, "unmapped_bam", sample_merged_bam)  #update unmapped bam reference
-	local_unmapped_bam_abs = os.path.join(param.pipeline_outfolder, "unmapped_bam", sample_merged_bam)
-	input_ext = ".bam"
-else:
-	# Link the file into the unmapped_bam directory
-	args.input = args.input[0]
-
-	if not os.path.isabs(args.input):
-		args.input = os.path.abspath(args.input)
-		print args.input
-
-	if args.input.endswith(".bam"):
-		input_ext = ".bam"
-	elif args.input.endswith(".fastq.gz"):
-		input_ext = ".fastq.gz"
-	else:
-		raise NotImplementedError("This pipeline can only deal with .bam or .fastq.gz files")
-
-	local_unmapped_bam_abs = os.path.join(param.pipeline_outfolder, "unmapped_bam", args.sample_name + input_ext)
-	pm.callprint("ln -sf " + args.input + " " + local_unmapped_bam_abs, shell=True)
-
-#check for file exists:
-if not os.path.exists(local_unmapped_bam_abs):
-	raise Exception(local_unmapped_bam_abs + " is not a file")
-
-# Record file size of input file
-
-cmd = "stat -Lc '%s' " + local_unmapped_bam_abs
-input_size = pm.checkprint(cmd)
-input_size = float(input_size.replace("'",""))
-
-pm.report_result("File_mb", round((input_size/1024)/1024,2))
-pm.report_result("Read_type",args.single_or_paired)
-pm.report_result("Genome",args.genome_assembly)
-
-
-# Fastq conversion
+# Merge/Link sample input and Fastq conversion
+# These commands merge (if multiple) or link (if single) input files,
+# then convert (if necessary, for bam, fastq, or gz format) files to fastq.
 ################################################################################
-pm.timestamp("### Fastq conversion: ")
-fastq_folder = os.path.join(param.pipeline_outfolder, "fastq")
-out_fastq_pre = os.path.join(fastq_folder, args.sample_name)
-unaligned_fastq = out_fastq_pre + "_R1.fastq"
+pm.timestamp("### Merge/link and fastq conversion: ")
 
-def check_fastq():
-	raw_reads = myngstk.count_reads(local_unmapped_bam_abs, args.paired_end)
-	pm.report_result("Raw_reads", str(raw_reads))
-	fastq_reads = myngstk.count_reads(unaligned_fastq, args.paired_end)
-	pm.report_result("Fastq_reads", fastq_reads)
-	fail_filter_reads = myngstk.count_fail_reads(local_unmapped_bam_abs, args.paired_end)
-	pf_reads = int(raw_reads) - int(fail_filter_reads)
-	pm.report_result("PF_reads", str(pf_reads))
-	if fastq_reads != int(raw_reads):
-		raise Exception("Fastq conversion error? Number of reads doesn't match unaligned bam")
+local_input_files = ngstk.merge_or_link([args.input, args.input2], raw_folder, args.sample_name)
+cmd, out_fastq_pre, unaligned_fastq = ngstk.input_to_fastq(local_input_files, args.sample_name, args.paired_end, fastq_folder)
+pm.run(cmd, unaligned_fastq, 
+	follow=ngstk.check_fastq(local_input_files, unaligned_fastq, args.paired_end))
+pm.clean_add(out_fastq_pre + "*.fastq", conditional=True)
 
-if input_ext ==".bam":
-	print("Found bam file")
-	cmd = myngstk.bam_to_fastq(local_unmapped_bam_abs, out_fastq_pre, args.paired_end)
-	pm.run(cmd, unaligned_fastq, follow=check_fastq)
-elif input_ext == ".fastq.gz":
-	print("Found gz fastq file")
-	if args.paired_end:
-		# For paired-end reads in one fastq file, we must split the file into 2.
-		cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "fastq_split.py")
-		cmd += " -i " + local_unmapped_bam_abs
-		cmd += " -o " + out_fastq_pre
-		fq_shell = False  # No shell necessary here
-	else:
-		# For single-end reads, we just unzip the fastq.gz file.
-		cmd = "gunzip -c " + local_unmapped_bam_abs + " > " + unaligned_fastq
-		fq_shell = True  # For this command we need shell.
+pm.report_result("File_mb", ngstk.get_file_size(local_input_files))
+pm.report_result("Read_type", args.single_or_paired)
+pm.report_result("Genome", args.genome_assembly)
 
-	myngstk.make_sure_path_exists(fastq_folder)
-	pm.run(cmd, unaligned_fastq, shell=fq_shell, follow=lambda:
-		pm.report_result("Fastq_reads",  myngstk.count_reads(unaligned_fastq, args.paired_end)))
 
 # Adapter trimming
 ################################################################################
@@ -213,7 +146,7 @@ cmd += " " + param.trimmomatic.trimsteps
 cmd += " ILLUMINACLIP:" + resources.adapter_file + param.trimmomatic.illuminaclip
 
 pm.run(cmd, trimmed_fastq, follow=lambda:
-	pm.report_result("Trimmed_reads",  myngstk.count_reads(trimmed_fastq, args.paired_end)))
+	pm.report_result("Trimmed_reads",  ngstk.count_reads(trimmed_fastq, args.paired_end)))
 
 pm.clean_add(os.path.join(fastq_folder, "*.fastq"), conditional=True)
 pm.clean_add(os.path.join(fastq_folder, "*.fq"), conditional=True)
@@ -240,9 +173,9 @@ if int(pm.cores) % bismark_bowtie_threads != 0:
 	print("inefficient core request; make divisible by " + 	str(bismark_bowtie_threads))
 
 bismark_folder = os.path.join(param.pipeline_outfolder, "bismark_" + args.genome_assembly )
-myngstk.make_sure_path_exists(bismark_folder)
+ngstk.make_sure_path_exists(bismark_folder)
 bismark_temp = os.path.join(bismark_folder, "bismark_temp" )
-myngstk.make_sure_path_exists(bismark_temp)
+ngstk.make_sure_path_exists(bismark_temp)
 
 if args.paired_end:
 	out_bismark = os.path.join(bismark_folder, args.sample_name + "_pe.bam")
@@ -272,9 +205,9 @@ if param.bismark.nondirectional:
 	cmd += " --non_directional"
 
 def check_bismark():
-	x = myngstk.count_mapped_reads(out_bismark, args.paired_end)
+	x = ngstk.count_mapped_reads(out_bismark, args.paired_end)
 	pm.report_result("Aligned_reads", x)
-	x = myngstk.count_multimapping_reads(out_bismark, args.paired_end)
+	x = ngstk.count_multimapping_reads(out_bismark, args.paired_end)
 	pm.report_result("Multimap_reads", x)
 
 
@@ -289,9 +222,9 @@ if args.paired_end and args.single2:
 	for read_n in ["1", "2"]:  # Align each read in single end mode
 		read_string = "R" + str(read_n)
 		bismark2_folder = os.path.join(bismark_folder, "se" + str(read_string))
-		myngstk.make_sure_path_exists(bismark2_folder)
+		ngstk.make_sure_path_exists(bismark2_folder)
 		bismark2_temp = os.path.join(bismark2_folder, "bismark2_temp" )
-		myngstk.make_sure_path_exists(bismark2_temp)
+		ngstk.make_sure_path_exists(bismark2_temp)
 		out_bismark2 = os.path.join(bismark2_folder, args.sample_name + read_string +  ".bam")
 
 		unmapped_reads_pre = os.path.join(bismark_folder, args.sample_name)
@@ -314,7 +247,7 @@ if args.paired_end and args.single2:
 	# Now merge, sort, and analyze the single-end data
 	merged_bismark = args.sample_name + "_SEmerged.bam"
 	output_merge = os.path.join(bismark_folder, merged_bismark)
-	cmd = myngstk.merge_bams(out_bismark_se, output_merge, in_sorted="FALSE")
+	cmd = ngstk.merge_bams(out_bismark_se, output_merge, in_sorted="FALSE")
 
 	pm.run(cmd, output_merge)
 	# Sort by read name
@@ -346,7 +279,7 @@ cmd += out_bismark
 cmd += " --bam"
 
 pm.run(cmd, out_dedup, follow=lambda:
-	pm.report_result("Deduplicated_reads", myngstk.count_reads(out_dedup, args.paired_end)))
+	pm.report_result("Deduplicated_reads", ngstk.count_reads(out_dedup, args.paired_end)))
 
 
 pm.timestamp("### Aligned read filtering: ")
@@ -354,14 +287,14 @@ pm.timestamp("### Aligned read filtering: ")
 # convert bam file into sam file and sort again to
 # compensate for a sorting issue of "deduplicate_bismark"
 sam_temp = os.path.join(bismark_folder, "sam_temp")
-myngstk.make_sure_path_exists(sam_temp)
+ngstk.make_sure_path_exists(sam_temp)
 out_sam = os.path.join(bismark_folder, args.sample_name + ".aln.deduplicated.sam")
 cmd = tools.samtools + " sort -n -o " + out_dedup + " " + out_dedup.replace(".bam", "_sorted") + " | " + tools.samtools + " view -h - >" + out_sam
 
 pm.run(cmd, out_sam, shell=True)
 
 #sorted file same size as presorted?
-#pm.report_result("Filtered_reads", myngstk.count_reads(out_sam_filter, args.paired_end)) = myngstk.count_reads(out_sam, args.paired_end)
+#pm.report_result("Filtered_reads", ngstk.count_reads(out_sam_filter, args.paired_end)) = ngstk.count_reads(out_sam, args.paired_end)
 #if sorted_reads != deduplicated_reads:
 #	raise Exception("Sorted size doesn't match deduplicated size.")
 
@@ -380,7 +313,7 @@ if args.paired_end:
 	cmd = cmd + " --pairedEnd"
 
 pm.run(cmd, out_sam_filter, follow=lambda:
-	pm.report_result("Filtered_reads", myngstk.count_reads(out_sam_filter, args.paired_end)))
+	pm.report_result("Filtered_reads", ngstk.count_reads(out_sam_filter, args.paired_end)))
 
 # Clean up all intermediates
 pm.clean_add(out_bismark) # initial mapped bam file
@@ -411,7 +344,7 @@ pm.clean_add(out_sam_filter) # after filtering
 pm.timestamp("### Methylation calling (bismark extractor): ")
 
 extract_dir = os.path.join(bismark_folder, "extractor")
-myngstk.make_sure_path_exists(extract_dir)
+ngstk.make_sure_path_exists(extract_dir)
 out_extractor = os.path.join(extract_dir, re.sub(r'.sam$', '.bismark.cov', os.path.basename(out_sam_filter)))
 out_cpg_report = re.sub(r'.bismark.cov$', '.CpG_report.txt', out_extractor)
 
@@ -485,7 +418,7 @@ if args.epilog:
 
 	pm.timestamp("### Epilog Methcalling: ")
 	epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
-	myngstk.make_sure_path_exists (epilog_output_dir)
+	ngstk.make_sure_path_exists (epilog_output_dir)
 	epilog_outfile=os.path.join(epilog_output_dir, args.sample_name + "_epilog.bed")
 	epilog_summary_file=os.path.join(epilog_output_dir, args.sample_name + "_epilog_summary.bed")
 
@@ -504,9 +437,9 @@ if args.epilog:
 # currently using bowtie1 instead of bowtie2
 pm.timestamp("### Bismark spike-in alignment: ")
 spikein_folder = os.path.join(param.pipeline_outfolder, "bismark_spikein" )
-myngstk.make_sure_path_exists(spikein_folder)
+ngstk.make_sure_path_exists(spikein_folder)
 spikein_temp = os.path.join(spikein_folder, "bismark_temp" )
-myngstk.make_sure_path_exists(spikein_temp)
+ngstk.make_sure_path_exists(spikein_temp)
 out_spikein_base = args.sample_name + ".spikein.aln"
 
 #out_spikein = spikein_folder + args.sample_name + "_R1_trimmed.fastq_unmapped_reads_1.fq_bismark_pe.bam"
@@ -565,7 +498,7 @@ pm.run([cmd, cmd2, cmd3, cmd4], out_spikein_sorted +".bam.bai", nofail=True)
 # Spike-in methylation calling
 ################################################################################
 pm.timestamp("### Methylation calling (testxmz) Spike-in: ")
-spike_chroms = myngstk.get_chrs_from_bam(out_spikein_sorted + ".bam")
+spike_chroms = ngstk.get_chrs_from_bam(out_spikein_sorted + ".bam")
 
 for chrom in spike_chroms:
 	cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "testxmz.py")
@@ -576,7 +509,7 @@ for chrom in spike_chroms:
 
 # spike in conversion efficiency calculation with epilog
 epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
-myngstk.make_sure_path_exists (epilog_output_dir)
+ngstk.make_sure_path_exists (epilog_output_dir)
 epilog_spike_outfile=os.path.join(spikein_folder, args.sample_name + "_epilog.bed")
 epilog_spike_summary_file=os.path.join(spikein_folder, args.sample_name + "_epilog_summary.bed")
 

@@ -85,29 +85,20 @@ raw_folder = os.path.join(param.pipeline_outfolder, "raw/")
 fastq_folder = os.path.join(param.pipeline_outfolder, "fastq/")
 
 # Merge/Link sample input and Fastq conversion
-# These commands merge (if required) or link, then ensure any (bam, fastq, or gz)
-# files are correctly converted to fastq/*.fastq files.
+# These commands merge (if multiple) or link (if single) input files,
+# then convert (if necessary, for bam, fastq, or gz format) files to fastq.
 ################################################################################
-pm.timestamp("### Merging/Linking and fastq conversion: ")
+pm.timestamp("### Merge/link and fastq conversion: ")
 
 local_input_files = ngstk.merge_or_link([args.input, args.input2], raw_folder, args.sample_name)
-
 cmd, out_fastq_pre, unaligned_fastq = ngstk.input_to_fastq(local_input_files, args.sample_name, args.paired_end, fastq_folder)
-
-pm.run(cmd, unaligned_fastq, follow=ngstk.check_fastq(local_input_files, unaligned_fastq, args.paired_end))
-
+pm.run(cmd, unaligned_fastq, 
+	follow=ngstk.check_fastq(local_input_files, unaligned_fastq, args.paired_end))
 pm.clean_add(out_fastq_pre + "*.fastq", conditional=True)
 
-# Record file size of input file
-
-#cmd = "stat -Lc '%s' " + local_input_files
-#input_size = pm.checkprint(cmd)
-#input_size = float(input_size.replace("'",""))
-
 pm.report_result("File_mb", ngstk.get_file_size(local_input_files))
-pm.report_result("Read_type",args.single_or_paired)
-pm.report_result("Genome",args.genome_assembly)
-
+pm.report_result("Read_type", args.single_or_paired)
+pm.report_result("Genome", args.genome_assembly)
 
 # Adapter trimming (Trimmomatic)
 ################################################################################
