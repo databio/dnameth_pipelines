@@ -208,12 +208,6 @@ ngstk.make_sure_path_exists(bsmap_folder)
 
 out_bsmap = os.path.join(bsmap_folder, args.sample_name + ".bam")
 
-
-# REMARK NS: In previous versions of the pipeline, TRIMGALORE used a .fq
-# extension, while trimmomatic used .fastq.
-# I updated it so that the trimmmomatic path also outputs a .fq file, so this
-# doesn't have to vary based on trimmer.
-
 cmd = tools.bsmap
 cmd += " -a " + out_fastq_pre + "_R1_trimmed.fq"
 if args.paired_end:
@@ -255,11 +249,7 @@ def check_bsmap():
 	pm.report_result("Multimap_rate", round(float(mr) *
  100 / float(tr), 2))
 
-pm.run(cmd, trimmed_fastq, follow = check_trim)
-
-
-
-pm.run(cmd, out_bsmap, follow=check_bsmap)
+pm.run(cmd, out_bsmap, follow = check_bsmap)
 
 # bsmap2.90 requires that
 cmd2 = tools.samtools + " sort -f " + out_bsmap + " " + out_bsmap
@@ -336,7 +326,7 @@ if args.genome_assembly == "canFam3":
 biseq_finished_helper = os.path.join(biseq_output_path, "biseq.completed")
 cmd2 = "touch " + biseq_finished_helper
 
-pm.run([cmd, cmd2], target=biseq_finished_helper)
+pm.run([cmd, cmd2], target = biseq_finished_helper)
 
 # Now parse some results for pypiper result reporting.
 read_variables = ['uniqueSeqMotifCount','totalSeqMotifCount','bisulfiteConversionRate','globalMethylationMean']
@@ -346,7 +336,7 @@ for var in read_variables:
 	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "tsv_parser.py")
 	cmd += " -i " + os.path.join(biseq_output_path, "RRBS_statistics_" + args.sample_name + ".txt")
 	cmd += " -c " + var
-	x = pm.checkprint(cmd, shell=True)
+	x = pm.checkprint(cmd, shell = True)
 
 	if var == 'totalSeqMotifCount':
 		totalSeqMotifCount = float(x)
@@ -626,4 +616,3 @@ if not args.paired_end:
 # Cleanup
 ################################################################################
 pm.stop_pipeline()
-

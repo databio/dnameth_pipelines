@@ -105,7 +105,6 @@ pm.report_result("File_mb", ngstk.get_file_size(local_input_files))
 pm.report_result("Read_type", args.single_or_paired)
 pm.report_result("Genome", args.genome_assembly)
 
-
 # Adapter trimming
 ################################################################################
 pm.timestamp("### Adapter trimming: ")
@@ -145,8 +144,14 @@ else:
 cmd += " " + param.trimmomatic.trimsteps
 cmd += " ILLUMINACLIP:" + resources.adapter_file + param.trimmomatic.illuminaclip
 
-pm.run(cmd, trimmed_fastq, follow=lambda:
-	pm.report_result("Trimmed_reads",  ngstk.count_reads(trimmed_fastq, args.paired_end)))
+def check_trim():
+	n_trim = float(ngstk.count_reads(trimmed_fastq, args.paired_end))
+	rr = float(pm.get_stat("Raw_reads"))
+	pm.report_result("Trimmed_reads", n_trim)
+	
+	pm.report_result("Trim_loss_rate", round((rr - n_trim) * 100 / rr, 2))
+
+pm.run(cmd, trimmed_fastq, follow = check_trim)
 
 pm.clean_add(os.path.join(fastq_folder, "*.fastq"), conditional=True)
 pm.clean_add(os.path.join(fastq_folder, "*.fq"), conditional=True)
@@ -205,13 +210,20 @@ if param.bismark.nondirectional:
 	cmd += " --non_directional"
 
 def check_bismark():
-	x = ngstk.count_mapped_reads(out_bismark, args.paired_end)
-	pm.report_result("Aligned_reads", x)
-	x = ngstk.count_multimapping_reads(out_bismark, args.paired_end)
-	pm.report_result("Multimap_reads", x)
+	ar = ngstk.count_mapped_reads(out_bismark, args.paired_end)
+	pm.report_result("Aligned_reads", ar)
+	rr = float(pm.get_stat("Raw_reads"))
+	tr = float(pm.get_stat("Trimmed_reads"))
+	pm.report_result("Alignment_rate", round(float(ar) *
+ 100 / float(tr), 2))
+	pm.report_result("Total_efficiency", round(float(ar) * 100 / float(rr), 2))
 
+	mr = ngstk.count_multimapping_reads(out_bismark, args.paired_end)
+	pm.report_result("Multimap_reads", mr)
+	pm.report_result("Multimap_rate", round(float(mr) *
+ 100 / float(tr), 2))
 
-pm.run(cmd, out_bismark, follow=check_bismark)
+pm.run(cmd, out_bismark, follow = check_bismark)
 
 
 # Secondary single mode:
@@ -278,7 +290,7 @@ else:
 cmd += out_bismark
 cmd += " --bam"
 
-pm.run(cmd, out_dedup, follow=lambda:
+pm.run(cmd, out_dedup, follow = lambda:
 	pm.report_result("Deduplicated_reads", ngstk.count_reads(out_dedup, args.paired_end)))
 
 
@@ -333,7 +345,7 @@ pm.clean_add(out_sam_filter) # after filtering
 # chr17	4890653	4890653	100	1	0
 # chr17	5334751	5334751	100	1	0
 # This output lacks strand information, so you don't know if the coordinate is
-# pointing to a C or G on the + strand unles you look it up in the reference genome.
+# pointing to a C or G on the + strand unless you look it up in the reference genome.
 # The "cytosine_report" file has all the info, but includes an entry for every
 # CpG, covered or not:
 # chr17	3000204	+	0	0	CG	CGT
