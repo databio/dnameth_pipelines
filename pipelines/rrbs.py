@@ -79,33 +79,32 @@ param = pm.config.parameters
 resources = pm.config.resources
 
 # Create a ngstk object
-myngstk = pypiper.NGSTk(pm=pm)
+ngstk = pypiper.NGSTk(pm=pm)
 
-raw_folder = os.path.join(paths.pipeline_outfolder, "raw/")
-fastq_folder = os.path.join(paths.pipeline_outfolder, "fastq/")
+raw_folder = os.path.join(param.pipeline_outfolder, "raw/")
+fastq_folder = os.path.join(param.pipeline_outfolder, "fastq/")
 
 # Merge/Link sample input and Fastq conversion
 # These commands merge (if required) or link, then ensure any (bam, fastq, or gz)
 # files are correctly converted to fastq/*.fastq files.
 ################################################################################
-mypiper.timestamp("### Merging/Linking and fastq conversion: ")
+pm.timestamp("### Merging/Linking and fastq conversion: ")
 
 local_input_files = ngstk.merge_or_link([args.input, args.input2], raw_folder, args.sample_name)
 
 cmd, out_fastq_pre, unaligned_fastq = ngstk.input_to_fastq(local_input_files, args.sample_name, args.paired_end, fastq_folder)
 
-mypiper.run(cmd, unaligned_fastq, follow=ngstk.check_fastq(local_input_files, unaligned_fastq, args.paired_end))
+pm.run(cmd, unaligned_fastq, follow=ngstk.check_fastq(local_input_files, unaligned_fastq, args.paired_end))
 
-mypiper.clean_add(out_fastq_pre + "*.fastq", conditional=True)
+pm.clean_add(out_fastq_pre + "*.fastq", conditional=True)
 
 # Record file size of input file
 
-cmd = "stat -Lc '%s' " + local_input_file
-input_size = pm.checkprint(cmd)
-input_size = float(input_size.replace("'",""))
+#cmd = "stat -Lc '%s' " + local_input_files
+#input_size = pm.checkprint(cmd)
+#input_size = float(input_size.replace("'",""))
 
-pm.report_result("File_mb", round((input_size/1024)/1024,2))
-
+pm.report_result("File_mb", ngstk.get_file_size(local_input_files))
 pm.report_result("Read_type",args.single_or_paired)
 pm.report_result("Genome",args.genome_assembly)
 
@@ -193,7 +192,7 @@ else: # use trim_galore
 # Trimming command has been constructed, using either trimming options.
 # The code to run it is the same either way:
 def check_trim():
-	n_trim = float(myngstk.count_reads(trimmed_fastq, args.paired_end))
+	n_trim = float(ngstk.count_reads(trimmed_fastq, args.paired_end))
 	rr = float(pm.get_stat("Raw_reads"))
 	pm.report_result("Trimmed_reads", n_trim)
 	
@@ -213,7 +212,7 @@ pm.clean_add(fastq_folder, conditional=True)
 ################################################################################
 pm.timestamp("### BSMAP alignment: ")
 bsmap_folder = os.path.join(param.pipeline_outfolder, "bsmap_" + args.genome_assembly)  # e.g. bsmap_hg19
-myngstk.make_sure_path_exists(bsmap_folder)
+ngstk.make_sure_path_exists(bsmap_folder)
 # no tmp folder needed for BSMAP alignment
 
 out_bsmap = os.path.join(bsmap_folder, args.sample_name + ".bam")
@@ -250,7 +249,7 @@ def check_bsmap():
 	# BSMap apparently stores all the reads (mapped and unmapped) in
 	# its output bam; to count aligned reads, then, we have to use
 	# a -F4 flag (with count_mapped_reads instead of count_reads).
-	ar = myngstk.count_mapped_reads(out_bsmap, args.paired_end)
+	ar = ngstk.count_mapped_reads(out_bsmap, args.paired_end)
 	pm.report_result("Aligned_reads", ar)
 	rr = float(pm.get_stat("Raw_reads"))
 	tr = float(pm.get_stat("Trimmed_reads"))
@@ -260,8 +259,10 @@ def check_bsmap():
 
 	# In addition, BSMap can (if instructed by parameters) randomly assign
 	# multimapping reads. It's useful to know how many in the final bam were such.
-	x = myngstk.count_multimapping_reads(out_bsmap, args.paired_end)
-	pm.report_result("Multimap_reads", x)
+	mr = ngstk.count_multimapping_reads(out_bsmap, args.paired_end)
+	pm.report_result("Multimap_reads", mr)
+	pm.report_result("Multimap_rate", round(float(mr) *
+ 100 / float(tr), 2))
 
 pm.run(cmd, trimmed_fastq, follow = check_trim)
 
@@ -296,7 +297,7 @@ biseq_output_path = os.path.join(param.pipeline_outfolder, "biseq_" + args.genom
 biseq_output_path_web = os.path.join(biseq_output_path, "web")
 biseq_output_path_temp = os.path.join(biseq_output_path, "temp")
 
-myngstk.make_sure_path_exists (biseq_output_path)
+ngstk.make_sure_path_exists (biseq_output_path)
 
 cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "biseqMethCalling.py")
 cmd += " --sampleName=" + args.sample_name
@@ -367,7 +368,7 @@ for var in read_variables:
 		pm.report_result('Total_CpGs', x)
 		pm.report_result('meanCoverage', str( totalSeqMotifCount/uniqueSeqMotifCount ))
 	else:
-		pm.report_result(var, x)
+		pm.report_result(var, round(x, 4))
 
 ################################################################################
 pm.timestamp("### Make bigbed: ")
@@ -387,8 +388,8 @@ biseq_methcall_file = os.path.join(biseq_output_path, "RRBS_cpgMethylation_" + a
 bigbed_output_path = os.path.join(param.pipeline_outfolder, "bigbed_" + args.genome_assembly)
 bigwig_output_path = os.path.join(param.pipeline_outfolder, "bigwig_" + args.genome_assembly)
 
-myngstk.make_sure_path_exists (bigbed_output_path)
-myngstk.make_sure_path_exists (bigwig_output_path)
+ngstk.make_sure_path_exists (bigbed_output_path)
+ngstk.make_sure_path_exists (bigwig_output_path)
 bigbed_output_file = os.path.join(bigbed_output_path,"RRBS_" + args.sample_name + ".bb")
 out_bedGraph = os.path.join(bigwig_output_path,"RRBS_" + args.sample_name + ".bedGraph")
 out_bigwig = os.path.join(bigwig_output_path, "RRBS_" + args.sample_name + ".bw")
@@ -431,7 +432,7 @@ pm.run([cmd, cmd2], out_bigwig, shell=True)
 # Calculate neighbor methylation matching
 pm.timestamp("### Neighbor Methylation Matching: ")
 nmm_output_dir = os.path.join(param.pipeline_outfolder, "nmm_" + args.genome_assembly)
-myngstk.make_sure_path_exists (nmm_output_dir)
+ngstk.make_sure_path_exists (nmm_output_dir)
 nmm_outfile=os.path.join(nmm_output_dir, args.sample_name + ".nmm.bed")
 
 cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "methylMatch.py")
@@ -448,7 +449,7 @@ pm.run(cmd, nmm_outfile)
 if args.epilog:
 	pm.timestamp("### Epilog Methcalling: ")
 	epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
-	myngstk.make_sure_path_exists (epilog_output_dir)
+	ngstk.make_sure_path_exists (epilog_output_dir)
 	epilog_outfile=os.path.join(epilog_output_dir, args.sample_name + "_epilog.bed")
 	epilog_summary_file=os.path.join(epilog_output_dir, args.sample_name + "_epilog_summary.bed")
 
@@ -482,14 +483,14 @@ if args.paired_end:
 # convert BAM to fastq
 bsmap_fastq_unalignable_pre = os.path.join(bsmap_folder, args.sample_name + "_unalignable")
 bsmap_fastq_unalignable = bsmap_fastq_unalignable_pre  + "_R1.fastq"
-cmd = myngstk.bam_to_fastq(bsmap_unalignable_bam, bsmap_fastq_unalignable_pre, args.paired_end)
+cmd = ngstk.bam_to_fastq(bsmap_unalignable_bam, bsmap_fastq_unalignable_pre, args.paired_end)
 pm.run(cmd, bsmap_fastq_unalignable)
 
 # actual spike-in analysis
 spikein_folder = os.path.join(param.pipeline_outfolder, "bismark_spikein")
-myngstk.make_sure_path_exists(spikein_folder)
+ngstk.make_sure_path_exists(spikein_folder)
 spikein_temp = os.path.join(spikein_folder, "bismark_temp")
-myngstk.make_sure_path_exists(spikein_temp)
+ngstk.make_sure_path_exists(spikein_temp)
 out_spikein_base = args.sample_name + ".spikein.aln"
 
 out_spikein = os.path.join(spikein_folder, out_spikein_base + ".bam")
@@ -538,7 +539,7 @@ pm.clean_add(out_spikein_dedup, conditional=False)
 # Spike-in methylation calling
 ################################################################################
 pm.timestamp("### Methylation calling (testxmz) Spike-in: ")
-spike_chroms = myngstk.get_chrs_from_bam(out_spikein_sorted + ".bam")
+spike_chroms = ngstk.get_chrs_from_bam(out_spikein_sorted + ".bam")
 
 for chrom in spike_chroms:
 	cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "testxmz.py")
@@ -548,7 +549,7 @@ for chrom in spike_chroms:
 
 # spike in conversion efficiency calculation with epilog
 epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
-myngstk.make_sure_path_exists (epilog_output_dir)
+ngstk.make_sure_path_exists (epilog_output_dir)
 epilog_spike_outfile=os.path.join(spikein_folder, args.sample_name + "_epilog.bed")
 epilog_spike_summary_file=os.path.join(spikein_folder, args.sample_name + "_epilog_summary.bed")
 
@@ -587,7 +588,7 @@ if not args.paired_end:
 	pm.timestamp("### PDR (Partial Disordered Methylation) analysis")
 
 	pdr_output_dir = os.path.join(param.pipeline_outfolder, "pdr_" + args.genome_assembly)
-	myngstk.make_sure_path_exists (pdr_output_dir)
+	ngstk.make_sure_path_exists (pdr_output_dir)
 
 	# convert aligned bam to sam
 
