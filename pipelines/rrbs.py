@@ -185,7 +185,7 @@ else: # use trim_galore
 def check_trim():
 	n_trim = float(ngstk.count_reads(trimmed_fastq, args.paired_end))
 	rr = float(pm.get_stat("Raw_reads"))
-	pm.report_result("Trimmed_reads", n_trim)
+	pm.report_result("Trimmed_reads", int(n_trim))
 	
 	pm.report_result("Trim_loss_rate", round((rr - n_trim) * 100 / rr, 2))
 
@@ -349,7 +349,7 @@ for var in read_variables:
 		pm.report_result('Total_CpGs', x)
 		pm.report_result('meanCoverage', str( totalSeqMotifCount/uniqueSeqMotifCount ))
 	else:
-		pm.report_result(var, round(x, 4))
+		pm.report_result(var, x)
 
 ################################################################################
 pm.timestamp("### Make bigbed: ")
