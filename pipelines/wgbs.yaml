@@ -11,8 +11,10 @@ tools:
   java: java
   Rscript: Rscript
   picard: /cm/shared/apps/picard-tools/1.140/picard.jar
-  trimmomatic: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32.jar
-  trimmomatic_epignome: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32-epignome.jar
+  #trimmomatic: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32.jar
+  # epignome libraries require a customized version of trimmomatic
+  trimmomatic: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32-epignome.jar
+  #trimmomatic_epignome: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32-epignome.jar
   bowtie1: /cm/shared/apps/bowtie/1.1.1/bin
   bowtie2: /cm/shared/apps/bowtie/2.2.4/bin
   bed2bigBed: /data/groups/lab_bock/shared/resources/tools/bedToBigBed
@@ -27,6 +29,7 @@ parameters:
   # parameters passed to bioinformatic tools, subclassed by tool
   trimmomatic:
     trimsteps: "HEADCROP:6"  # Epignome requires a HEADCROP:6
+    # illuminaclip settings with special epignome setting requiring epignome-specific trimmomatic version.
     illuminaclip: ":2:10:4:1:true:epignome:5 SLIDINGWINDOW:4:1 MAXINFO:16:0.40 MINLEN:25"
   bismark:
     nondirectional: false

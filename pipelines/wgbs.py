@@ -123,7 +123,7 @@ else:
 trimmed_fastq = out_fastq_pre + "_R1_trimmed.fq"
 trimmed_fastq_R2 = out_fastq_pre + "_R2_trimmed.fq"
 
-cmd = tools.java + " -Xmx" + str(pm.mem) + " -jar " + tools.trimmomatic_epignome
+cmd = tools.java + " -Xmx" + str(pm.mem) + " -jar " + tools.trimmomatic
 if args.paired_end:
 	cmd += " PE"
 else:
