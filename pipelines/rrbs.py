@@ -182,16 +182,9 @@ else: # use trim_galore
 
 # Trimming command has been constructed, using either trimming options.
 # The code to run it is the same either way:
-def check_trim():
-	n_trim = float(ngstk.count_reads(trimmed_fastq, args.paired_end))
-	rr = float(pm.get_stat("Raw_reads"))
-	pm.report_result("Trimmed_reads", int(n_trim))
-	
-	pm.report_result("Trim_loss_rate", round((rr - n_trim) * 100 / rr, 2))
 
-pm.run(cmd, trimmed_fastq, follow = check_trim)
-
-
+pm.run(cmd, trimmed_fastq, 
+	follow = ngstk.check_trim(trimmed_fastq, trimmed_fastq_R2, args.paired_end))
 
 pm.clean_add(os.path.join(fastq_folder, "*.fastq"), conditional=True)
 pm.clean_add(os.path.join(fastq_folder, "*.fq"), conditional=True)
