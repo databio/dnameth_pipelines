@@ -375,10 +375,15 @@ def getSeqBitArrays(s,padding=0,padVal=False,addBisulfite=1,addH=0,alphabet=["C"
                 bitArrays[c][i] = True
             else:
                 bitArrays[otherChar][i] = True
-        if addBisulfite==1:
+	# modified in June 2016 by Charles Dietz
+	# supports wildcard model for digestion enzymes c-CGG and t-CGA as "wildcard" input "y-CGR"
+        if addBisulfite==1 or addBisulfite==2:
             bitArrays["Y"] = bitArrays["C"] | bitArrays["T"]
-        elif addBisulfite==2:
             bitArrays["R"] = bitArrays["A"] | bitArrays["G"]
+        #if addBisulfite==1:
+        #    bitArrays["Y"] = bitArrays["C"] | bitArrays["T"]
+        #elif addBisulfite==2:
+        #    bitArrays["R"] = bitArrays["A"] | bitArrays["G"]
         if addH==1:
             bitArrays["H"] = bitArrays["A"] | bitArrays["C"] | bitArrays["T"]
         elif addH==2:
