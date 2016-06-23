@@ -234,7 +234,7 @@ if args.paired_end:
 	cmd += " -b " + out_fastq_pre + "_R2_trimmed.fq"
 cmd += " -d " + resources.ref_genome_fasta
 cmd += " -o " + out_bsmap
-cmd += " -D " + str(param.bsmap.rrbs_mapping_mode)
+cmd += " " + str(param.bsmap.rrbs_mapping_mode)
 cmd += " -w " + str(param.bsmap.equal_best_hits)
 cmd += " -v " + str(param.bsmap.mismatch_rate)
 cmd += " -r " + str(param.bsmap.report_repeat)
@@ -307,6 +307,7 @@ cmd += " --sampleName=" + args.sample_name
 cmd += " --alignmentFile=" + out_bsmap      # this is the absolute path to the bsmap aligned bam file
 cmd += " --methodPrefix=RRBS"
 cmd += " --rrbsMode"
+cmd += " --restrictionSite=" + str(param.biseq.restrictionSite) # specify the pattern of restriction sites
 cmd += " --checkRestriction"
 cmd += " --minFragmentLength=" + str(param.biseq.minFragmentLength)
 cmd += " --maxFragmentLength=" + str(param.biseq.maxFragmentLength)

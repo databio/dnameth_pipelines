@@ -29,11 +29,11 @@ parameters:
   trimmomatic:
     memory: 4  # memory allocated to java VM in GB
     threads: 4
-    illuminaclip: ":2:40:7 SLIDINGWINDOW:4:15 MAXINFO:20:0.50 MINLEN:18"   # new set
-    #illuminaclip: ":2:40:7 SLIDINGWINDOW:4:1 MAXINFO:20:0.50 MINLEN:16"   # old set
+    illuminaclip: ":2:40:7 SLIDINGWINDOW:4:15 MAXINFO:20:0.50 MINLEN:18"   # default
+    #illuminaclip: ":2:40:7 SLIDINGWINDOW:4:15 MAXINFO:20:0.50 CROP:50 MINLEN:18"   # with cropping
 
   bsmap:
-    rrbs_mapping_mode: "C-CGG"    # " -D C-CGG "  # set to " " to disable!
+    rrbs_mapping_mode: "-D C-CGG -D T-CGA"    # support for MSP1 and TAQ1 digestion enzymes, set to " " to disable!
     equal_best_hits: 100          # number of equal best hits to count; smaller will be faster
     mismatch_rate: 0.08           # if this value is between 0 and 1, it's interpreted as the mismatch rate w.r.t to the read length
     report_repeat: 1              # how to report repeat hits, 0=none(unique hit/pair only); 1=random one, default:1
@@ -47,6 +47,7 @@ parameters:
     maximal_insert_size: 500      # option for pair-end alignment: maximal insert size allowed, default=500
 
   biseq:
+    restrictionSite: "y-CG_R" # generic pattern for c-CGG (MSP1) and t-CGA (TAQ1)
     minFragmentLength: 20
     maxFragmentLength: 1000
     pfStatus: "All"
