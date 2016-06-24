@@ -41,21 +41,6 @@ if args.single_or_paired == "paired":
 else:
 	args.paired_end = False
 
-# Merging
-################################################################################
-# If 2 input files are given, then these are to be merged.
-# Must be done here to initialize the sample name correctly
-# This is now deprecated (there is no default sample name implemented)
-#merge = False
-#if len(args.input) > 1:
-#	merge = True
-#	if args.sample_name == "default":
-#		args.sample_name = "merged"
-#else:
-#	if args.sample_name == "default":
-#		# Default sample name is derived from the input file
-#		args.sample_name = os.path.splitext(os.path.basename(args.input[0]))[0]
-
 # Create a PipelineManager object and start the pipeline
 pm = pypiper.PipelineManager(name = "RRBS", outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name)), args = args)
 
@@ -65,7 +50,6 @@ pm.config.resources.ref_genome_fasta = os.path.join(pm.config.resources.genomes,
 pm.config.resources.chrom_sizes = os.path.join(pm.config.resources.genomes, args.genome_assembly, args.genome_assembly + ".chromSizes")
 pm.config.resources.genomes_split = os.path.join(pm.config.resources.resources, "genomes_split")
 pm.config.resources.bismark_spikein_genome = os.path.join(pm.config.resources.genomes, pm.config.resources.spikein_genome, "indexed_bismark_bt1")
-
 
 # Epilog indexes
 pm.config.resources.methpositions = os.path.join(pm.config.resources.genomes, args.genome_assembly, "indexed_epilog", args.genome_assembly + "_index.tsv.gz")
@@ -126,7 +110,7 @@ if args.trimmomatic:
 
 	# REMARK NS:
 	# The -Xmx4000m restricts heap memory allowed to java, and is necessary
-	#  to prevent java from allocating lots of memory willy-nilly
+	# to prevent java from allocating lots of memory willy-nilly
 	# if it's on a machine with lots of memory, which can lead
 	# to jobs getting killed by a resource manager. By default, java will
 	# use more memory on systems that have more memory, leading to node-dependent
@@ -184,12 +168,13 @@ else: # use trim_galore
 # The code to run it is the same either way:
 
 pm.run(cmd, trimmed_fastq, 
-	follow = ngstk.check_trim(trimmed_fastq, trimmed_fastq_R2, args.paired_end))
+	follow = ngstk.check_trim(trimmed_fastq, trimmed_fastq_R2, args.paired_end,
+		fastqc_folder = os.path.join(param.pipeline_outfolder, "fastqc/")))
 
-pm.clean_add(os.path.join(fastq_folder, "*.fastq"), conditional=True)
-pm.clean_add(os.path.join(fastq_folder, "*.fq"), conditional=True)
-pm.clean_add(os.path.join(fastq_folder, "*.log"), conditional=True)
-pm.clean_add(fastq_folder, conditional=True)
+pm.clean_add(os.path.join(fastq_folder, "*.fastq"), conditional = True)
+pm.clean_add(os.path.join(fastq_folder, "*.fq"), conditional = True)
+pm.clean_add(os.path.join(fastq_folder, "*.log"), conditional = True)
+pm.clean_add(fastq_folder, conditional = True)
 
 
 # RRBS alignment with BSMAP.
