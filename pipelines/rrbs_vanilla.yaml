@@ -2,7 +2,8 @@ resources:
   # paths to reference genomes, adapter files, and other required shared data
   resources: /data/groups/lab_bock/shared/resources
   genomes: /data/groups/lab_bock/shared/resources/genomes/
-  adapters: /data/groups/lab_bock/shared/resources/adapters/
+  adapter_file: /data/groups/lab_bock/shared/resources/adapters/RRBS_adapters.fa
+  spikein_genome: meth_spikein_k1_k3
 
 tools:
   # paths to required tools
@@ -19,7 +20,6 @@ tools:
   bed2bigWig: /data/groups/lab_bock/shared/resources/tools/bedGraphToBigWig
   bismark: /cm/shared/apps/bismark/0.12.2/bismark
   deduplicate_bismark: /cm/shared/apps/bismark/0.12.2/deduplicate_bismark
-  #bsmap: /cm/shared/apps/bsmap/2.74/bsmap
   bsmap: /cm/shared/apps/bsmap/2.90/bin/bsmap
   biseq_tools: /data/groups/lab_bock/shared/resources/tools
 
