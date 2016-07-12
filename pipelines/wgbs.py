@@ -36,7 +36,6 @@ parser.add_argument('--single2', dest='single2', action="store_true", default=Fa
 			be aligned using single-end mode, and then analyzed. Only valid for \
 			paired-end mode. ')
 
-
 args = parser.parse_args()
 
 if args.single_or_paired == "paired":
@@ -62,7 +61,8 @@ else:
 
 
 # Create a PipelineManager object and start the pipeline
-pm = pypiper.PipelineManager(name = "WGBS", outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name)), args = args)
+outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
+pm = pypiper.PipelineManager(name = "WGBS", outfolder = outfolder, args = args)
 
 # Set up a few additional paths not in the config file
 pm.config.tools.scripts_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tools")
@@ -82,7 +82,7 @@ pm.config.resources.methpositions = os.path.join(pm.config.resources.genomes, ar
 if pm.config.resources.bismark_spikein_genome:
 	pm.config.resources.spikein_methpositions = os.path.join(pm.config.resources.genomes, pm.config.resources.spikein_genome, "indexed_epilog", pm.config.resources.spikein_genome + "_index.tsv.gz")
 
-pm.config.parameters.pipeline_outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
+pm.config.parameters.pipeline_outfolder = outfolder
 
 print(pm.config)
 tools = pm.config.tools  # Convenience alias
