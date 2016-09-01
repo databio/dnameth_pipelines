@@ -260,7 +260,8 @@ if args.paired_end and args.single2:
 	# Now merge, sort, and analyze the single-end data
 	merged_bismark = args.sample_name + "_SEmerged.bam"
 	output_merge = os.path.join(bismark_folder, merged_bismark)
-	cmd = ngstk.merge_bams(out_bismark_se, output_merge, in_sorted="FALSE")
+	cmd = ngstk.merge_bams(out_bismark_se, output_merge, in_sorted = "FALSE", 
+		tmp_dir = resources.tmp_dir)
 
 	pm.run(cmd, output_merge)
 	# Sort by read name

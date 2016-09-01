@@ -4,6 +4,7 @@ resources:
   genomes: /data/groups/lab_bock/shared/resources/genomes/
   adapter_file: /data/groups/lab_bock/shared/resources/adapters/epignome_adapters.fa
   spikein_genome: meth_spikein_k1_k3
+  tmp_dir: /data/groups/lab_bock/tmp
 
 tools:
   # absolute paths to required tools
