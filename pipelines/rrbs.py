@@ -42,7 +42,8 @@ else:
 	args.paired_end = False
 
 # Create a PipelineManager object and start the pipeline
-pm = pypiper.PipelineManager(name = "RRBS", outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name)), args = args)
+outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
+pm = pypiper.PipelineManager(name = "RRBS", outfolder = outfolder, args = args)
 
 # Set up a few additional paths not in the config file
 pm.config.tools.scripts_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tools")
@@ -55,7 +56,7 @@ pm.config.resources.bismark_spikein_genome = os.path.join(pm.config.resources.ge
 pm.config.resources.methpositions = os.path.join(pm.config.resources.genomes, args.genome_assembly, "indexed_epilog", args.genome_assembly + "_index.tsv.gz")
 pm.config.resources.spikein_methpositions = os.path.join(pm.config.resources.genomes, pm.config.resources.spikein_genome, "indexed_epilog", pm.config.resources.spikein_genome + "_index.tsv.gz")
 
-pm.config.parameters.pipeline_outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
+pm.config.parameters.pipeline_outfolder = outfolder
 
 print(pm.config)
 tools = pm.config.tools  # Convenience alias
