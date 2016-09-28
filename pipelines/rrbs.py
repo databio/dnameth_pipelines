@@ -423,6 +423,23 @@ if args.epilog:
 
 	pm.run(cmd, epilog_outfile, nofail=True)
 
+
+if args.pdr:
+	pm.timestamp("### Epilog Methcalling: ")
+	epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+	ngstk.make_sure_path_exists (epilog_output_dir)
+	epilog_outfile=os.path.join(epilog_output_dir, args.sample_name + "_epilog.bed")
+	epilog_summary_file=os.path.join(epilog_output_dir, args.sample_name + "_epilog_summary.bed")
+
+	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
+	cmd += " --infile=" + out_bsmap  # absolute path to the bsmap aligned bam
+	cmd += " --p=" + resources.methpositions
+	cmd += " --outfile=" + epilog_outfile
+	cmd += " --summary-file=" + epilog_summary_file
+	cmd += " --cores=" + str(pm.cores)
+
+	pm.run(cmd, epilog_outfile, nofail=True)	
+
 ################################################################################
 pm.timestamp("### Bismark spike-in alignment: ")
 # currently using bowtie1 instead of bowtie2
@@ -543,8 +560,8 @@ for chrom in spike_chroms:
 # PDR calculation:
 ################################################################################
 
-# PDR not applied to PE case because bisulfiteReadConcordanceAnalysis.py crashes
-if not args.paired_end:
+# PDR not applied to PE case because bisulfiteReadConcordanceAnalysis.py is single-end only
+if not args.paired_end and args.pdr:
 
 	pm.timestamp("### PDR (Partial Disordered Methylation) analysis")
 
@@ -587,6 +604,19 @@ if not args.paired_end:
 	# delete huge input SAM file
 	pm.clean_add(os.path.join(pdr_output_dir,"*.sam"), conditional=True)
 	pm.clean_add(pdr_output_dir, conditional=True)
+
+	if file_exists(tools.extractPDR):
+
+		pm.timestamp("### PDR (Perl version by Kendell)")	
+		pdr_out = os.path.join(pdr_output_dir, args.sample_name + ".pdr")
+
+		cmd = "perl " + os.path.join(tools.scripts_dir, "extractPDR.pl")
+		cmd += " " + os.path.join(pdr_output_dir, args.sample_name) + " " + args.genome_assembly + "_split"
+		cmd += " " + out_bsmap
+
+		pm.run(cmd, target = pdr_out, nofail = True)
+
+
 
 # Final sorting and indexing
 ################################################################################
