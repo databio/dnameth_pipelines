@@ -34,6 +34,10 @@ parser.add_argument('-t', '--trimgalore', dest='trimmomatic', action="store_fals
 parser.add_argument('-e', '--epilog', dest='epilog', action="store_true", default=False,
 	help='Use epilog for meth calling?')
 
+parser.add_argument('--pdr', dest='pdr', action="store_true", default=False,
+	help='Calculate Proportion of Discordant Reads (PDR)?')
+
+
 args = parser.parse_args()
 
 if args.single_or_paired == "paired":
@@ -420,25 +424,10 @@ if args.epilog:
 	cmd += " --outfile=" + epilog_outfile
 	cmd += " --summary-file=" + epilog_summary_file
 	cmd += " --cores=" + str(pm.cores)
+	cmd += " --strand"  # Strand mode required because this isn't a bismark alignment.
 
 	pm.run(cmd, epilog_outfile, nofail=True)
 
-
-if args.pdr:
-	pm.timestamp("### Epilog Methcalling: ")
-	epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
-	ngstk.make_sure_path_exists (epilog_output_dir)
-	epilog_outfile=os.path.join(epilog_output_dir, args.sample_name + "_epilog.bed")
-	epilog_summary_file=os.path.join(epilog_output_dir, args.sample_name + "_epilog_summary.bed")
-
-	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
-	cmd += " --infile=" + out_bsmap  # absolute path to the bsmap aligned bam
-	cmd += " --p=" + resources.methpositions
-	cmd += " --outfile=" + epilog_outfile
-	cmd += " --summary-file=" + epilog_summary_file
-	cmd += " --cores=" + str(pm.cores)
-
-	pm.run(cmd, epilog_outfile, nofail=True)	
 
 ################################################################################
 pm.timestamp("### Bismark spike-in alignment: ")
@@ -599,19 +588,19 @@ if not args.paired_end and args.pdr:
 	    #TODO: perhaps convert them to bam *cough*
 
 	#call:
-	pm.run(cmd1, pdr_bedfile)
+	pm.run(cmd1, pdr_bedfile, nofail = True)
 
 	# delete huge input SAM file
-	pm.clean_add(os.path.join(pdr_output_dir,"*.sam"), conditional=True)
-	pm.clean_add(pdr_output_dir, conditional=True)
+	pm.clean_add(os.path.join(pdr_output_dir,"*.sam"), conditional = True)
+	pm.clean_add(pdr_output_dir, conditional = True)
 
-	if file_exists(tools.extractPDR):
+	if os.path.isfile(os.path.join(tools.scripts_dir, "extractPDR.pl")):
 
 		pm.timestamp("### PDR (Perl version by Kendell)")	
 		pdr_out = os.path.join(pdr_output_dir, args.sample_name + ".pdr")
 
 		cmd = "perl " + os.path.join(tools.scripts_dir, "extractPDR.pl")
-		cmd += " " + os.path.join(pdr_output_dir, args.sample_name) + " " + args.genome_assembly + "_split"
+		cmd += " " + os.path.join(pdr_output_dir, args.sample_name) + " " + args.genome_assembly + ""
 		cmd += " " + out_bsmap
 
 		pm.run(cmd, target = pdr_out, nofail = True)
