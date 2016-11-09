@@ -10,7 +10,7 @@ tools:
   python: python
   java: java
   samtools: samtools
-  picard: /cm/shared/apps/picard-tools/1.140/picard.jar
+  picard: $PICARD/picard.jar
   trimmomatic: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32.jar
   trimmomatic_epignome: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32-epignome.jar
   trimgalore: /cm/shared/apps/trim_galore/0.3.3/trim_galore
