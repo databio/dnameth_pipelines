@@ -235,7 +235,7 @@ def check_bsmap():
 pm.run(cmd, out_bsmap, follow = check_bsmap)
 
 # bsmap2.90 requires that
-cmd2 = tools.samtools + " sort -f " + out_bsmap + " " + out_bsmap
+cmd2 = tools.samtools + " sort -o " + out_bsmap + " " + out_bsmap
 cmd3 = tools.samtools + " index " + out_bsmap
 pm.run([cmd2, cmd3], out_bsmap + ".bai", nofail=True)
 
@@ -464,7 +464,10 @@ out_spikein = os.path.join(spikein_folder, out_spikein_base + ".bam")
 cmd = tools.bismark + " " + resources.bismark_spikein_genome + " "
 cmd += bsmap_fastq_unalignable_pre + "_R1.fastq"
 cmd += " --bam --unmapped"
-cmd += " --path_to_bowtie " + tools.bowtie1
+if (os.path.isdir(tools.bowtie1)):
+	# If tools.bowtie1 is not a directory, assume owtie is in the path,
+	# in which case bismark doesn't need it.
+	cmd += " --path_to_bowtie " + tools.bowtie1
 #	cmd += " --bowtie2"
 cmd += " --temp_dir " + spikein_temp
 cmd += " --output_dir " + spikein_folder
@@ -498,7 +501,7 @@ else:
 	cmd += " --bam"
 
 out_spikein_sorted = out_spikein_dedup.replace('.deduplicated.bam', '.deduplicated.sorted')
-cmd2 = tools.samtools + " sort " + out_spikein_dedup + " " + out_spikein_sorted
+cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
 cmd3 = tools.samtools + " index " + out_spikein_sorted + ".bam"
 pm.run([cmd, cmd2, cmd3], out_spikein_sorted + ".bam.bai", nofail=True)
 pm.clean_add(out_spikein_dedup, conditional=False)
