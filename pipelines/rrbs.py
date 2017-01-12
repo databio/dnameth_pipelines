@@ -34,6 +34,10 @@ parser.add_argument('-t', '--trimgalore', dest='trimmomatic', action="store_fals
 parser.add_argument('-e', '--epilog', dest='epilog', action="store_true", default=False,
 	help='Use epilog for meth calling?')
 
+parser.add_argument('--pdr', dest='pdr', action="store_true", default=False,
+	help='Calculate Proportion of Discordant Reads (PDR)?')
+
+
 args = parser.parse_args()
 
 if args.single_or_paired == "paired":
@@ -231,7 +235,7 @@ def check_bsmap():
 pm.run(cmd, out_bsmap, follow = check_bsmap)
 
 # bsmap2.90 requires that
-cmd2 = tools.samtools + " sort -f " + out_bsmap + " " + out_bsmap
+cmd2 = tools.samtools + " sort -o " + out_bsmap + " " + out_bsmap
 cmd3 = tools.samtools + " index " + out_bsmap
 pm.run([cmd2, cmd3], out_bsmap + ".bai", nofail=True)
 
@@ -420,8 +424,10 @@ if args.epilog:
 	cmd += " --outfile=" + epilog_outfile
 	cmd += " --summary-file=" + epilog_summary_file
 	cmd += " --cores=" + str(pm.cores)
+	cmd += " --strand"  # Strand mode required because this isn't a bismark alignment.
 
 	pm.run(cmd, epilog_outfile, nofail=True)
+
 
 ################################################################################
 pm.timestamp("### Bismark spike-in alignment: ")
@@ -458,7 +464,10 @@ out_spikein = os.path.join(spikein_folder, out_spikein_base + ".bam")
 cmd = tools.bismark + " " + resources.bismark_spikein_genome + " "
 cmd += bsmap_fastq_unalignable_pre + "_R1.fastq"
 cmd += " --bam --unmapped"
-cmd += " --path_to_bowtie " + tools.bowtie1
+if (os.path.isdir(tools.bowtie1)):
+	# If tools.bowtie1 is not a directory, assume owtie is in the path,
+	# in which case bismark doesn't need it.
+	cmd += " --path_to_bowtie " + tools.bowtie1
 #	cmd += " --bowtie2"
 cmd += " --temp_dir " + spikein_temp
 cmd += " --output_dir " + spikein_folder
@@ -492,7 +501,7 @@ else:
 	cmd += " --bam"
 
 out_spikein_sorted = out_spikein_dedup.replace('.deduplicated.bam', '.deduplicated.sorted')
-cmd2 = tools.samtools + " sort " + out_spikein_dedup + " " + out_spikein_sorted
+cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
 cmd3 = tools.samtools + " index " + out_spikein_sorted + ".bam"
 pm.run([cmd, cmd2, cmd3], out_spikein_sorted + ".bam.bai", nofail=True)
 pm.clean_add(out_spikein_dedup, conditional=False)
@@ -543,8 +552,8 @@ for chrom in spike_chroms:
 # PDR calculation:
 ################################################################################
 
-# PDR not applied to PE case because bisulfiteReadConcordanceAnalysis.py crashes
-if not args.paired_end:
+# PDR not applied to PE case because bisulfiteReadConcordanceAnalysis.py is single-end only
+if not args.paired_end and args.pdr:
 
 	pm.timestamp("### PDR (Partial Disordered Methylation) analysis")
 
@@ -582,11 +591,24 @@ if not args.paired_end:
 	    #TODO: perhaps convert them to bam *cough*
 
 	#call:
-	pm.run(cmd1, pdr_bedfile)
+	pm.run(cmd1, pdr_bedfile, nofail = True)
 
 	# delete huge input SAM file
-	pm.clean_add(os.path.join(pdr_output_dir,"*.sam"), conditional=True)
-	pm.clean_add(pdr_output_dir, conditional=True)
+	pm.clean_add(os.path.join(pdr_output_dir,"*.sam"), conditional = True)
+	pm.clean_add(pdr_output_dir, conditional = True)
+
+	if os.path.isfile(os.path.join(tools.scripts_dir, "extractPDR.pl")):
+
+		pm.timestamp("### PDR (Perl version by Kendell)")	
+		pdr_out = os.path.join(pdr_output_dir, args.sample_name + ".pdr")
+
+		cmd = "perl " + os.path.join(tools.scripts_dir, "extractPDR.pl")
+		cmd += " " + os.path.join(pdr_output_dir, args.sample_name) + " " + args.genome_assembly + ""
+		cmd += " " + out_bsmap
+
+		pm.run(cmd, target = pdr_out, nofail = True)
+
+
 
 # Final sorting and indexing
 ################################################################################
