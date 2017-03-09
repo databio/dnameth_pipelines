@@ -195,7 +195,9 @@ if args.paired_end:
 else:
 	cmd += out_fastq_pre + "_R1_trimmed.fq"
 cmd += " --bam --unmapped"
-cmd += " --path_to_bowtie " + tools.bowtie2
+# Bowtie may be specified in raw form to indicate presence on path.
+if tools.bowtie2 != "bowtie2":
+	cmd += " --path_to_bowtie " + tools.bowtie2
 cmd += " --bowtie2"
 cmd += " --temp_dir " + bismark_temp
 cmd += " --output_dir " + bismark_folder
