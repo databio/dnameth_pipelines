@@ -431,7 +431,7 @@ pm.run(cmd, out_bigwig, shell=False)
 
 if args.epilog:
 	# out_bismark must be indexed in order for epilog to use it
-	cmd2 = tools.samtools + " sort -f " + out_bismark + " " + out_bismark
+	cmd2 = tools.samtools + " sort -@ " + int(pm.cores) + " -o " + out_bismark + " " + out_bismark
 	cmd3 = tools.samtools + " index " + out_bismark
 	pm.run([cmd2, cmd3], out_bismark + ".bai")
 
