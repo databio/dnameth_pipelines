@@ -11,7 +11,7 @@ tools:
   python: python
   java: java
   Rscript: Rscript
-  picard: $RESOURCES/tools/picard-tools/1.100/picard.jar
+  picard: $PICARD
   # epignome libraries require a customized version of trimmomatic
   trimmomatic: $RESOURCES/tools/trimmomatic/0.32/trimmomatic-0.32-epignome.jar
   bowtie: bowtie
