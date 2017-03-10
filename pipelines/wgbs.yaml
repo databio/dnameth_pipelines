@@ -11,7 +11,7 @@ tools:
   python: python
   java: java
   Rscript: Rscript
-  picard: /cm/shared/apps/picard-tools/1.140/picard.jar
+  picard: $PICARD
   #trimmomatic: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32.jar
   # epignome libraries require a customized version of trimmomatic
   trimmomatic: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32-epignome.jar
@@ -23,7 +23,7 @@ tools:
   bismark: /cm/shared/apps/bismark/0.12.2/bismark
   deduplicate_bismark: /cm/shared/apps/bismark/0.12.2/deduplicate_bismark
   bismark_methylation_extractor: /cm/shared/apps/bismark/0.12.2/bismark_methylation_extractor
-  samtools: /cm/shared/apps/samtools/1.2/bin/samtools
+  samtools: samtools
   biseqMethCalling_tools: /data/groups/lab_bock/shared/resources/tools
 
 parameters:
