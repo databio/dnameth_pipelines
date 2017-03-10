@@ -4,25 +4,25 @@ resources:
   genomes: $GENOMES
   adapter_file: $RESOURCES/adapters/epignome_adapters.fa
   spikein_genome: meth_spikein_k1_k3
-  tmp_dir: $SCRATCH/tmp
+  tmp_dir: ${TMPDIR}
 
 tools:
   # absolute paths to required tools
   python: python
   java: java
   Rscript: Rscript
-  picard: $PICARD
+  picard: ${PICARD}
   # epignome libraries require a customized version of trimmomatic
-  trimmomatic: $RESOURCES/tools/trimmomatic/0.32/trimmomatic-0.32-epignome.jar
+  trimmomatic: ${TRIMMOMATIC}
   bowtie: bowtie
   bowtie1: bowtie
   bowtie2: bowtie2
-  bed2bigBed: $RESOURCES/tools/bedToBigBed
-  bed2bigWig: $RESOURCES/tools/bedGraphToBigWig
+  bed2bigBed: bedToBigBed
+  bed2bigWig: bedGraphToBigWig
   deduplicate_bismark: deduplicate_bismark
   bismark_methylation_extractor: bismark_methylation_extractor
   samtools: samtools
-  biseqMethCalling_tools: /scratch/ns5bc/resources/tools
+  biseqMethCalling_tools: ${RESOURCES}/tools
 
 parameters:
   # parameters passed to bioinformatic tools, subclassed by tool
