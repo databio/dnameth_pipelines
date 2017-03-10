@@ -433,7 +433,7 @@ if args.epilog:
 	# out_bismark must be indexed in order for epilog to use it
 	# should we do this on out_ded
 	out_dedup_sorted = re.sub(r'.bam$',"_sort.bam", out_dedup)
-	cmd2 = tools.samtools + " sort -@ " + int(pm.cores) + " -o " + out_dedup_sorted + " " + out_dedup
+	cmd2 = tools.samtools + " sort -@ " + str(pm.cores) + " -o " + out_dedup_sorted + " " + out_dedup
 	cmd3 = tools.samtools + " index " + out_dedup_sorted
 	pm.run([cmd2, cmd3], out_dedup_sorted + ".bai")
 
