@@ -431,9 +431,11 @@ pm.run(cmd, out_bigwig, shell=False)
 
 if args.epilog:
 	# out_bismark must be indexed in order for epilog to use it
-	cmd2 = tools.samtools + " sort -@ " + int(pm.cores) + " -o " + out_bismark + " " + out_bismark
-	cmd3 = tools.samtools + " index " + out_bismark
-	pm.run([cmd2, cmd3], out_bismark + ".bai")
+	# should we do this on out_ded
+	out_dedup_sorted = re.sub(r'.bam$',"_sort.bam", out_dedup)
+	cmd2 = tools.samtools + " sort -@ " + int(pm.cores) + " -o " + out_dedup_sorted + " " + out_dedup
+	cmd3 = tools.samtools + " index " + out_dedup_sorted
+	pm.run([cmd2, cmd3], out_dedup_sorted + ".bai")
 
 	pm.timestamp("### Epilog Methcalling: ")
 	epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
@@ -442,7 +444,7 @@ if args.epilog:
 	epilog_summary_file=os.path.join(epilog_output_dir, args.sample_name + "_epilog_summary.bed")
 
 	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
-	cmd += " --infile=" + out_bismark  # absolute path to the aligned bam
+	cmd += " --infile=" + out_dedup_sorted  # absolute path to the aligned bam
 	cmd += " --p=" + resources.methpositions
 	cmd += " --outfile=" + epilog_outfile
 	cmd += " --summary-file=" + epilog_summary_file
