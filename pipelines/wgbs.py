@@ -305,7 +305,10 @@ pm.timestamp("### Aligned read filtering: ")
 sam_temp = os.path.join(bismark_folder, "sam_temp")
 ngstk.make_sure_path_exists(sam_temp)
 out_sam = os.path.join(bismark_folder, args.sample_name + ".aln.deduplicated.sam")
-cmd = tools.samtools + " sort -n -o " + out_dedup + " " + out_dedup.replace(".bam", "_sorted") + " | " + tools.samtools + " view -h - >" + out_sam
+#Is this an old version of samtools?
+#cmd = tools.samtools + " sort -n -o " + out_dedup + " " + out_dedup.replace(".bam", "_sorted") + " | " + tools.samtools + " view -h - >" + out_sam
+cmd = tools.samtools + " sort -n " + out_dedup + " " + " | " + tools.samtools + " view -h - >" + out_sam
+
 
 pm.run(cmd, out_sam, shell=True)
 
