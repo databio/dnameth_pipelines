@@ -247,7 +247,9 @@ if args.paired_end and args.single2:
 		cmd = tools.bismark + " " + resources.bismark_indexed_genome + " "
 		cmd += unmapped_reads_pre + "_unmapped_reads_" + str(read_n) + ".fq"
 		cmd += " --bam --unmapped"
-		cmd += " --path_to_bowtie " + tools.bowtie2
+		# Bowtie may be specified in raw form to indicate presence on path.
+		if tools.bowtie2 != "bowtie2":
+			cmd += " --path_to_bowtie " + tools.bowtie2
 		cmd += " --bowtie2"
 		cmd += " --temp_dir " + bismark2_temp
 		cmd += " --output_dir " + bismark2_folder
@@ -478,7 +480,9 @@ if resources.bismark_spikein_genome:
 	else:
 		cmd += unmapped_reads_pre + "_unmapped_reads.fq"
 	cmd += " --bam --unmapped"
-	cmd += " --path_to_bowtie " + tools.bowtie1
+	# Bowtie may be specified in raw form to indicate presence on path.
+	if tools.bowtie1 != "bowtie":
+		cmd += " --path_to_bowtie " + tools.bowtie1
 	#cmd += " --bowtie2"
 	cmd += " --temp_dir " + spikein_temp
 	cmd += " --output_dir " + spikein_folder
