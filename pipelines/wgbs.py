@@ -272,7 +272,7 @@ if args.paired_end and args.single2:
 	sorted_bismark = args.sample_name + "_SEsorted.bam"
 	output_sort = os.path.join(bismark_folder, sorted_bismark)
 
-	cmd = tools.samtools + " sort -n -o " + output_merge " " + output_sort
+	cmd = tools.samtools + " sort -n -o " + output_merge + " " + output_sort
 	pm.run(cmd, output_sort)
 
 	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "rematch_pairs.py")
@@ -590,7 +590,7 @@ out_final = os.path.join(bismark_folder, args.sample_name + ".final.bam")
 # cmd += " CREATE_INDEX=true"
 # pm.run(cmd, out_final, lock_name="final_sorting")
 
-cmd = tools.samtools + " sort -b " + out_sam_filter + " -o " + out_final
+cmd = tools.samtools + " sort -@ " + str(pm.cores) + " " + out_sam_filter + " -o " + out_final
 cmd2 = tools.samtools + " index " + out_final
 pm.run([cmd, cmd2], out_final + ".bai")
 
