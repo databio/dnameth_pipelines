@@ -272,7 +272,7 @@ if args.paired_end and args.single2:
 	sorted_bismark = args.sample_name + "_SEsorted.bam"
 	output_sort = os.path.join(bismark_folder, sorted_bismark)
 
-	cmd = tools.samtools + " sort -n " + output_merge + " -f " + output_sort
+	cmd = tools.samtools + " sort -n -o " + output_merge " " + output_sort
 	pm.run(cmd, output_sort)
 
 	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "rematch_pairs.py")
@@ -309,7 +309,8 @@ ngstk.make_sure_path_exists(sam_temp)
 out_sam = os.path.join(bismark_folder, args.sample_name + ".aln.deduplicated.sam")
 #Is this an old version of samtools?
 #cmd = tools.samtools + " sort -n -o " + out_dedup + " " + out_dedup.replace(".bam", "_sorted") + " | " + tools.samtools + " view -h - >" + out_sam
-cmd = tools.samtools + " sort -n " + out_dedup + " " + " | " + tools.samtools + " view -h - >" + out_sam
+#cmd = tools.samtools + " sort -n " + out_dedup + " " + " | " + tools.samtools + " view -h - >" + out_sam
+cmd = tools.samtools + " sort -n " + out_dedup + " -o " + out_sam
 
 
 pm.run(cmd, out_sam, shell=True)
@@ -574,22 +575,24 @@ pm.timestamp("### Final sorting and indexing: ")
 
 #out_header = bismark_folder + args.sample_name + ".reheader.bam"
 out_final = os.path.join(bismark_folder, args.sample_name + ".final.bam")
-temp_folder = os.path.join(bismark_folder, "tmp")
+# temp_folder = os.path.join(bismark_folder, "tmp")
 
-# Sort
-cmd = tools.java + " -Xmx" + str(pm.mem)
-# This sort can run out of temp space on big jobs; this puts the temp to a
-# local spot.
-cmd += " -Djava.io.tmpdir=" + str(temp_folder)
-cmd += " -jar " + tools.picard + " SortSam"
-cmd += " I=" + out_sam_filter
-cmd += " O=" + out_final
-cmd += " SORT_ORDER=coordinate"
-cmd += " VALIDATION_STRINGENCY=SILENT"
-cmd += " CREATE_INDEX=true"
-pm.run(cmd, out_final, lock_name="final_sorting")
+# # Sort
+# cmd = tools.java + " -Xmx" + str(pm.mem)
+# # This sort can run out of temp space on big jobs; this puts the temp to a
+# # local spot.
+# cmd += " -Djava.io.tmpdir=" + str(temp_folder)
+# cmd += " -jar " + tools.picard + " SortSam"
+# cmd += " I=" + out_sam_filter
+# cmd += " O=" + out_final
+# cmd += " SORT_ORDER=coordinate"
+# cmd += " VALIDATION_STRINGENCY=SILENT"
+# cmd += " CREATE_INDEX=true"
+# pm.run(cmd, out_final, lock_name="final_sorting")
 
-
+cmd = tools.samtools + " sort -b " + out_sam_filter + " -o " + out_final
+cmd2 = tools.samtools + " index " + out_final
+pm.run([cmd, cmd2], out_final + ".bai")
 
 # Cleanup
 ################################################################################
