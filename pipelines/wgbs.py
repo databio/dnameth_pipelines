@@ -516,7 +516,7 @@ if resources.bismark_spikein_genome:
 	cmd += " --bam"
 
 	out_spikein_sorted = out_spikein_dedup.replace('.deduplicated.bam', '.deduplicated.sorted')
-	cmd2 = tools.samtools + " sort " + out_spikein_dedup + " " + out_spikein_sorted
+	cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
 	cmd3 = tools.samtools + " index " + out_spikein_sorted + ".bam"
 	cmd4 = "rm " + out_spikein_dedup
 	pm.run([cmd, cmd2, cmd3, cmd4], out_spikein_sorted +".bam.bai", nofail=True)
