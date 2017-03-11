@@ -77,7 +77,7 @@ except:
 pm.config.resources.bismark_indexed_genome = os.path.join(pm.config.resources.genomes, args.genome_assembly, "indexed_bismark_bt2")
 
 # Epilog indexes
-pm.config.resources.methpositions = os.path.join(pm.config.resources.genomes, args.genome_assembly, "indexed_epilog", args.genome_assembly + "_index.tsv.gz")
+pm.config.resources.methpositions = os.path.join(pm.config.resources.genomes, args.genome_assembly, "indexed_epilog", args.genome_assembly + "_cg.tsv.gz")
 
 if pm.config.resources.bismark_spikein_genome:
 	pm.config.resources.spikein_methpositions = os.path.join(pm.config.resources.genomes, pm.config.resources.spikein_genome, "indexed_epilog", pm.config.resources.spikein_genome + "_index.tsv.gz")
@@ -584,6 +584,8 @@ cmd += " SORT_ORDER=coordinate"
 cmd += " VALIDATION_STRINGENCY=SILENT"
 cmd += " CREATE_INDEX=true"
 pm.run(cmd, out_final, lock_name="final_sorting")
+
+
 
 # Cleanup
 ################################################################################
