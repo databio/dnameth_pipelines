@@ -18,7 +18,7 @@ tools:
   bowtie1: bowtie
   bowtie2: bowtie2
   bed2bigBed: bedToBigBed
-  bed2bigWig: bedGraphToBigWig
+  bedGraphToBigWig: bedGraphToBigWig
   deduplicate_bismark: deduplicate_bismark
   bismark_methylation_extractor: bismark_methylation_extractor
   samtools: samtools

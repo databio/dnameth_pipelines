@@ -423,12 +423,14 @@ if not keep_bismark_report:
 ################################################################################
 pm.timestamp("### Make bigwig: ")
 
-bedGraph = out_extractor.replace(".bismark.cov",".bedGraph")
-out_bigwig = bedGraph.replace(".bedGraph", ".bw")
-cmd = tools.bed2bigWig + " " + bedGraph + " " + resources.chrom_sizes
-cmd += " " + out_bigwig
+bedGraph = re.sub(".bismark.cov$", ".bedGraph", out_extractor)
+sort_bedGraph = re.sub(".bedGraph$", ".sort.bedGraph", bedGraph)
+out_bigwig = re.sub(".bedGraph$", ".bw", bedGraph)
+cmd1 = "sed '1d' " + bedGraph + " | LC_COLLATE=C sort -k1,1 -k2,2n - " + " > " + sort_bedGraph
+cmd2 = tools.bedGraphToBigWig + " " + sort_bedGraph + " " + resources.chrom_sizes
+cmd2 += " " + out_bigwig
 
-pm.run(cmd, out_bigwig, shell=False)
+pm.run([cmd1, cmd2], out_bigwig)
 
 ################################################################################
 
