@@ -413,12 +413,15 @@ pm.run(cmd, nmm_outfile)
 
 if args.epilog:
 	pm.timestamp("### Epilog Methcalling: ")
-	epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+	epilog_output_dir = os.path.join(
+			param.pipeline_outfolder, "epilog_" + args.genome_assembly)
 	ngstk.make_sure_path_exists (epilog_output_dir)
-	epilog_outfile=os.path.join(epilog_output_dir, args.sample_name + "_epilog.bed")
-	epilog_summary_file=os.path.join(epilog_output_dir, args.sample_name + "_epilog_summary.bed")
+	epilog_outfile = os.path.join(
+			epilog_output_dir, args.sample_name + "_epilog.bed")
+	epilog_summary_file = os.path.join(
+			epilog_output_dir, args.sample_name + "_epilog_summary.bed")
 
-	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "run_epilog.py")
+	cmd = tools.epilog
 	cmd += " --infile=" + out_bsmap  # absolute path to the bsmap aligned bam
 	cmd += " --positions=" + resources.methpositions
 	cmd += " --outfile=" + epilog_outfile
@@ -518,13 +521,16 @@ for chrom in spike_chroms:
 	pm.run(cmd1, lock_name="spikein", nofail=True)
 
 # spike in conversion efficiency calculation with epilog
-epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+epilog_output_dir = os.path.join(
+		param.pipeline_outfolder, "epilog_" + args.genome_assembly)
 ngstk.make_sure_path_exists (epilog_output_dir)
-epilog_spike_outfile=os.path.join(spikein_folder, args.sample_name + "_epilog.bed")
-epilog_spike_summary_file=os.path.join(spikein_folder, args.sample_name + "_epilog_summary.bed")
+epilog_spike_outfile=os.path.join(
+		spikein_folder, args.sample_name + "_epilog.bed")
+epilog_spike_summary_file=os.path.join(
+		spikein_folder, args.sample_name + "_epilog_summary.bed")
 
 
-cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "run_epilog.py")
+cmd = tools.epilog
 cmd += " --infile=" + out_spikein_sorted + ".bam"  # absolute path to the bsmap aligned bam
 cmd += " --positions=" + resources.spikein_methpositions
 cmd += " --outfile=" + epilog_spike_outfile

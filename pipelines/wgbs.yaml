@@ -23,6 +23,7 @@ tools:
   bismark_methylation_extractor: bismark_methylation_extractor
   samtools: samtools
   biseqMethCalling_tools: ${RESOURCES}/tools
+  epilog: epilog
 
 parameters:
   # parameters passed to bioinformatic tools, subclassed by tool

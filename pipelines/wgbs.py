@@ -450,7 +450,7 @@ if args.epilog:
 	epilog_summary_file = os.path.join(
 			epilog_output_dir, args.sample_name + "_epilog_summary.bed")
 
-	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "run_epilog.py")
+	cmd = tools.epilog
 	cmd += " --infile=" + out_dedup_sorted  # absolute path to the aligned bam
 	cmd += " --positions=" + resources.methpositions
 	cmd += " --outfile=" + epilog_outfile
@@ -539,13 +539,16 @@ if resources.bismark_spikein_genome:
 
 
 	# spike in conversion efficiency calculation with epilog
-	epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+	epilog_output_dir = os.path.join(
+			param.pipeline_outfolder, "epilog_" + args.genome_assembly)
 	ngstk.make_sure_path_exists (epilog_output_dir)
-	epilog_spike_outfile=os.path.join(spikein_folder, args.sample_name + "_epilog.bed")
-	epilog_spike_summary_file=os.path.join(spikein_folder, args.sample_name + "_epilog_summary.bed")
+	epilog_spike_outfile=os.path.join(
+			spikein_folder, args.sample_name + "_epilog.bed")
+	epilog_spike_summary_file=os.path.join(
+			spikein_folder, args.sample_name + "_epilog_summary.bed")
 
 
-	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "run_epilog.py")
+	cmd = tools.epilog
 	cmd += " --infile=" + out_spikein_sorted + ".bam"  # absolute path to the bsmap aligned bam
 	cmd += " --positions=" + resources.spikein_methpositions
 	cmd += " --outfile=" + epilog_spike_outfile
