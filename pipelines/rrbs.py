@@ -418,13 +418,13 @@ if args.epilog:
 	epilog_outfile=os.path.join(epilog_output_dir, args.sample_name + "_epilog.bed")
 	epilog_summary_file=os.path.join(epilog_output_dir, args.sample_name + "_epilog_summary.bed")
 
-	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
+	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "run_epilog.py")
 	cmd += " --infile=" + out_bsmap  # absolute path to the bsmap aligned bam
-	cmd += " --p=" + resources.methpositions
+	cmd += " --positions=" + resources.methpositions
 	cmd += " --outfile=" + epilog_outfile
-	cmd += " --summary-file=" + epilog_summary_file
+	cmd += " --summary-filename=" + epilog_summary_file
 	cmd += " --cores=" + str(pm.cores)
-	cmd += " --strand"  # Strand mode required because this isn't a bismark alignment.
+	cmd += " --use-strand"    # Strand mode required because this isn't a bismark alignment.
 
 	pm.run(cmd, epilog_outfile, nofail=True)
 
@@ -524,14 +524,14 @@ epilog_spike_outfile=os.path.join(spikein_folder, args.sample_name + "_epilog.be
 epilog_spike_summary_file=os.path.join(spikein_folder, args.sample_name + "_epilog_summary.bed")
 
 
-cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
+cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "run_epilog.py")
 cmd += " --infile=" + out_spikein_sorted + ".bam"  # absolute path to the bsmap aligned bam
-cmd += " --p=" + resources.spikein_methpositions
+cmd += " --positions=" + resources.spikein_methpositions
 cmd += " --outfile=" + epilog_spike_outfile
-cmd += " --summary=" + epilog_spike_summary_file
+cmd += " --summary-filename=" + epilog_spike_summary_file
 cmd += " --cores=" + str(pm.cores)
-cmd += " -t=" + str(30)  # quality_threshold
-cmd += " -l=" + str(30)  # read length cutoff
+cmd += " --qual-threshold=30"    # quality_threshold
+cmd += " --read-length-threshold=30"    # read length cutoff
 
 pm.run(cmd, epilog_spike_outfile, nofail=True)
 
