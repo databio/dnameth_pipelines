@@ -12,7 +12,7 @@ tools:
   samtools: samtools
   picard: /cm/shared/apps/picard-tools/1.140/picard.jar
   trimmomatic: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32.jar
-  trimmomatic_epignome: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32-epignome.jar
+  trimmomatic_epignome: ${TRIMMOMATIC_EPIGNOME}
   trimgalore: /cm/shared/apps/trim_galore/0.3.3/trim_galore
   bowtie1: /cm/shared/apps/bowtie/1.1.1/bin
   bowtie2: /cm/shared/apps/bowtie/2.2.4/bin
