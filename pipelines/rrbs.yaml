@@ -12,11 +12,11 @@ tools:
   samtools: samtools
   picard: ${PICARD}
   trimmomatic: ${TRIMMOMATIC}
-  trimmomatic_epignome: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32-epignome.jar
+  trimmomatic_epignome: ${TRIMMOMATIC_EPIGNOME}
   trimgalore: /cm/shared/apps/trim_galore/0.3.3/trim_galore
   bowtie1: bowtie
   bowtie2: bowtie2
-  bed2bigBed: bedToBigBed
+  bedToBigBed: bedToBigBed
   bedGraphToBigWig: bedGraphToBigWig
   bismark: bismark
   deduplicate_bismark: deduplicate_bismark
