@@ -1,30 +1,28 @@
 resources:
   # paths to reference genomes, adapter files, and other required shared data
-  resources: /data/groups/lab_bock/shared/resources
-  genomes: /data/groups/lab_bock/shared/resources/genomes/
-  adapter_file: /data/groups/lab_bock/shared/resources/adapters/epignome_adapters.fa
+  resources: $RESOURCES
+  genomes: $GENOMES
+  adapter_file: $RESOURCES/adapters/epignome_adapters.fa
   spikein_genome: meth_spikein_k1_k3
-  tmp_dir: /data/groups/lab_bock/tmp
+  tmp_dir: ${TMPDIR}
 
 tools:
   # absolute paths to required tools
   python: python
   java: java
   Rscript: Rscript
-  picard: /cm/shared/apps/picard-tools/1.140/picard.jar
-  #trimmomatic: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32.jar
+  picard: ${PICARD}
   # epignome libraries require a customized version of trimmomatic
-  trimmomatic: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32-epignome.jar
-  #trimmomatic_epignome: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32-epignome.jar
-  bowtie1: /cm/shared/apps/bowtie/1.1.1/bin
-  bowtie2: /cm/shared/apps/bowtie/2.2.4/bin
-  bed2bigBed: /data/groups/lab_bock/shared/resources/tools/bedToBigBed
-  bed2bigWig: /data/groups/lab_bock/shared/resources/tools/bedGraphToBigWig
-  bismark: /cm/shared/apps/bismark/0.12.2/bismark
-  deduplicate_bismark: /cm/shared/apps/bismark/0.12.2/deduplicate_bismark
-  bismark_methylation_extractor: /cm/shared/apps/bismark/0.12.2/bismark_methylation_extractor
-  samtools: /cm/shared/apps/samtools/1.2/bin/samtools
-  biseqMethCalling_tools: /data/groups/lab_bock/shared/resources/tools
+  trimmomatic: ${TRIMMOMATIC}
+  bowtie: bowtie
+  bowtie1: bowtie
+  bowtie2: bowtie2
+  bed2bigBed: bedToBigBed
+  bedGraphToBigWig: bedGraphToBigWig
+  deduplicate_bismark: deduplicate_bismark
+  bismark_methylation_extractor: bismark_methylation_extractor
+  samtools: samtools
+  biseqMethCalling_tools: ${RESOURCES}/tools
 
 parameters:
   # parameters passed to bioinformatic tools, subclassed by tool

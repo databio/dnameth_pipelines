@@ -77,7 +77,7 @@ except:
 pm.config.resources.bismark_indexed_genome = os.path.join(pm.config.resources.genomes, args.genome_assembly, "indexed_bismark_bt2")
 
 # Epilog indexes
-pm.config.resources.methpositions = os.path.join(pm.config.resources.genomes, args.genome_assembly, "indexed_epilog", args.genome_assembly + "_index.tsv.gz")
+pm.config.resources.methpositions = os.path.join(pm.config.resources.genomes, args.genome_assembly, "indexed_epilog", args.genome_assembly + "_cg.tsv.gz")
 
 if pm.config.resources.bismark_spikein_genome:
 	pm.config.resources.spikein_methpositions = os.path.join(pm.config.resources.genomes, pm.config.resources.spikein_genome, "indexed_epilog", pm.config.resources.spikein_genome + "_index.tsv.gz")
@@ -195,7 +195,9 @@ if args.paired_end:
 else:
 	cmd += out_fastq_pre + "_R1_trimmed.fq"
 cmd += " --bam --unmapped"
-cmd += " --path_to_bowtie " + tools.bowtie2
+# Bowtie may be specified in raw form to indicate presence on path.
+if tools.bowtie2 != "bowtie2":
+	cmd += " --path_to_bowtie " + tools.bowtie2
 cmd += " --bowtie2"
 cmd += " --temp_dir " + bismark_temp
 cmd += " --output_dir " + bismark_folder
@@ -245,7 +247,9 @@ if args.paired_end and args.single2:
 		cmd = tools.bismark + " " + resources.bismark_indexed_genome + " "
 		cmd += unmapped_reads_pre + "_unmapped_reads_" + str(read_n) + ".fq"
 		cmd += " --bam --unmapped"
-		cmd += " --path_to_bowtie " + tools.bowtie2
+		# Bowtie may be specified in raw form to indicate presence on path.
+		if tools.bowtie2 != "bowtie2":
+			cmd += " --path_to_bowtie " + tools.bowtie2
 		cmd += " --bowtie2"
 		cmd += " --temp_dir " + bismark2_temp
 		cmd += " --output_dir " + bismark2_folder
@@ -268,7 +272,7 @@ if args.paired_end and args.single2:
 	sorted_bismark = args.sample_name + "_SEsorted.bam"
 	output_sort = os.path.join(bismark_folder, sorted_bismark)
 
-	cmd = tools.samtools + " sort -n " + output_merge + " -f " + output_sort
+	cmd = tools.samtools + " sort -n -o " + output_merge + " " + output_sort
 	pm.run(cmd, output_sort)
 
 	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "rematch_pairs.py")
@@ -303,7 +307,11 @@ pm.timestamp("### Aligned read filtering: ")
 sam_temp = os.path.join(bismark_folder, "sam_temp")
 ngstk.make_sure_path_exists(sam_temp)
 out_sam = os.path.join(bismark_folder, args.sample_name + ".aln.deduplicated.sam")
-cmd = tools.samtools + " sort -n -o " + out_dedup + " " + out_dedup.replace(".bam", "_sorted") + " | " + tools.samtools + " view -h - >" + out_sam
+#Is this an old version of samtools?
+#cmd = tools.samtools + " sort -n -o " + out_dedup + " " + out_dedup.replace(".bam", "_sorted") + " | " + tools.samtools + " view -h - >" + out_sam
+#cmd = tools.samtools + " sort -n " + out_dedup + " " + " | " + tools.samtools + " view -h - >" + out_sam
+cmd = tools.samtools + " sort -n " + out_dedup + " -o " + out_sam
+
 
 pm.run(cmd, out_sam, shell=True)
 
@@ -415,20 +423,24 @@ if not keep_bismark_report:
 ################################################################################
 pm.timestamp("### Make bigwig: ")
 
-bedGraph = out_extractor.replace(".bismark.cov",".bedGraph")
-out_bigwig = bedGraph.replace(".bedGraph", ".bw")
-cmd = tools.bed2bigWig + " " + bedGraph + " " + resources.chrom_sizes
-cmd += " " + out_bigwig
+bedGraph = re.sub(".bismark.cov$", ".bedGraph", out_extractor)
+sort_bedGraph = re.sub(".bedGraph$", ".sort.bedGraph", bedGraph)
+out_bigwig = re.sub(".bedGraph$", ".bw", bedGraph)
+cmd1 = "sed '1d' " + bedGraph + " | LC_COLLATE=C sort -k1,1 -k2,2n - " + " > " + sort_bedGraph
+cmd2 = tools.bedGraphToBigWig + " " + sort_bedGraph + " " + resources.chrom_sizes
+cmd2 += " " + out_bigwig
 
-pm.run(cmd, out_bigwig, shell=False)
+pm.run([cmd1, cmd2], out_bigwig)
 
 ################################################################################
 
 if args.epilog:
 	# out_bismark must be indexed in order for epilog to use it
-	cmd2 = tools.samtools + " sort -f " + out_bismark + " " + out_bismark
-	cmd3 = tools.samtools + " index " + out_bismark
-	pm.run([cmd2, cmd3], out_bismark + ".bai")
+	# should we do this on out_ded
+	out_dedup_sorted = re.sub(r'.bam$',"_sort.bam", out_dedup)
+	cmd2 = tools.samtools + " sort -@ " + str(pm.cores) + " -o " + out_dedup_sorted + " " + out_dedup
+	cmd3 = tools.samtools + " index " + out_dedup_sorted
+	pm.run([cmd2, cmd3], out_dedup_sorted + ".bai")
 
 	pm.timestamp("### Epilog Methcalling: ")
 	epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
@@ -437,7 +449,7 @@ if args.epilog:
 	epilog_summary_file=os.path.join(epilog_output_dir, args.sample_name + "_epilog_summary.bed")
 
 	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
-	cmd += " --infile=" + out_bismark  # absolute path to the aligned bam
+	cmd += " --infile=" + out_dedup_sorted  # absolute path to the aligned bam
 	cmd += " --p=" + resources.methpositions
 	cmd += " --outfile=" + epilog_outfile
 	cmd += " --summary-file=" + epilog_summary_file
@@ -471,7 +483,9 @@ if resources.bismark_spikein_genome:
 	else:
 		cmd += unmapped_reads_pre + "_unmapped_reads.fq"
 	cmd += " --bam --unmapped"
-	cmd += " --path_to_bowtie " + tools.bowtie1
+	# Bowtie may be specified in raw form to indicate presence on path.
+	if tools.bowtie1 != "bowtie":
+		cmd += " --path_to_bowtie " + tools.bowtie1
 	#cmd += " --bowtie2"
 	cmd += " --temp_dir " + spikein_temp
 	cmd += " --output_dir " + spikein_folder
@@ -505,7 +519,7 @@ if resources.bismark_spikein_genome:
 	cmd += " --bam"
 
 	out_spikein_sorted = out_spikein_dedup.replace('.deduplicated.bam', '.deduplicated.sorted')
-	cmd2 = tools.samtools + " sort " + out_spikein_dedup + " " + out_spikein_sorted
+	cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
 	cmd3 = tools.samtools + " index " + out_spikein_sorted + ".bam"
 	cmd4 = "rm " + out_spikein_dedup
 	pm.run([cmd, cmd2, cmd3, cmd4], out_spikein_sorted +".bam.bai", nofail=True)
@@ -563,20 +577,24 @@ pm.timestamp("### Final sorting and indexing: ")
 
 #out_header = bismark_folder + args.sample_name + ".reheader.bam"
 out_final = os.path.join(bismark_folder, args.sample_name + ".final.bam")
-temp_folder = os.path.join(bismark_folder, "tmp")
+# temp_folder = os.path.join(bismark_folder, "tmp")
 
-# Sort
-cmd = tools.java + " -Xmx" + str(pm.mem)
-# This sort can run out of temp space on big jobs; this puts the temp to a
-# local spot.
-cmd += " -Djava.io.tmpdir=" + str(temp_folder)
-cmd += " -jar " + tools.picard + " SortSam"
-cmd += " I=" + out_sam_filter
-cmd += " O=" + out_final
-cmd += " SORT_ORDER=coordinate"
-cmd += " VALIDATION_STRINGENCY=SILENT"
-cmd += " CREATE_INDEX=true"
-pm.run(cmd, out_final, lock_name="final_sorting")
+# # Sort
+# cmd = tools.java + " -Xmx" + str(pm.mem)
+# # This sort can run out of temp space on big jobs; this puts the temp to a
+# # local spot.
+# cmd += " -Djava.io.tmpdir=" + str(temp_folder)
+# cmd += " -jar " + tools.picard + " SortSam"
+# cmd += " I=" + out_sam_filter
+# cmd += " O=" + out_final
+# cmd += " SORT_ORDER=coordinate"
+# cmd += " VALIDATION_STRINGENCY=SILENT"
+# cmd += " CREATE_INDEX=true"
+# pm.run(cmd, out_final, lock_name="final_sorting")
+
+cmd = tools.samtools + " sort -@ " + str(pm.cores) + " " + out_sam_filter + " -o " + out_final
+cmd2 = tools.samtools + " index " + out_final
+pm.run([cmd, cmd2], out_final + ".bai")
 
 # Cleanup
 ################################################################################
