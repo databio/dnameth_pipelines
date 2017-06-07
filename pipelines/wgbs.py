@@ -12,10 +12,9 @@ __version__ = "0.1"
 __status__ = "Development"
 
 from argparse import ArgumentParser
-import os, re
-import sys
+import os
+import re
 import subprocess
-import yaml
 import pypiper
 
 parser = ArgumentParser(description='Pipeline')
@@ -443,18 +442,21 @@ if args.epilog:
 	pm.run([cmd2, cmd3], out_dedup_sorted + ".bai")
 
 	pm.timestamp("### Epilog Methcalling: ")
-	epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
-	ngstk.make_sure_path_exists (epilog_output_dir)
-	epilog_outfile=os.path.join(epilog_output_dir, args.sample_name + "_epilog.bed")
-	epilog_summary_file=os.path.join(epilog_output_dir, args.sample_name + "_epilog_summary.bed")
+	epilog_output_dir = os.path.join(
+			param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+	ngstk.make_sure_path_exists(epilog_output_dir)
+	epilog_outfile = os.path.join(
+			epilog_output_dir, args.sample_name + "_epilog.bed")
+	epilog_summary_file = os.path.join(
+			epilog_output_dir, args.sample_name + "_epilog_summary.bed")
 
-	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
+	cmd = tools.epilog
 	cmd += " --infile=" + out_dedup_sorted  # absolute path to the aligned bam
-	cmd += " --p=" + resources.methpositions
+	cmd += " --positions=" + resources.methpositions
 	cmd += " --outfile=" + epilog_outfile
-	cmd += " --summary-file=" + epilog_summary_file
+	cmd += " --summary-filename=" + epilog_summary_file
 	cmd += " --cores=" + str(pm.cores)
-	cmd += " -r=" + str(0)  # Turn off RRBS mode
+	cmd += " --rrbs-fill-count=0"    # Turn off RRBS mode
 
 	pm.run(cmd, epilog_outfile, nofail=True)
 
@@ -537,21 +539,24 @@ if resources.bismark_spikein_genome:
 
 
 	# spike in conversion efficiency calculation with epilog
-	epilog_output_dir = os.path.join(param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+	epilog_output_dir = os.path.join(
+			param.pipeline_outfolder, "epilog_" + args.genome_assembly)
 	ngstk.make_sure_path_exists (epilog_output_dir)
-	epilog_spike_outfile=os.path.join(spikein_folder, args.sample_name + "_epilog.bed")
-	epilog_spike_summary_file=os.path.join(spikein_folder, args.sample_name + "_epilog_summary.bed")
+	epilog_spike_outfile=os.path.join(
+			spikein_folder, args.sample_name + "_epilog.bed")
+	epilog_spike_summary_file=os.path.join(
+			spikein_folder, args.sample_name + "_epilog_summary.bed")
 
 
-	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "epilog.py")
+	cmd = tools.epilog
 	cmd += " --infile=" + out_spikein_sorted + ".bam"  # absolute path to the bsmap aligned bam
-	cmd += " --p=" + resources.spikein_methpositions
+	cmd += " --positions=" + resources.spikein_methpositions
 	cmd += " --outfile=" + epilog_spike_outfile
 	cmd += " --summary=" + epilog_spike_summary_file
 	cmd += " --cores=" + str(pm.cores)
-	cmd += " -t=" + str(30)  # quality_threshold
-	cmd += " -l=" + str(30)  # read length cutoff
-	cmd += " -r=" + str(0)  # no rrbs mode for WGBS pipeline
+	cmd += " --qual-threshold=30"
+	cmd += " --read-length-threshold=30"
+	cmd += " --rrbs-fill-count=0"    # no rrbs mode for WGBS pipeline
 
 	pm.run(cmd, epilog_spike_outfile, nofail=True)
 

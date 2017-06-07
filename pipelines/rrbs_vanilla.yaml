@@ -12,12 +12,12 @@ tools:
   samtools: samtools
   picard: /cm/shared/apps/picard-tools/1.140/picard.jar
   trimmomatic: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32.jar
-  trimmomatic_epignome: /cm/shared/apps/trimmomatic/0.32/trimmomatic-0.32-epignome.jar
+  trimmomatic_epignome: ${TRIMMOMATIC_EPIGNOME}
   trimgalore: /cm/shared/apps/trim_galore/0.3.3/trim_galore
   bowtie1: /cm/shared/apps/bowtie/1.1.1/bin
   bowtie2: /cm/shared/apps/bowtie/2.2.4/bin
-  bed2bigBed: /data/groups/lab_bock/shared/resources/tools/bedToBigBed
-  bed2bigWig: /data/groups/lab_bock/shared/resources/tools/bedGraphToBigWig
+  bedToBigBed: /data/groups/lab_bock/shared/resources/tools/bedToBigBed
+  bedGraphToBigWig: /data/groups/lab_bock/shared/resources/tools/bedGraphToBigWig
   bismark: /cm/shared/apps/bismark/0.12.2/bismark
   deduplicate_bismark: /cm/shared/apps/bismark/0.12.2/deduplicate_bismark
   bsmap: /cm/shared/apps/bsmap/2.90/bin/bsmap
