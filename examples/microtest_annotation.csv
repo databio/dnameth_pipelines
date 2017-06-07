@@ -1,0 +1,5 @@
+sample_name,library,organism,replicate,filename,data_source
+RRBS_human,RRBS,human,1,rrbs1.bam,microtest
+RRBS_human_PE,RRBS,human,1,rrbs_PE.bam,microtest
+WGBS_human_1,WGBS,human,1,wgbs1.bam,microtest
+WGBS_human_2,WGBS,human,2,wgbs2.bam,microtest
