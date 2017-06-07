@@ -18,9 +18,9 @@ pip install --user https://github.com/epigen/looper/zipball/master
 pip install --user https://github.com/databio/pararead/zipball/master
 ```
 
-**Required executables**. You will need some common bioinformatics tools installed. The list is specified in the pipeline configuration files in ([src/](src/)).
+**Required executables**. You will need some common bioinformatics tools installed. The list is specified in the pipeline configuration files (`.yaml` files in [src/](src/)).
 
-**Genome resources**. This pipeline requires genome assemblies produced by [refgenie](https://github.com/databio/refgenie). You may [download pre-indexed references](http://cloud.databio.org/refgenomes) or you may index your own (see [refgenie](https://github.com/databio/refgenie) instructions). Any prealignments you want to do use will also require refgenie assemblies. Some common examples are provided by [ref_decoy](https://github.com/databio/ref_decoy).
+**Genome resources**. This pipeline requires genome assemblies produced by [refgenie](https://github.com/databio/refgenie). You may [download pre-indexed references](http://cloud.databio.org/refgenomes) or you may index your own (see [refgenie instructions](https://github.com/databio/refgenie#indexing-your-own-reference-genome)). Any prealignments you want to do use will also require refgenie assemblies. Some common examples are provided by [ref_decoy](https://github.com/databio/ref_decoy).
 
 **Clone the pipeline**. Clone this repository using one of these methods:
 - using SSH: `git clone git@github.com:databio/dnameth_pipelines.git`
@@ -30,7 +30,7 @@ pip install --user https://github.com/databio/pararead/zipball/master
 
 There are two configuration options: You can either set up environment variables to fit the default configuration, or change the configuration file to fit your environment. Choose one:
 
-**Option 1: Default configuration** (recommended; [src/rrbs.yaml](src/rrbs.yaml)). 
+**Option 1: Default configuration** (recommended; e.g. [src/rrbs.yaml](src/rrbs.yaml)). 
   - Make sure the executable tools (java, samtools, bowtie2, etc.) are in your PATH.
   - Set up environment variables to point to `jar` files for the java tools (`picard` and `trimmomatic`).
   ```

@@ -8,14 +8,14 @@ __author__ = "Nathan Sheffield"
 __email__ = "nathan@code.databio.org"
 __credits__ = ["Charles Dietz", "Johanna Klughammer", "Christoph Bock", "Andreas Schoenegger"]
 __license__ = "GPL3"
-__version__ = "0.1"
-__status__ = "Development"
+__version__ = "0.2.0-dev"
 
 from argparse import ArgumentParser
 import os
 import re
 import subprocess
 import pypiper
+
 
 parser = ArgumentParser(description='Pipeline')
 
@@ -58,10 +58,13 @@ else:
 		# Default sample name is derived from the input file
 		args.sample_name = os.path.splitext(os.path.basename(args.input[0]))[0]
 
+if not args.input:
+	parser.print_help()
+	raise SystemExit
 
 # Create a PipelineManager object and start the pipeline
 outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
-pm = pypiper.PipelineManager(name = "WGBS", outfolder = outfolder, args = args)
+pm = pypiper.PipelineManager(name="WGBS", outfolder=outfolder, args=args, version=__version__)
 
 # Set up a few additional paths not in the config file
 pm.config.tools.scripts_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tools")

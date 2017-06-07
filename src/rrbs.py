@@ -8,8 +8,7 @@ __author__ = "Nathan Sheffield"
 __email__ = "nathan@code.databio.org"
 __credits__ = ["Charles Dietz", "Johanna Klughammer", "Christoph Bock", "Andreas Schoenegger"]
 __license__ = "GPL3"
-__version__ = "0.1"
-__status__ = "Development"
+__version__ = "0.2.0-dev"
 
 from argparse import ArgumentParser
 import os, re
@@ -45,9 +44,13 @@ if args.single_or_paired == "paired":
 else:
 	args.paired_end = False
 
+if not args.input:
+	parser.print_help()
+	raise SystemExit
+
 # Create a PipelineManager object and start the pipeline
 outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
-pm = pypiper.PipelineManager(name = "RRBS", outfolder = outfolder, args = args)
+pm = pypiper.PipelineManager(name="RRBS", outfolder=outfolder, args=args, version=__version__)
 
 # Set up a few additional paths not in the config file
 pm.config.tools.scripts_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tools")
@@ -391,23 +394,6 @@ cmd2 += " " + resources.chrom_sizes
 cmd2 += " " + out_bigwig
 
 pm.run([cmd, cmd2], out_bigwig, shell=True)
-
-
-################################################################################
-# Calculate neighbor methylation matching
-pm.timestamp("### Neighbor Methylation Matching: ")
-nmm_output_dir = os.path.join(param.pipeline_outfolder, "nmm_" + args.genome_assembly)
-ngstk.make_sure_path_exists (nmm_output_dir)
-nmm_outfile=os.path.join(nmm_output_dir, args.sample_name + ".nmm.bed")
-
-cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "methylMatch.py")
-cmd += " --inFile=" + out_bsmap      # this is the absolute path to the bsmap aligned bam file
-cmd += " --methFile=" + biseq_methcall_file
-cmd += " --outFile=" + nmm_outfile
-cmd += " --cores=" + str(pm.cores)
-cmd += " -q"
-
-pm.run(cmd, nmm_outfile)
 
 ################################################################################
 
