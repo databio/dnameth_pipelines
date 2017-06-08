@@ -61,7 +61,7 @@ pipelines:
         mem: "4000"
         time: "0-02:00:00"      
       small:
-        file_size: "0"
+        file_size: "0.3"
         cores: "4"
         mem: "16000"
         time: "1-00:00:00"
