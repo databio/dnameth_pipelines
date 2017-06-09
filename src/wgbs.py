@@ -526,7 +526,7 @@ if resources.bismark_spikein_genome:
 	cmd += out_spikein
 	cmd += " --bam"
 
-		out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_bismark)
+	out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_bismark)
 	cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
 	cmd3 = tools.samtools + " index " + out_spikein_sorted + ".bam"
 	cmd4 = "rm " + out_spikein_dedup
@@ -555,6 +555,7 @@ if resources.bismark_spikein_genome:
 
 
 	cmd = tools.epilog
+	cmd += " call"
 	cmd += " --infile=" + out_spikein_sorted + ".bam"  # absolute path to the bsmap aligned bam
 	cmd += " --positions=" + resources.spikein_methpositions
 	cmd += " --outfile=" + epilog_spike_outfile
