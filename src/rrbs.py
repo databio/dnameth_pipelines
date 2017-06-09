@@ -408,12 +408,14 @@ if args.epilog:
 			epilog_output_dir, args.sample_name + "_epilog_summary.bed")
 
 	cmd = tools.epilog
+	cmd += " call"
 	cmd += " --infile=" + out_bsmap  # absolute path to the bsmap aligned bam
 	cmd += " --positions=" + resources.methpositions
 	cmd += " --outfile=" + epilog_outfile
 	cmd += " --summary-filename=" + epilog_summary_file
 	cmd += " --cores=" + str(pm.cores)
 	cmd += " --use-strand"    # Strand mode required because this isn't a bismark alignment.
+	cmd += " --rrbs-fill-count=4"
 
 	pm.run(cmd, epilog_outfile, nofail=True)
 
@@ -517,6 +519,7 @@ epilog_spike_summary_file=os.path.join(
 
 
 cmd = tools.epilog
+cmd += " call"
 cmd += " --infile=" + out_spikein_sorted + ".bam"  # absolute path to the bsmap aligned bam
 cmd += " --positions=" + resources.spikein_methpositions
 cmd += " --outfile=" + epilog_spike_outfile
@@ -524,6 +527,7 @@ cmd += " --summary-filename=" + epilog_spike_summary_file
 cmd += " --cores=" + str(pm.cores)
 cmd += " --qual-threshold=30"    # quality_threshold
 cmd += " --read-length-threshold=30"    # read length cutoff
+cmd += " --rrbs-fill-count=0"
 
 pm.run(cmd, epilog_spike_outfile, nofail=True)
 
