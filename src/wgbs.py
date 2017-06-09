@@ -370,7 +370,7 @@ pm.timestamp("### Methylation calling (bismark extractor): ")
 extract_dir = os.path.join(bismark_folder, "extractor")
 ngstk.make_sure_path_exists(extract_dir)
 out_extractor = os.path.join(extract_dir, re.sub(r'.sam$', '.bismark.cov', os.path.basename(out_sam_filter)))
-out_cpg_report = re.sub(r'.bismark.cov$', '.CpG_report.txt', out_extractor)
+out_cpg_report = re.sub(r'.bismark.cov$', '.CpG_report.txt.gz', out_extractor)
 
 cmd = tools.bismark_methylation_extractor
 if args.paired_end:
@@ -394,12 +394,14 @@ keep_non_standard_chromosomes = False
 adjust_minus_strand = True
 
 # prepare outputs:
-out_cpg_report_filt = re.sub(r'.CpG_report.txt$', '.CpG_report_filt.txt', out_cpg_report)
-out_cpg_report_filt_cov = re.sub(r'.CpG_report.txt$', '.CpG_report_filt.cov', out_cpg_report)
+out_cpg_report_filt = re.sub(r'.CpG_report.txt.gz$', '.CpG_report_filt.txt', out_cpg_report)
+out_cpg_report_filt_cov = re.sub(r'.CpG_report.txt.gz$', '.CpG_report_filt.cov', out_cpg_report)
 
 # remove uncovered regions:
-cmd = "awk '{ if ($4+$5 > 0) print; }'"
+# Update to Bismark version 17 now gzips this output.
+cmd = "gzip -c -d "
 cmd += " " + out_cpg_report
+cmd = " | awk '{ if ($4+$5 > 0) print; }'"
 cmd += " > " + out_cpg_report_filt
 pm.run(cmd,  out_cpg_report_filt, shell=True)
 
