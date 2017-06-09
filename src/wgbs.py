@@ -401,7 +401,7 @@ out_cpg_report_filt_cov = re.sub(r'.CpG_report.txt.gz$', '.CpG_report_filt.cov',
 # Update to Bismark version 17 now gzips this output.
 cmd = "gzip -c -d "
 cmd += " " + out_cpg_report
-cmd = " | awk '{ if ($4+$5 > 0) print; }'"
+cmd += " | awk '{ if ($4+$5 > 0) print; }'"
 cmd += " > " + out_cpg_report_filt
 pm.run(cmd,  out_cpg_report_filt, shell=True)
 
@@ -462,7 +462,7 @@ if args.epilog:
 	cmd += " --outfile=" + epilog_outfile
 	cmd += " --summary-filename=" + epilog_summary_file
 	cmd += " --cores=" + str(pm.cores)
-	cmd += " --rrbs-fill-count=0"    # Turn off RRBS mode
+	cmd += " --rrbs-fill=0"    # Turn off RRBS mode
 
 	pm.run(cmd, epilog_outfile, nofail=True)
 
@@ -563,7 +563,7 @@ if resources.bismark_spikein_genome:
 	cmd += " --cores=" + str(pm.cores)
 	cmd += " --qual-threshold=30"
 	cmd += " --read-length-threshold=30"
-	cmd += " --rrbs-fill-count=0"    # no rrbs mode for WGBS pipeline
+	cmd += " --rrbs-fill=0"    # no rrbs mode for WGBS pipeline
 
 	pm.run(cmd, epilog_spike_outfile, nofail=True)
 
