@@ -491,7 +491,7 @@ else:
 	cmd += out_spikein
 	cmd += " --bam"
 
-out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_bismark)
+out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_spikein_dedup)
 cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
 cmd3 = tools.samtools + " index " + out_spikein_sorted + ".bam"
 pm.run([cmd, cmd2, cmd3], out_spikein_sorted + ".bam.bai", nofail=True)
