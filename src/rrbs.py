@@ -491,7 +491,7 @@ else:
 	cmd += out_spikein
 	cmd += " --bam"
 
-out_spikein_sorted = out_spikein_dedup.replace('.deduplicated.bam', '.deduplicated.sorted')
+out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_bismark)
 cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
 cmd3 = tools.samtools + " index " + out_spikein_sorted + ".bam"
 pm.run([cmd, cmd2, cmd3], out_spikein_sorted + ".bam.bai", nofail=True)
@@ -500,11 +500,11 @@ pm.clean_add(out_spikein_dedup, conditional=False)
 # Spike-in methylation calling
 ################################################################################
 pm.timestamp("### Methylation calling (testxmz) Spike-in: ")
-spike_chroms = ngstk.get_chrs_from_bam(out_spikein_sorted + ".bam")
+spike_chroms = ngstk.get_chrs_from_bam(out_spikein_sorted)
 
 for chrom in spike_chroms:
 	cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "testxmz.py")
-	cmd1 += " " + out_spikein_sorted + ".bam" + " " + chrom
+	cmd1 += " " + out_spikein_sorted + " " + chrom
 	cmd1 += " >> " + pm.pipeline_stats_file
 	pm.run(cmd1, lock_name="spikein", nofail=True)
 
@@ -520,7 +520,7 @@ epilog_spike_summary_file=os.path.join(
 
 cmd = tools.epilog
 cmd += " call"
-cmd += " --infile=" + out_spikein_sorted + ".bam"  # absolute path to the bsmap aligned bam
+cmd += " --infile=" + out_spikein_sorted # absolute path to the bsmap aligned bam
 cmd += " --positions=" + resources.spikein_methpositions
 cmd += " --outfile=" + epilog_spike_outfile
 cmd += " --summary-filename=" + epilog_spike_summary_file
