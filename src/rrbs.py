@@ -415,7 +415,7 @@ if args.epilog:
 	cmd += " --summary-filename=" + epilog_summary_file
 	cmd += " --cores=" + str(pm.cores)
 	cmd += " --use-strand"    # Strand mode required because this isn't a bismark alignment.
-	cmd += " --rrbs-fill-count=4"
+	cmd += " --rrbs-fill=4"
 
 	pm.run(cmd, epilog_outfile, nofail=True)
 
@@ -527,7 +527,7 @@ cmd += " --summary-filename=" + epilog_spike_summary_file
 cmd += " --cores=" + str(pm.cores)
 cmd += " --qual-threshold=30"    # quality_threshold
 cmd += " --read-length-threshold=30"    # read length cutoff
-cmd += " --rrbs-fill-count=0"
+cmd += " --rrbs-fill=0"
 
 pm.run(cmd, epilog_spike_outfile, nofail=True)
 
