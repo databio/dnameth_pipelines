@@ -407,7 +407,7 @@ pm.run(cmd,  out_cpg_report_filt, shell=True)
 
 # convert the bismark report to the simpler coverage format and adjust the coordinates
 # of CpG's on the reverse strand while doing so (by substracting 1 from the start):
-cmd = tools.Rscript + " " + os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "scripts", "convertBismarkReport.R") # disable coverage filter, because we have already used `awk` to achieve this result
+cmd = tools.Rscript + " " + os.path.join(tools.scripts_dir, "convertBismarkReport.R") # disable coverage filter, because we have already used `awk` to achieve this result
 cmd += " --formats=cov,min,gibberish"
 cmd += " --noCovFilter"
 if keep_non_standard_chromosomes:
