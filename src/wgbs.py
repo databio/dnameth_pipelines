@@ -456,6 +456,7 @@ if args.epilog:
 			epilog_output_dir, args.sample_name + "_epilog_summary.bed")
 
 	cmd = tools.epilog
+	cmd += " call"
 	cmd += " --infile=" + out_dedup_sorted  # absolute path to the aligned bam
 	cmd += " --positions=" + resources.methpositions
 	cmd += " --outfile=" + epilog_outfile
@@ -525,7 +526,7 @@ if resources.bismark_spikein_genome:
 	cmd += out_spikein
 	cmd += " --bam"
 
-	out_spikein_sorted = out_spikein_dedup.replace('.deduplicated.bam', '.deduplicated.sorted')
+		out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_bismark)
 	cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
 	cmd3 = tools.samtools + " index " + out_spikein_sorted + ".bam"
 	cmd4 = "rm " + out_spikein_dedup
