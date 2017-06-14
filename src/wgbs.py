@@ -399,7 +399,7 @@ out_cpg_report_filt_cov = re.sub(r'.CpG_report.txt.gz$', '.CpG_report_filt.cov',
 
 # remove uncovered regions:
 # Update to Bismark version 17 now gzips this output.
-cmd = "gzip -c -d "
+cmd = ngstk.ziptool + " -c -d"
 cmd += " " + out_cpg_report
 cmd += " | awk '{ if ($4+$5 > 0) print; }'"
 cmd += " > " + out_cpg_report_filt
@@ -430,7 +430,9 @@ pm.timestamp("### Make bigwig: ")
 bedGraph = re.sub(".bismark.cov$", ".bedGraph", out_extractor)
 sort_bedGraph = re.sub(".bedGraph$", ".sort.bedGraph", bedGraph)
 out_bigwig = re.sub(".bedGraph$", ".bw", bedGraph)
-cmd1 = "sed '1d' " + bedGraph + " | LC_COLLATE=C sort -k1,1 -k2,2n - " + " > " + sort_bedGraph
+cmd1 = ngstk.ziptool + " -c -d"
+cmd1 += " " + bedGraph
+cmd1 += " | sed '1d' " + " | LC_COLLATE=C sort -k1,1 -k2,2n - " + " > " + sort_bedGraph
 cmd2 = tools.bedGraphToBigWig + " " + sort_bedGraph + " " + resources.chrom_sizes
 cmd2 += " " + out_bigwig
 
@@ -526,7 +528,7 @@ if resources.bismark_spikein_genome:
 	cmd += out_spikein
 	cmd += " --bam"
 
-	out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_bismark)
+	out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_spikein_dedup)
 	cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
 	cmd3 = tools.samtools + " index " + out_spikein_sorted
 	cmd4 = "rm " + out_spikein_dedup
