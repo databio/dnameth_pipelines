@@ -8,14 +8,14 @@ __author__ = "Nathan Sheffield"
 __email__ = "nathan@code.databio.org"
 __credits__ = ["Charles Dietz", "Johanna Klughammer", "Christoph Bock", "Andreas Schoenegger"]
 __license__ = "GPL3"
-__version__ = "0.1"
-__status__ = "Development"
+__version__ = "0.2.0-dev"
 
 from argparse import ArgumentParser
 import os
 import re
 import subprocess
 import pypiper
+
 
 parser = ArgumentParser(description='Pipeline')
 
@@ -58,10 +58,13 @@ else:
 		# Default sample name is derived from the input file
 		args.sample_name = os.path.splitext(os.path.basename(args.input[0]))[0]
 
+if not args.input:
+	parser.print_help()
+	raise SystemExit
 
 # Create a PipelineManager object and start the pipeline
 outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
-pm = pypiper.PipelineManager(name = "WGBS", outfolder = outfolder, args = args)
+pm = pypiper.PipelineManager(name="WGBS", outfolder=outfolder, args=args, version=__version__)
 
 # Set up a few additional paths not in the config file
 pm.config.tools.scripts_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tools")
@@ -367,7 +370,7 @@ pm.timestamp("### Methylation calling (bismark extractor): ")
 extract_dir = os.path.join(bismark_folder, "extractor")
 ngstk.make_sure_path_exists(extract_dir)
 out_extractor = os.path.join(extract_dir, re.sub(r'.sam$', '.bismark.cov', os.path.basename(out_sam_filter)))
-out_cpg_report = re.sub(r'.bismark.cov$', '.CpG_report.txt', out_extractor)
+out_cpg_report = re.sub(r'.bismark.cov$', '.CpG_report.txt.gz', out_extractor)
 
 cmd = tools.bismark_methylation_extractor
 if args.paired_end:
@@ -391,18 +394,20 @@ keep_non_standard_chromosomes = False
 adjust_minus_strand = True
 
 # prepare outputs:
-out_cpg_report_filt = re.sub(r'.CpG_report.txt$', '.CpG_report_filt.txt', out_cpg_report)
-out_cpg_report_filt_cov = re.sub(r'.CpG_report.txt$', '.CpG_report_filt.cov', out_cpg_report)
+out_cpg_report_filt = re.sub(r'.CpG_report.txt.gz$', '.CpG_report_filt.txt', out_cpg_report)
+out_cpg_report_filt_cov = re.sub(r'.CpG_report.txt.gz$', '.CpG_report_filt.cov', out_cpg_report)
 
 # remove uncovered regions:
-cmd = "awk '{ if ($4+$5 > 0) print; }'"
+# Update to Bismark version 17 now gzips this output.
+cmd = ngstk.ziptool + " -c -d"
 cmd += " " + out_cpg_report
+cmd += " | awk '{ if ($4+$5 > 0) print; }'"
 cmd += " > " + out_cpg_report_filt
 pm.run(cmd,  out_cpg_report_filt, shell=True)
 
 # convert the bismark report to the simpler coverage format and adjust the coordinates
 # of CpG's on the reverse strand while doing so (by substracting 1 from the start):
-cmd = tools.Rscript + " " + os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "scripts", "convertBismarkReport.R") # disable coverage filter, because we have already used `awk` to achieve this result
+cmd = tools.Rscript + " " + os.path.join(tools.scripts_dir, "convertBismarkReport.R") # disable coverage filter, because we have already used `awk` to achieve this result
 cmd += " --formats=cov,min,gibberish"
 cmd += " --noCovFilter"
 if keep_non_standard_chromosomes:
@@ -425,7 +430,9 @@ pm.timestamp("### Make bigwig: ")
 bedGraph = re.sub(".bismark.cov$", ".bedGraph", out_extractor)
 sort_bedGraph = re.sub(".bedGraph$", ".sort.bedGraph", bedGraph)
 out_bigwig = re.sub(".bedGraph$", ".bw", bedGraph)
-cmd1 = "sed '1d' " + bedGraph + " | LC_COLLATE=C sort -k1,1 -k2,2n - " + " > " + sort_bedGraph
+cmd1 = ngstk.ziptool + " -c -d"
+cmd1 += " " + bedGraph
+cmd1 += " | sed '1d' " + " | LC_COLLATE=C sort -k1,1 -k2,2n - " + " > " + sort_bedGraph
 cmd2 = tools.bedGraphToBigWig + " " + sort_bedGraph + " " + resources.chrom_sizes
 cmd2 += " " + out_bigwig
 
@@ -451,12 +458,13 @@ if args.epilog:
 			epilog_output_dir, args.sample_name + "_epilog_summary.bed")
 
 	cmd = tools.epilog
+	cmd += " call"
 	cmd += " --infile=" + out_dedup_sorted  # absolute path to the aligned bam
 	cmd += " --positions=" + resources.methpositions
 	cmd += " --outfile=" + epilog_outfile
 	cmd += " --summary-filename=" + epilog_summary_file
 	cmd += " --cores=" + str(pm.cores)
-	cmd += " --rrbs-fill-count=0"    # Turn off RRBS mode
+	cmd += " --rrbs-fill=0"    # Turn off RRBS mode
 
 	pm.run(cmd, epilog_outfile, nofail=True)
 
@@ -520,20 +528,20 @@ if resources.bismark_spikein_genome:
 	cmd += out_spikein
 	cmd += " --bam"
 
-	out_spikein_sorted = out_spikein_dedup.replace('.deduplicated.bam', '.deduplicated.sorted')
+	out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_spikein_dedup)
 	cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
-	cmd3 = tools.samtools + " index " + out_spikein_sorted + ".bam"
+	cmd3 = tools.samtools + " index " + out_spikein_sorted
 	cmd4 = "rm " + out_spikein_dedup
-	pm.run([cmd, cmd2, cmd3, cmd4], out_spikein_sorted +".bam.bai", nofail=True)
+	pm.run([cmd, cmd2, cmd3, cmd4], out_spikein_sorted +".bai", nofail=True)
 
 	# Spike-in methylation calling
 	################################################################################
 	pm.timestamp("### Methylation calling (testxmz) Spike-in: ")
-	spike_chroms = ngstk.get_chrs_from_bam(out_spikein_sorted + ".bam")
+	spike_chroms = ngstk.get_chrs_from_bam(out_spikein_sorted)
 
 	for chrom in spike_chroms:
 		cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "testxmz.py")
-		cmd1 += " " + out_spikein_sorted + ".bam" + " " + chrom
+		cmd1 += " " + out_spikein_sorted + " " + chrom
 		cmd1 += " >> " + pm.pipeline_stats_file
 		pm.callprint(cmd1, shell=True, nofail=True)
 
@@ -549,14 +557,15 @@ if resources.bismark_spikein_genome:
 
 
 	cmd = tools.epilog
-	cmd += " --infile=" + out_spikein_sorted + ".bam"  # absolute path to the bsmap aligned bam
+	cmd += " call"
+	cmd += " --infile=" + out_spikein_sorted  # absolute path to the bsmap aligned bam
 	cmd += " --positions=" + resources.spikein_methpositions
 	cmd += " --outfile=" + epilog_spike_outfile
 	cmd += " --summary=" + epilog_spike_summary_file
 	cmd += " --cores=" + str(pm.cores)
 	cmd += " --qual-threshold=30"
 	cmd += " --read-length-threshold=30"
-	cmd += " --rrbs-fill-count=0"    # no rrbs mode for WGBS pipeline
+	cmd += " --rrbs-fill=0"    # no rrbs mode for WGBS pipeline
 
 	pm.run(cmd, epilog_spike_outfile, nofail=True)
 
