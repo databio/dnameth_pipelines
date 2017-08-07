@@ -415,8 +415,10 @@ if args.epilog:
 	cmd += " --outfile=" + epilog_outfile
 	cmd += " --summary-filename=" + epilog_summary_file
 	cmd += " --cores=" + str(pm.cores)
+	cmd += " --qual-threshold=" + str(param.epilog.qual_threshold)
+	cmd += " --read-length-threshold=" + str(param.epilog.read_length_threshold)
+	cmd += " --rrbs-fill=" + str(args.rrbs_fill)
 	cmd += " --use-strand"    # Strand mode required because this isn't a bismark alignment.
-	cmd += " --rrbs-fill={}".format(args.rrbs_fill)
 
 	pm.run(cmd, epilog_outfile, nofail=True)
 
