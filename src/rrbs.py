@@ -11,10 +11,8 @@ __license__ = "GPL3"
 __version__ = "0.2.0-dev"
 
 from argparse import ArgumentParser
-import os, re
-import sys
-import subprocess
-import yaml
+import os
+import re
 import pypiper
 
 parser = ArgumentParser(description='Pipeline')
@@ -27,13 +25,13 @@ parser = ArgumentParser(description='Pipeline')
 parser = pypiper.add_pypiper_args(parser, all_args=True)
 
 # Add any pipeline-specific arguments
-parser.add_argument('-t', '--trimgalore', dest='trimmomatic', action="store_false", default=True,
+parser.add_argument('-t', '--trimgalore', dest='trimgalore', action="store_true",
 	help='Use trimgalore instead of trimmomatic?')
 
-parser.add_argument('-e', '--epilog', dest='epilog', action="store_true", default=False,
+parser.add_argument('-e', '--epilog', dest='epilog', action="store_true",
 	help='Use epilog for meth calling?')
 
-parser.add_argument('--pdr', dest='pdr', action="store_true", default=False,
+parser.add_argument('--pdr', dest='pdr', action="store_true",
 	help='Calculate Proportion of Discordant Reads (PDR)?')
 
 
@@ -92,7 +90,7 @@ pm.report_result("File_mb", ngstk.get_file_size(local_input_files))
 pm.report_result("Read_type", args.single_or_paired)
 pm.report_result("Genome", args.genome_assembly)
 
-# Adapter trimming (Trimmomatic)
+
 ################################################################################
 pm.timestamp("### Adapter trimming: ")
 
@@ -106,7 +104,36 @@ elif encoding_string.find("phred64") != -1:
 else:
 	raise Exception("Unknown quality encoding type: "+encoding_string)
 
-if args.trimmomatic:
+if args.trimgalore:
+	# Trim galore requires biopython, cutadapt modules. RSeQC as well (maybe?)
+	#   --- $trim_galore -q $q --phred33 -a $a --stringency $s -e $e --length $l --output_dir $output_dir $input_fastq
+
+	raise NotImplementedError("TrimGalore no longer supported")
+
+	if args.paired_end:
+		raise NotImplementedError("TrimGalore for PE RRBS not implemented")
+	input_fastq = out_fastq_pre + "_R1.fastq "
+
+	# With trimgalore, the output file is predetermined.
+	trimmed_fastq = out_fastq_pre + "_R1_trimmed.fq"
+
+	output_dir = fastq_folder
+
+	# Adapter
+	a = "AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC"
+
+	cmd = tools.trimgalore
+	cmd += " -q 20"  # quality trimming
+	cmd += " --" + encoding
+	cmd += " -a " + a
+	cmd += " --stringency 1"  # stringency: Overlap with adapter sequence required to trim a sequence
+	cmd += " -e 0.1"  # Maximum allowed error rate
+	cmd += " --length 16"  # Minimum Read length
+	# by unchangeable default Trimmomatic discards reads of lenth 0 (produced by ILLUMINACLIP):
+	cmd += " --output_dir " + output_dir + " " + input_fastq
+
+else:
+	# Trimmomatic
 
 	trimmed_fastq = out_fastq_pre + "_R1_trimmed.fq"
 	trimmed_fastq_R2 = out_fastq_pre + "_R2_trimmed.fq"
@@ -144,33 +171,6 @@ if args.trimmomatic:
 		cmd += out_fastq_pre + "_R1_trimmed.fq "
 	cmd += "ILLUMINACLIP:" + resources.adapter_file + param.trimmomatic.illuminaclip
 
-else: # use trim_galore
-	# Trim galore requires biopython, cutadapt modules. RSeQC as well (maybe?)
-	#   --- $trim_galore -q $q --phred33 -a $a --stringency $s -e $e --length $l --output_dir $output_dir $input_fastq
-
-	raise NotImplementedError("TrimGalore no longer supported")
-
-	if args.paired_end:
-		raise NotImplementedError("TrimGalore for PE RRBS not implemented")
-	input_fastq = out_fastq_pre + "_R1.fastq "
-
-	# With trimgalore, the output file is predetermined.
-	trimmed_fastq = out_fastq_pre + "_R1_trimmed.fq"
-
-	output_dir=fastq_folder
-
-	#Adapter
-	a="AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC"
-
-	cmd = tools.trimgalore
-	cmd += " -q 20" 	#quality trimming
-	cmd += " --" + encoding
-	cmd += " -a " + a
-	cmd += " --stringency 1"		#stringency: Overlap with adapter sequence required to trim a sequence
-	cmd += " -e 0.1" 	#Maximum allowed error rate
-	cmd += " --length 16"	#Minimum Read length
-	# by unchangeable default Trimmomatic discards reads of lenth 0 (produced by ILLUMINACLIP):
-	cmd += " --output_dir " + output_dir + " " + input_fastq
 
 # Trimming command has been constructed, using either trimming options.
 # The code to run it is the same either way:
@@ -398,7 +398,7 @@ pm.run([cmd, cmd2], out_bigwig, shell=True)
 ################################################################################
 
 if args.epilog:
-	pm.timestamp("### Epilog Methcalling: ")
+	pm.timestamp("### Epilog methylation calling: ")
 	epilog_output_dir = os.path.join(
 			param.pipeline_outfolder, "epilog_" + args.genome_assembly)
 	ngstk.make_sure_path_exists (epilog_output_dir)
