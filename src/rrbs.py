@@ -25,23 +25,24 @@ parser = ArgumentParser(description='Pipeline')
 parser = pypiper.add_pypiper_args(parser, all_args=True)
 
 # Add any pipeline-specific arguments
-parser.add_argument('-t', '--trimgalore', dest='trimgalore', action="store_true",
+parser.add_argument("-t", "--trimgalore", dest="trimgalore", action="store_true",
 	help='Use trimgalore instead of trimmomatic?')
-
-parser.add_argument('-e', '--epilog', dest='epilog', action="store_true",
+parser.add_argument("-e", "--epilog", dest='epilog', action="store_true",
 	help='Use epilog for meth calling?')
-
-parser.add_argument('--pdr', dest='pdr', action="store_true",
+parser.add_argument("--pdr", dest="pdr", action="store_true",
 	help='Calculate Proportion of Discordant Reads (PDR)?')
-
+parser.add_argument("--rrbs-fill", dest="rrbs_fill", type=int, default=4,
+	help="Number of bases from read end to regard as unreliable and ignore due to RRBS chemistry")
 
 args = parser.parse_args()
 
+# Translate pypiper method of read type specification into flag-like option.
 if args.single_or_paired == "paired":
 	args.paired_end = True
 else:
 	args.paired_end = False
 
+# Input is required.
 if not args.input:
 	parser.print_help()
 	raise SystemExit
@@ -415,7 +416,7 @@ if args.epilog:
 	cmd += " --summary-filename=" + epilog_summary_file
 	cmd += " --cores=" + str(pm.cores)
 	cmd += " --use-strand"    # Strand mode required because this isn't a bismark alignment.
-	cmd += " --rrbs-fill=4"
+	cmd += " --rrbs-fill={}".format(args.rrbs_fill)
 
 	pm.run(cmd, epilog_outfile, nofail=True)
 
