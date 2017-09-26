@@ -62,8 +62,8 @@ export PATH=$PATH:~/.local/bin
 
 Now, adapt the example project to your project. Here's a quick start: You need to build two files for your project (follow examples in the [examples/test_project](examples/test_project/) folder):
 
-- [project config file](examples/test_project/test_config.yaml) -- describes output locations, pointers to data, etc.
-- [sample annotation file](examples/test_project/test_annotation.csv) -- comma-separated value (CSV) list of your samples.
+- [project config file](examples/test_config.yaml) -- describes output locations, pointers to data, etc.
+- [sample annotation file](examples/microtest_annotation.csv) -- comma-separated value (CSV) list of your samples.
 
 Your annotation file must specify these columns:
 - sample_name
