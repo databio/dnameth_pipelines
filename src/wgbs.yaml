@@ -34,3 +34,6 @@ parameters:
   bismark:
     nondirectional: false
     maxins: 5000
+  epilog:
+    qual_threshold: 30
+    read_length_threshold: 30

@@ -59,3 +59,8 @@ parameters:
     genomeFraction: 50
     smartWindows: 250000
     maxProcesses: 4
+
+  epilog:
+    rrbs_fill: 4
+    qual_threshold: 30
+    read_length_threshold: 30
