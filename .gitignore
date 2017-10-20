@@ -1,0 +1,7 @@
+# JetBrains
+.idea/
+
+# Python
+*.pyc
+__pycache__
+
