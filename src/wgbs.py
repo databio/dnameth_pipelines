@@ -153,7 +153,7 @@ cmd += " " + param.trimmomatic.trimsteps
 cmd += " ILLUMINACLIP:" + resources.adapter_file + param.trimmomatic.illuminaclip
 
 pm.run(cmd, trimmed_fastq, 
-	follow = ngstk.check_trim(trimmed_fastq, trimmed_fastq_R2, args.paired_end,
+	follow = ngstk.check_trim(trimmed_fastq, args.paired_end, trimmed_fastq_R2,
 		fastqc_folder = os.path.join(param.pipeline_outfolder, "fastqc/")))
 
 pm.clean_add(os.path.join(fastq_folder, "*.fastq"), conditional=True)
