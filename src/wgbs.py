@@ -464,7 +464,9 @@ if args.epilog:
 	cmd += " --outfile=" + epilog_outfile
 	cmd += " --summary-filename=" + epilog_summary_file
 	cmd += " --cores=" + str(pm.cores)
-	cmd += " --rrbs-fill=0"    # Turn off RRBS mode
+	cmd += " --qual-threshold=" + str(param.epilog.qual_threshold)
+	cmd += " --read-length-threshold=" + str(param.epilog.read_length_threshold)
+	cmd += " --wgbs"    # Turn off RRBS mode
 
 	pm.run(cmd, epilog_outfile, nofail=True)
 
@@ -565,7 +567,7 @@ if resources.bismark_spikein_genome:
 	cmd += " --cores=" + str(pm.cores)
 	cmd += " --qual-threshold=30"
 	cmd += " --read-length-threshold=30"
-	cmd += " --rrbs-fill=0"    # no rrbs mode for WGBS pipeline
+	cmd += " --wgbs"    # No RRBS "fill-in"
 
 	pm.run(cmd, epilog_spike_outfile, nofail=True)
 
