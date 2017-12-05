@@ -118,7 +118,12 @@ pm.report_result("Genome", args.genome_assembly)
 pm.timestamp("### Adapter trimming: ")
 
 # We need to detect the quality encoding type of the fastq.
-cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "detect_quality_code.py") + " -f " + unaligned_fastq
+if isinstance(unaligned_fastq, list):
+	example_fq = unaligned_fastq[0]
+else:
+	example_fq = unaligned_fastq
+	
+cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "detect_quality_code.py") + " -f " + example_fq
 encoding_string = pm.checkprint(cmd)
 if encoding_string.find("phred33") != -1:
 	encoding = "phred33"
