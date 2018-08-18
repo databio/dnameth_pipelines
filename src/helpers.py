@@ -4,7 +4,7 @@ __author__ = "Vince Reuter"
 __email__ = "vince.reuter@gmail.com"
 
 
-def make_epi_cmd_base(jar, readsfile, sitesfile, outdir, strand_method, rrbs_fill, mem_gig, context="CG"):
+def get_epi_cmd(jar, readsfile, sitesfile, outdir, strand_method, rrbs_fill, mem_gig, context="CG"):
     """
     Create base for epiallele processing command.
 
