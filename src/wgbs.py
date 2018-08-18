@@ -15,6 +15,7 @@ import os
 import re
 import subprocess
 import pypiper
+from helpers import make_epi_cmd_base
 
 
 parser = ArgumentParser(description='Pipeline')
@@ -441,17 +442,19 @@ pm.run([cmd1, cmd2], out_bigwig)
 ################################################################################
 
 if args.epilog:
+
+	# Prep for epialles
 	# out_bismark must be indexed in order for epilog to use it
 	# should we do this on out_ded
 	out_dedup_sorted = re.sub(r'.bam$',"_sort.bam", out_dedup)
 	cmd2 = tools.samtools + " sort -@ " + str(pm.cores) + " -o " + out_dedup_sorted + " " + out_dedup
 	cmd3 = tools.samtools + " index " + out_dedup_sorted
 	pm.run([cmd2, cmd3], out_dedup_sorted + ".bai")
-
-	pm.timestamp("### Epilog Methcalling: ")
 	epilog_output_dir = os.path.join(
 			param.pipeline_outfolder, "epilog_" + args.genome_assembly)
 	ngstk.make_sure_path_exists(epilog_output_dir)
+
+	"""
 	epilog_outfile = os.path.join(
 			epilog_output_dir, args.sample_name + "_epilog.bed")
 	epilog_summary_file = os.path.join(
@@ -469,6 +472,10 @@ if args.epilog:
 	cmd += " --wgbs"    # Turn off RRBS mode
 
 	pm.run(cmd, epilog_outfile, nofail=True)
+	"""
+
+	pm.timestamp("### Epilog Methcalling: ")
+	epi_cmd = make_epi_cmd_base(, tools.epilog)
 
 # Spike-in alignment
 ################################################################################
