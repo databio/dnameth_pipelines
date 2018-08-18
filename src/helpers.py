@@ -4,7 +4,7 @@ __author__ = "Vince Reuter"
 __email__ = "vince.reuter@gmail.com"
 
 
-def get_epi_cmd(jar, readsfile, sitesfile, outdir, strand_method, rrbs_fill, mem_gig, context="CG"):
+def get_epi_cmd(jar, readsfile, sitesfile, outdir, min_rlen, min_qual, strand_method, rrbs_fill, mem_gig, context="CG"):
     """
     Create base for epiallele processing command.
 
@@ -49,5 +49,5 @@ def get_epi_cmd(jar, readsfile, sitesfile, outdir, strand_method, rrbs_fill, mem
 
     if problems:
         raise Exception("Problems: {}".format(", ".join(problems)))
-    return "java -Xmx{}g -jar {} --context {} --rrbsFill {} --strandMethod {} -O {} {} {}".format(
-        mem_gig, jar, context, rrbs_fill, strand_method, outdir, readsfile, sitesfile)
+    return "java -Xmx{m}g -jar {j} --minBaseQuality {q} --minReadLength {rl} --context {ctx} --rrbsFill {base_fill} --strandMethod {sm} -O {o} {r} {s}".format(
+        m=mem_gig, j=jar, rl=min_rlen, q=min_qual, ctx=context, base_fill=rrbs_fill, sm=strand_method, o=outdir, r=readsfile, s=sitesfile)

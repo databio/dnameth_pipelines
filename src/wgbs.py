@@ -456,7 +456,8 @@ if args.epilog:
 
 	pm.timestamp("### Epilog Methcalling: ")
 	epi_cmd = get_epi_cmd(tools.epilog, out_dedup_sorted, resources.methpositions,
-		epilog_output_dir, param.epilog.strand_method, rrbs_fill=0, mem_gig=param.epilog.mem_gig, context=param.epilog.context)
+		epilog_output_dir, param.epilog.read_length_threshold, param.epilog.qual_threshold,
+		param.epilog.strand_method, rrbs_fill=0, mem_gig=param.epilog.mem_gig, context=param.epilog.context)
 	pm.run(epi_cmd, nofail=True)
 
 	"""
@@ -566,9 +567,9 @@ if resources.bismark_spikein_genome:
 
 	pm.timestamp("### Spike-in Epilog Methcalling: ")
 	ngstk.make_sure_path_exists(spikein_folder)
-	epi_cmd = get_epi_cmd(tools.epilog, out_spikein_sorted, resources.spikein.methpositions,
-		spikein_folder, param.epilog.strand_method, rrbs_fill=0, mem_gig=param.epilog.mem_gig,
-						  context=param.epilog.context)
+	epi_cmd = get_epi_cmd(tools.epilog, out_spikein_sorted, resources.spikein_methpositions,
+		spikein_folder, param.epilog.read_length_threshold, param.epilog.qual_threshold,
+		param.epilog.strand_method, rrbs_fill=0, mem_gig=param.epilog.mem_gig, context=param.epilog.context)
 	pm.run(epi_cmd, nofail=True)
 
 	"""
