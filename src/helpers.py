@@ -12,8 +12,25 @@ def get_epi_cmd(jar, readsfile, sitesfile, outdir, min_rlen, min_qual, strand_me
     ----------
     jar : str
         Path to JAR file for epiallele software.
+    readsfile : str
+        Path to sorted, aligned BAM with reads to analyze.
+    sitesfile : str
+        Path to gzipped, tabix-indexed file with sites to analyze.
+    outdir : str
+        Path to folder for output files.
+    min_rlen : int
+        Minimum number of bases aligned for a read to be used in analysis.
+    min_qual : int
+        Minimum base call quality at a site and neighbor site(s) for it to
+        be used in analysis.
+    strand_method : str
+        Name of strategy to determine read orientation; 'tag' or 'flag'
+    rrbs_fill : int
+        Number of bases at read end to ignore due to RRBS "fill-in"
     mem_gig : int
         Number of gigabytes of memory.
+    context : str
+        Methylation context (sense strand, e.g. 'CG' for typical mammalian analysis)
 
     Returns
     -------
@@ -30,6 +47,16 @@ def get_epi_cmd(jar, readsfile, sitesfile, outdir, min_rlen, min_qual, strand_me
         return "Mem spec must be nonnegative integer; got {}".format(mem_gig)
 
     problems = []
+
+    pos_int_vals = {"Memory": mem_gig, "Length": min_rlen, "Quality": min_qual}
+    for label, value in pos_int_vals.items():
+        valid = False
+        try:
+            valid = int(value) >= 0
+        except (TypeError, ValueError):
+            pass
+        if not valid:
+            problems.append("Did not get nonnegative value -- {} = {}".format(label, value))
 
     try:
         mem_gig = int(mem_gig)
