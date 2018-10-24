@@ -15,6 +15,7 @@ import os
 import re
 import subprocess
 import pypiper
+from helpers import get_epi_cmd
 
 
 parser = ArgumentParser(description='Pipeline')
@@ -441,17 +442,25 @@ pm.run([cmd1, cmd2], out_bigwig)
 ################################################################################
 
 if args.epilog:
+
+	# Prep for epialles
 	# out_bismark must be indexed in order for epilog to use it
 	# should we do this on out_ded
 	out_dedup_sorted = re.sub(r'.bam$',"_sort.bam", out_dedup)
 	cmd2 = tools.samtools + " sort -@ " + str(pm.cores) + " -o " + out_dedup_sorted + " " + out_dedup
 	cmd3 = tools.samtools + " index " + out_dedup_sorted
 	pm.run([cmd2, cmd3], out_dedup_sorted + ".bai")
-
-	pm.timestamp("### Epilog Methcalling: ")
 	epilog_output_dir = os.path.join(
 			param.pipeline_outfolder, "epilog_" + args.genome_assembly)
 	ngstk.make_sure_path_exists(epilog_output_dir)
+
+	pm.timestamp("### Epilog Methcalling: ")
+	epi_cmd = get_epi_cmd(tools.epilog, out_dedup_sorted, resources.methpositions,
+		epilog_output_dir, param.epilog.read_length_threshold, param.epilog.qual_threshold,
+		param.epilog.strand_method, rrbs_fill=0, mem_gig=param.epilog.mem_gig, context=param.epilog.context)
+	pm.run(epi_cmd, nofail=True)
+
+	"""
 	epilog_outfile = os.path.join(
 			epilog_output_dir, args.sample_name + "_epilog.bed")
 	epilog_summary_file = os.path.join(
@@ -469,6 +478,7 @@ if args.epilog:
 	cmd += " --wgbs"    # Turn off RRBS mode
 
 	pm.run(cmd, epilog_outfile, nofail=True)
+	"""
 
 # Spike-in alignment
 ################################################################################
@@ -549,15 +559,25 @@ if resources.bismark_spikein_genome:
 
 
 	# spike in conversion efficiency calculation with epilog
+	# TODO: do we need these checks here, or are they carried over from
+	# the section where methlation is called for the actual input reads?
 	epilog_output_dir = os.path.join(
 			param.pipeline_outfolder, "epilog_" + args.genome_assembly)
 	ngstk.make_sure_path_exists (epilog_output_dir)
+
+	pm.timestamp("### Spike-in Epilog Methcalling: ")
+	ngstk.make_sure_path_exists(spikein_folder)
+	epi_cmd = get_epi_cmd(tools.epilog, out_spikein_sorted, resources.spikein_methpositions,
+		spikein_folder, param.epilog.read_length_threshold, param.epilog.qual_threshold,
+		param.epilog.strand_method, rrbs_fill=0, mem_gig=param.epilog.mem_gig, context=param.epilog.context)
+	pm.run(epi_cmd, nofail=True)
+
+	"""
 	epilog_spike_outfile=os.path.join(
 			spikein_folder, args.sample_name + "_epilog.bed")
 	epilog_spike_summary_file=os.path.join(
 			spikein_folder, args.sample_name + "_epilog_summary.bed")
-
-
+	
 	cmd = tools.epilog
 	cmd += " call"
 	cmd += " --infile=" + out_spikein_sorted  # absolute path to the bsmap aligned bam
@@ -568,9 +588,9 @@ if resources.bismark_spikein_genome:
 	cmd += " --qual-threshold=30"
 	cmd += " --read-length-threshold=30"
 	cmd += " --wgbs"    # No RRBS "fill-in"
-
+	
 	pm.run(cmd, epilog_spike_outfile, nofail=True)
-
+	
 	# Now parse some results for pypiper result reporting.
 
 	for chrom in spike_chroms:
@@ -584,6 +604,7 @@ if resources.bismark_spikein_genome:
 		cmd_rate = cmd + " -c " + "rate"
 		x = pm.checkprint(cmd_rate, shell=True)
 		pm.report_result(chrom+'_meth_EL', x)
+	"""
 
 
 # Final sorting and indexing

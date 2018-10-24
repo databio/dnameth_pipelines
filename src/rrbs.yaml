@@ -64,3 +64,5 @@ parameters:
     rrbs_fill: 4
     qual_threshold: 30
     read_length_threshold: 30
+    strand_method: flag
+    mem_gig: 4

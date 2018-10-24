@@ -403,6 +403,14 @@ if args.epilog:
 	epilog_output_dir = os.path.join(
 			param.pipeline_outfolder, "epilog_" + args.genome_assembly)
 	ngstk.make_sure_path_exists (epilog_output_dir)
+
+	pm.timestamp("### Epilog Methcalling: ")
+	epi_cmd = get_epi_cmd(tools.epilog, out_bsmap, resources.methpositions,
+		epilog_output_dir, param.epilog.read_length_threshold, param.epilog.qual_threshold,
+		param.epilog.strand_method, rrbs_fill=args.rrbs_fill, mem_gig=param.epilog.mem_gig, context=param.epilog.context)
+	pm.run(epi_cmd, nofail=True)
+
+	"""
 	epilog_outfile = os.path.join(
 			epilog_output_dir, args.sample_name + "_epilog.bed")
 	epilog_summary_file = os.path.join(
@@ -421,6 +429,7 @@ if args.epilog:
 	cmd += " --use-strand"    # Strand mode required because this isn't a bismark alignment.
 
 	pm.run(cmd, epilog_outfile, nofail=True)
+	"""
 
 
 ################################################################################
@@ -512,14 +521,23 @@ for chrom in spike_chroms:
 	pm.run(cmd1, lock_name="spikein", nofail=True)
 
 # spike in conversion efficiency calculation with epilog
+# TODO: needed? should this be for the spikein folder?
 epilog_output_dir = os.path.join(
 		param.pipeline_outfolder, "epilog_" + args.genome_assembly)
-ngstk.make_sure_path_exists (epilog_output_dir)
+ngstk.make_sure_path_exists(epilog_output_dir)
+
+pm.timestamp("### Epilog Methcalling: ")
+ngstk.make_sure_path_exists(spikein_folder)
+epi_cmd = get_epi_cmd(tools.epilog, out_bsmap, resources.spikein_methpositions,
+	spikein_folder, param.epilog.read_length_threshold, param.epilog.qual_threshold,
+	param.epilog.strand_method, rrbs_fill=0, mem_gig=param.epilog.mem_gig, context=param.epilog.context)
+pm.run(epi_cmd, nofail=True)
+
+"""
 epilog_spike_outfile=os.path.join(
 		spikein_folder, args.sample_name + "_epilog.bed")
 epilog_spike_summary_file=os.path.join(
 		spikein_folder, args.sample_name + "_epilog_summary.bed")
-
 
 cmd = tools.epilog
 cmd += " call"
@@ -535,7 +553,6 @@ cmd += " --rrbs-fill=0"
 pm.run(cmd, epilog_spike_outfile, nofail=True)
 
 # Now parse some results for pypiper result reporting.
-
 for chrom in spike_chroms:
 	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "tsv_parser.py")
 	cmd += " -i " + os.path.join(spikein_folder, epilog_spike_summary_file)
@@ -547,6 +564,7 @@ for chrom in spike_chroms:
 	cmd_rate = cmd + " -c " + "rate"
 	x = pm.checkprint(cmd_rate, shell=True)
 	pm.report_result(chrom+'_meth_EL', x)
+"""
 
 # PDR calculation:
 ################################################################################
