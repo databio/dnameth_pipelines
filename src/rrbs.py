@@ -105,7 +105,15 @@ def main(cmdl):
 	pm.timestamp("### Adapter trimming: ")
 
 	# We need to detect the quality encoding type of the fastq.
-	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "detect_quality_code.py") + " -f " + unaligned_fastq
+
+	if args.paired_end: 
+		# Just look at the first read
+		cmd = tools.python + " -u " + os.path.join(tools.scripts_dir,
+		"detect_quality_code.py") + " -f " + unaligned_fastq[0]
+	else:
+		cmd = tools.python + " -u " + os.path.join(tools.scripts_dir,
+		"detect_quality_code.py") + " -f " + unaligned_fastq
+		
 	encoding_string = pm.checkprint(cmd)
 	if encoding_string.find("phred33") != -1:
 		encoding = "phred33"

@@ -72,7 +72,7 @@ if __name__ == "__main__":
                 print("no encodings for range: %s" % str((gmin, gmax)))
                 raise SystemExit
             if len(valid) == 1 and opts.n == -1:
-                print "\t".join(valid) + "\t" + str((gmin, gmax)) + "\t" + str(i)
+                print("\t".join(valid) + "\t" + str((gmin, gmax)) + "\t" + str(i))
                 raise SystemExit
  
         if opts.n > 0 and i > opts.n:
