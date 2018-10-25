@@ -14,6 +14,7 @@ __version__ = "0.3.0-dev"
 import os
 import re
 import pypiper
+from helpers import get_epi_cmd
 
 
 def _parse_args(cmdl):
