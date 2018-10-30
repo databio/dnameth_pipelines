@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
 """
-Splits a paired-end fastq file into 2 files, one for each read.
-It can handle 2 formats: the reads are specified as with /1 or /2 in the read name; or with the other notation: "1:N:0:NNNNNNNN" vs "2:N:0:NNNNNNNN"
-(which essentially splits on "whitespace#")
+Splits a paired-end fastq file into 2 files, one for each read. It can handle 2
+formats: the reads are specified as with /1 or /2 in the read name; or with the
+other notation: "1:N:0:NNNNNNNN" vs "2:N:0:NNNNNNNN" (which essentially splits
+on "whitespace#")
 
 By default it uses a named pipe which offers a balance between speed and memory.
 The default, named-pipe method uses 2 processors.
