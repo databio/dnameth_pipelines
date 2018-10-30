@@ -1,7 +1,13 @@
 # Change log
 All notable changes to this project will be documented in this file.
 
-## [0.2.0 Unreleased]
+## [0.3.0] -- Unreleased
+
+### Added
+
+	- Support for scala epilog methcalling.
+
+## [0.2.0] -- 10/25/2018
 
 ### Added
 
