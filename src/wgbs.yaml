@@ -24,6 +24,7 @@ tools:
   samtools: samtools
   biseqMethCalling_tools: ${RESOURCES}/tools
   epilog: epilog
+  episcall: ${DNAM_EPIS}
 
 parameters:
   # parameters passed to bioinformatic tools, subclassed by tool

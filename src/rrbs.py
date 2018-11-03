@@ -423,7 +423,7 @@ def main(cmdl):
 		ngstk.make_sure_path_exists (epilog_output_dir)
 
 		pm.timestamp("### Epilog Methcalling: ")
-		epi_cmd = get_epi_cmd(tools.epilog, out_bsmap, resources.methpositions,
+		epi_cmd = get_epi_cmd(tools.episcall, out_bsmap, resources.methpositions,
 			epilog_output_dir, param.epilog.read_length_threshold, param.epilog.qual_threshold,
 			param.epilog.strand_method, rrbs_fill=args.rrbs_fill, mem_gig=param.epilog.mem_gig, context=param.epilog.context)
 		pm.run(epi_cmd, nofail=True)
@@ -546,7 +546,7 @@ def main(cmdl):
 
 	pm.timestamp("### Epilog Methcalling: ")
 	ngstk.make_sure_path_exists(spikein_folder)
-	epi_cmd = get_epi_cmd(tools.epilog, out_bsmap, resources.spikein_methpositions,
+	epi_cmd = get_epi_cmd(tools.episcall, out_bsmap, resources.spikein_methpositions,
 		spikein_folder, param.epilog.read_length_threshold, param.epilog.qual_threshold,
 		param.epilog.strand_method, rrbs_fill=0, mem_gig=param.epilog.mem_gig, context=param.epilog.context)
 	pm.run(epi_cmd, nofail=True)
