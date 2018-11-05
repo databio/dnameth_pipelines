@@ -14,7 +14,6 @@ __version__ = "0.3.0-dev"
 import os
 import re
 import pypiper
-from helpers import get_epi_cmd
 
 
 def _parse_args(cmdl):
@@ -38,6 +37,8 @@ def _parse_args(cmdl):
 		help='Calculate Proportion of Discordant Reads (PDR)?')
 	parser.add_argument("--rrbs-fill", dest="rrbs_fill", type=int, default=4,
 		help="Number of bases from read end to regard as unreliable and ignore due to RRBS chemistry")
+	parser.add_argument("--dark-bases", type=int, default=None,
+		help="Number of bases from to prepend to R1 from R2 for dark sequencing")
 
 	args = parser.parse_args(cmdl)
 
@@ -100,6 +101,21 @@ def main(cmdl):
 	pm.report_result("File_mb", ngstk.get_file_size(local_input_files))
 	pm.report_result("Read_type", args.single_or_paired)
 	pm.report_result("Genome", args.genome_assembly)
+
+
+
+	if args.dark_bases:
+		pm.timestamp("### Dark sequencing mode: ")
+		cmd = tools.scripts_dir + "/darkSeqCombineReads.pl " + \
+			out_fastq_pre + "_R1.fastq " +\
+			out_fastq_pre + "_R2.fastq " +\
+			out_fastq_pre + "_undark_R1.fastq " +\
+			str(args.dark_bases)
+		out_fastq_pre = out_fastq_pre + "_undark"
+		unaligned_fastq = out_fastq_pre + "_R1.fastq"
+		pm.run(cmd, unaligned_fastq)
+		args.paired_end = False
+
 
 
 	################################################################################

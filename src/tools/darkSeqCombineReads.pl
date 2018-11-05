@@ -1,6 +1,8 @@
+#! /usr/bin/env perl 
 # count mismatches between read1 and read2 for dark sequencing
-# inputs: read1file, read2file, outputfile, number of bases from the beginning of read2 to be added to the beginning of read1
-# example usage: perl darkSeqCombineReads.pl read1.fastq read2.fastq combined.fastq 3
+# inputs: read1file, read2file, outputfile, number of bases from the beginning
+# of read2 to be added to the beginning of read1
+# usage: perl darkSeqCombineReads.pl read1.fq read2.fq combined.fq 3
 
 # input arguments
 $file1 = shift;  # read1 from @ARGV

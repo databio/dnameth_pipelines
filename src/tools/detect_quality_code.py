@@ -49,7 +49,9 @@ if __name__ == "__main__":
     'phred64/Illumina-1.5': (67, 104)
     }
     else:
-        # Actually I don't care which exact one it is, I just want to know how to convert it. This will save you lots of time if you just need this much info.
+        # Actually I don't care which exact one it is, I just want to know how
+        # to convert it. This will save you lots of time if you just need this
+        # much info.
         RANGES = {
 	'phred33': (33,75),
 	'phred64': (59,104)
