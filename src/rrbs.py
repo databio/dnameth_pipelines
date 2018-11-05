@@ -246,7 +246,7 @@ def main(cmdl):
 	cmd += " -f " + str(param.bsmap.filter)
 	cmd += " -q " + str(param.bsmap.quality_threshold)
 	cmd += " -u"       # report unmapped reads (into same bam file)
-	cmd += " -V 1"     # bsmap2.90 feature
+	cmd += " -V 1"     # set verbosity level
 	if args.paired_end:
 		cmd += " -m " + str(param.bsmap.minimal_insert_size)
 		cmd += " -x " + str(param.bsmap.maximal_insert_size)
