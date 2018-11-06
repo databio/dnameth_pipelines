@@ -443,7 +443,7 @@ def main(cmdl):
 		epi_cmd = get_epi_cmd(tools.epilog, out_bsmap, resources.methpositions,
 			epilog_output_dir, param.epilog.read_length_threshold, param.epilog.qual_threshold,
 			param.epilog.strand_method, rrbs_fill=args.rrbs_fill, mem_gig=param.epilog.mem_gig, context=param.epilog.context)
-		pm.run(epi_cmd, nofail=True)
+		pm.run(epi_cmd, lock_name="epilog", nofail=True)
 
 		"""
 		epilog_outfile = os.path.join(
@@ -566,7 +566,7 @@ def main(cmdl):
 	epi_cmd = get_epi_cmd(tools.epilog, out_bsmap, resources.spikein_methpositions,
 		spikein_folder, param.epilog.read_length_threshold, param.epilog.qual_threshold,
 		param.epilog.strand_method, rrbs_fill=0, mem_gig=param.epilog.mem_gig, context="C")
-	pm.run(epi_cmd, nofail=True)
+	pm.run(epi_cmd, lock_name="epilog", nofail=True)
 
 	"""
 	epilog_spike_outfile=os.path.join(
