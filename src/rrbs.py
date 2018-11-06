@@ -284,7 +284,7 @@ def main(cmdl):
 
 	# Run biseq-methcalling:
 	################################################################################
-	pm.timestamp("### biseq: ")
+	pm.timestamp("### Biseq methylation calling: ")
 
 	# Python Software Requirements for biseq
 	# REMARK AS: all packages are available via "easy_install --user <lib>"
@@ -439,7 +439,6 @@ def main(cmdl):
 				param.pipeline_outfolder, "epilog_" + args.genome_assembly)
 		ngstk.make_sure_path_exists (epilog_output_dir)
 
-		pm.timestamp("### Epilog Methcalling: ")
 		epi_cmd = get_epi_cmd(tools.epilog, out_bsmap, resources.methpositions,
 			epilog_output_dir, param.epilog.read_length_threshold, param.epilog.qual_threshold,
 			param.epilog.strand_method, rrbs_fill=args.rrbs_fill, mem_gig=param.epilog.mem_gig, context=param.epilog.context)
@@ -468,7 +467,7 @@ def main(cmdl):
 
 
 	################################################################################
-	pm.timestamp("### Bismark spike-in alignment: ")
+	pm.timestamp("### Bismark alignment (spike-in): ")
 	# currently using bowtie1 instead of bowtie2
 
 	# get unaligned reads out of BSMAP bam
@@ -525,7 +524,7 @@ def main(cmdl):
 
 
 	################################################################################
-	pm.timestamp("### PCR duplicate removal (Spike-in): ")
+	pm.timestamp("### PCR duplicate removal (spike-in): ")
 	# Bismark's deduplication forces output naming, how annoying.
 	#out_spikein_dedup = spikein_folder + args.sample_name + ".spikein.aln.deduplicated.bam"
 	out_spikein_dedup = re.sub(r'.bam$', '.deduplicated.bam', out_spikein)
@@ -546,7 +545,7 @@ def main(cmdl):
 
 	# Spike-in methylation calling
 	################################################################################
-	pm.timestamp("### Methylation calling (testxmz) Spike-in: ")
+	pm.timestamp("### Testxmz methylation calling (spike-in): ")
 	spike_chroms = ngstk.get_chrs_from_bam(out_spikein_sorted)
 
 	for chrom in spike_chroms:
@@ -562,7 +561,7 @@ def main(cmdl):
 				param.pipeline_outfolder, "epilog_" + args.genome_assembly)
 		ngstk.make_sure_path_exists(epilog_output_dir)
 
-		pm.timestamp("### Epilog Methcalling: ")
+		pm.timestamp("### Epilog methylation calling (spike-in): ")
 		ngstk.make_sure_path_exists(spikein_folder)
 		epi_cmd = get_epi_cmd(tools.epilog, out_bsmap, resources.spikein_methpositions,
 			spikein_folder, param.epilog.read_length_threshold, param.epilog.qual_threshold,
