@@ -555,18 +555,19 @@ def main(cmdl):
 		cmd1 += " >> " + pm.pipeline_stats_file
 		pm.run(cmd1, lock_name="spikein", nofail=True)
 
-	# spike in conversion efficiency calculation with epilog
-	# TODO: needed? should this be for the spikein folder?
-	epilog_output_dir = os.path.join(
-			param.pipeline_outfolder, "epilog_" + args.genome_assembly)
-	ngstk.make_sure_path_exists(epilog_output_dir)
+	if args.epilog:
+		# spike in conversion efficiency calculation with epilog
+		# TODO: needed? should this be for the spikein folder?
+		epilog_output_dir = os.path.join(
+				param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+		ngstk.make_sure_path_exists(epilog_output_dir)
 
-	pm.timestamp("### Epilog Methcalling: ")
-	ngstk.make_sure_path_exists(spikein_folder)
-	epi_cmd = get_epi_cmd(tools.epilog, out_bsmap, resources.spikein_methpositions,
-		spikein_folder, param.epilog.read_length_threshold, param.epilog.qual_threshold,
-		param.epilog.strand_method, rrbs_fill=0, mem_gig=param.epilog.mem_gig, context="C")
-	pm.run(epi_cmd, lock_name="epilog", nofail=True)
+		pm.timestamp("### Epilog Methcalling: ")
+		ngstk.make_sure_path_exists(spikein_folder)
+		epi_cmd = get_epi_cmd(tools.epilog, out_bsmap, resources.spikein_methpositions,
+			spikein_folder, param.epilog.read_length_threshold, param.epilog.qual_threshold,
+			param.epilog.strand_method, rrbs_fill=0, mem_gig=param.epilog.mem_gig, context="C")
+		pm.run(epi_cmd, lock_name="epilog", nofail=True)
 
 	"""
 	epilog_spike_outfile=os.path.join(
