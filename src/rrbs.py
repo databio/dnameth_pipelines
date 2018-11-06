@@ -565,7 +565,7 @@ def main(cmdl):
 	ngstk.make_sure_path_exists(spikein_folder)
 	epi_cmd = get_epi_cmd(tools.epilog, out_bsmap, resources.spikein_methpositions,
 		spikein_folder, param.epilog.read_length_threshold, param.epilog.qual_threshold,
-		param.epilog.strand_method, rrbs_fill=0, mem_gig=param.epilog.mem_gig, context=param.epilog.context)
+		param.epilog.strand_method, rrbs_fill=0, mem_gig=param.epilog.mem_gig, context="C")
 	pm.run(epi_cmd, nofail=True)
 
 	"""
