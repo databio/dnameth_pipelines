@@ -5,7 +5,7 @@ __email__ = "vince.reuter@gmail.com"
 
 
 def get_epi_cmd(jar, readsfile, sitesfile, outdir, min_rlen, min_qual,
-    strand_method, rrbs_fill, mem_gig, context="CG", cores="1"):
+    strand_method, rrbs_fill, mem_gig, context="CG", cores=1):
     """
     Create base for epiallele processing command.
 
@@ -32,6 +32,8 @@ def get_epi_cmd(jar, readsfile, sitesfile, outdir, min_rlen, min_qual,
         Number of gigabytes of memory.
     context : str
         Methylation context (sense strand, e.g. 'CG' for typical mammalian analysis)
+    cores : int
+        Number of cores to use for processing
 
     Returns
     -------
@@ -74,6 +76,12 @@ def get_epi_cmd(jar, readsfile, sitesfile, outdir, min_rlen, min_qual,
 
     if context not in contexts:
         problems.append("Invalid context ({}); choose one: {}".format(context, ", ".join(contexts)))
+
+    try:
+        if int(cores) < 1:
+            problems.append("Too few cores: {}".format(cores))
+    except:
+        problems.append("Invalid cores count: {}".format(cores))
 
     if problems:
         raise Exception("Problems: {}".format(", ".join(problems)))
