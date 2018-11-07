@@ -80,7 +80,7 @@ def get_epi_cmd(jar, readsfile, sitesfile, outdir, min_rlen, min_qual,
     try:
         if int(cores) < 1:
             problems.append("Too few cores: {}".format(cores))
-    except:
+    except (TypeError, ValueError):
         problems.append("Invalid cores count: {}".format(cores))
 
     if problems:
