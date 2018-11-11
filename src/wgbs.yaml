@@ -35,7 +35,9 @@ parameters:
     nondirectional: false
     maxins: 5000
   epilog:
+    rrbs_fill: 0
     qual_threshold: 30
     read_length_threshold: 30
     strand_method: flag
     mem_gig: 4
+    context: CG
