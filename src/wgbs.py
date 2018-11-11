@@ -458,7 +458,7 @@ def main(cmdl):
 		ngstk.make_sure_path_exists(outdir)
 		outfile = os.path.join(outdir, "all_calls.txt")
 		epis_file = os.path.join(outdir, "all_epialleles.txt") if param.epilog.epialleles and not skip_epis else None
-		return get_epi_cmd(tools.epilog, readsfile, sitesfile, outfile,
+		return outfile, get_epi_cmd(tools.epilog, readsfile, sitesfile, outfile,
 			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.read_length_threshold,
 			strand_method=param.epilog.strand_method, rrbs_fill=0,
 			mem_gig=param.epilog.mem_gig, context=context, cores=pm.cores,
@@ -474,9 +474,9 @@ def main(cmdl):
 		epilog_output_dir = os.path.join(
 				param.pipeline_outfolder, "epilog_" + args.genome_assembly)
 		pm.timestamp("### Epilog Methcalling: ")
-		epi_cmd = build_epilog_command(out_dedup_sorted, resources.methpositions,
+		epi_tgt, epi_cmd = build_epilog_command(out_dedup_sorted, resources.methpositions,
 			context=param.epilog.context, outdir=epilog_output_dir)
-		pm.run(epi_cmd, nofail=True)
+		pm.run(epi_cmd, target=epi_tgt, nofail=True)
 
 		"""
 		epilog_outfile = os.path.join(
@@ -579,9 +579,9 @@ def main(cmdl):
 		# spike in conversion efficiency calculation with epilog
 		pm.timestamp("### Spike-in Epilog Methcalling: ")
 		ngstk.make_sure_path_exists(spikein_folder)
-		epi_cmd = build_epilog_command(out_spikein_sorted, resources.spikein_methpositions,
+		epi_tgt, epi_cmd = build_epilog_command(out_spikein_sorted, resources.spikein_methpositions,
 			context="C", outdir=spikein_folder, skip_epis=True)
-		pm.run(epi_cmd, nofail=True)
+		pm.run(epi_cmd, target=epi_tgt, nofail=True)
 
 		"""
 		epilog_spike_outfile=os.path.join(

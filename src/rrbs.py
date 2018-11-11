@@ -438,7 +438,7 @@ def main(cmdl):
 		outfile = os.path.join(outdir, "all_calls.txt")
 		epis_file = os.path.join(outdir, "all_epialleles.txt") \
 			if param.epilog.epialleles and not skip_epis else None
-		return get_epi_cmd(tools.epilog, readsfile, sitesfile, outfile,
+		return outfile, get_epi_cmd(tools.epilog, readsfile, sitesfile, outfile,
 			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.read_length_threshold,
 			strand_method=param.epilog.strand_method, rrbs_fill=args.rrbs_fill,
 			mem_gig=param.epilog.mem_gig, context=context, cores=pm.cores,
@@ -448,9 +448,9 @@ def main(cmdl):
 		pm.timestamp("### Epilog methylation calling: ")
 		epilog_output_dir = os.path.join(
 				param.pipeline_outfolder, "epilog_" + args.genome_assembly)
-		epi_cmd = build_epilog_command(out_bsmap, resources.methpositions,
+		epi_tgt, epi_cmd = build_epilog_command(out_bsmap, resources.methpositions,
 			context=param.epilog.context, outdir=epilog_output_dir)
-		pm.run(epi_cmd, lock_name="epilog", nofail=True)
+		pm.run(epi_cmd, target=epi_tgt, lock_name="epilog", nofail=True)
 
 		"""
 		epilog_outfile = os.path.join(
@@ -565,9 +565,9 @@ def main(cmdl):
 	if args.epilog:
 		# spike in conversion efficiency calculation with epilog
 		pm.timestamp("### Epilog methylation calling (spike-in): ")
-		epi_cmd = build_epilog_command(out_bsmap, resources.spikein_methpositions,
+		epi_tgt, epi_cmd = build_epilog_command(out_bsmap, resources.spikein_methpositions,
 			context="C", outdir=spikein_folder, skip_epis=True)
-		pm.run(epi_cmd, lock_name="epilog", nofail=True)
+		pm.run(epi_cmd, target=epi_tgt, lock_name="epilog", nofail=True)
 
 	"""
 	epilog_spike_outfile=os.path.join(
