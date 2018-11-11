@@ -433,10 +433,11 @@ def main(cmdl):
 
 	################################################################################
 
-	def build_epilog_command(readsfile, sitesfile, context):
-		outdir = os.path.dirname(readsfile)
+	def build_epilog_command(readsfile, sitesfile, context, outdir, skip_epis=False):
+		ngstk.make_sure_path_exists(outdir)
 		outfile = os.path.join(outdir, "all_calls.txt")
-		epis_file = os.path.join(outdir, "all_epialleles.txt") if param.epilog.epialleles else None
+		epis_file = os.path.join(outdir, "all_epialleles.txt") \
+			if param.epilog.epialleles and not skip_epis else None
 		return get_epi_cmd(tools.epilog, readsfile, sitesfile, outfile,
 			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.read_length_threshold,
 			strand_method=param.epilog.strand_method, rrbs_fill=args.rrbs_fill,
@@ -447,9 +448,8 @@ def main(cmdl):
 		pm.timestamp("### Epilog methylation calling: ")
 		epilog_output_dir = os.path.join(
 				param.pipeline_outfolder, "epilog_" + args.genome_assembly)
-		ngstk.make_sure_path_exists (epilog_output_dir)
-
-		epi_cmd = build_epilog_command(out_bsmap, resources.methpositions, context=param.epilog.context)
+		epi_cmd = build_epilog_command(out_bsmap, resources.methpositions,
+			context=param.epilog.context, outdir=epilog_output_dir)
 		pm.run(epi_cmd, lock_name="epilog", nofail=True)
 
 		"""
@@ -564,14 +564,9 @@ def main(cmdl):
 
 	if args.epilog:
 		# spike in conversion efficiency calculation with epilog
-		# TODO: needed? should this be for the spikein folder?
-		epilog_output_dir = os.path.join(
-				param.pipeline_outfolder, "epilog_" + args.genome_assembly)
-		ngstk.make_sure_path_exists(epilog_output_dir)
-
 		pm.timestamp("### Epilog methylation calling (spike-in): ")
-		ngstk.make_sure_path_exists(spikein_folder)
-		epi_cmd = build_epilog_command(out_bsmap, resources.spikein_methpositions, context="C")
+		epi_cmd = build_epilog_command(out_bsmap, resources.spikein_methpositions,
+			context="C", outdir=spikein_folder, skip_epis=True)
 		pm.run(epi_cmd, lock_name="epilog", nofail=True)
 
 	"""

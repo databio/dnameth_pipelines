@@ -454,10 +454,10 @@ def main(cmdl):
 
 	################################################################################
 
-	def build_epilog_command(readsfile, sitesfile, context):
-		outdir = os.path.dirname(readsfile)
+	def build_epilog_command(readsfile, sitesfile, context, outdir, skip_epis=False):
+		ngstk.make_sure_path_exists(outdir)
 		outfile = os.path.join(outdir, "all_calls.txt")
-		epis_file = os.path.join(outdir, "all_epialleles.txt") if param.epilog.epialleles else None
+		epis_file = os.path.join(outdir, "all_epialleles.txt") if param.epilog.epialleles and not skip_epis else None
 		return get_epi_cmd(tools.epilog, readsfile, sitesfile, outfile,
 			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.read_length_threshold,
 			strand_method=param.epilog.strand_method, rrbs_fill=0,
@@ -465,8 +465,6 @@ def main(cmdl):
 			keep_chrom_files=param.epilog.keep_chrom_files, epis_file=epis_file)
 
 	if args.epilog:
-
-		# Prep for epialles
 		# out_bismark must be indexed in order for epilog to use it
 		# should we do this on out_ded
 		out_dedup_sorted = re.sub(r'.bam$',"_sort.bam", out_dedup)
@@ -475,10 +473,9 @@ def main(cmdl):
 		pm.run([cmd2, cmd3], out_dedup_sorted + ".bai")
 		epilog_output_dir = os.path.join(
 				param.pipeline_outfolder, "epilog_" + args.genome_assembly)
-		ngstk.make_sure_path_exists(epilog_output_dir)
-
 		pm.timestamp("### Epilog Methcalling: ")
-		epi_cmd = build_epilog_command(out_dedup_sorted, resources.methpositions, context=param.epilog.context)
+		epi_cmd = build_epilog_command(out_dedup_sorted, resources.methpositions,
+			context=param.epilog.context, outdir=epilog_output_dir)
 		pm.run(epi_cmd, nofail=True)
 
 		"""
@@ -580,15 +577,10 @@ def main(cmdl):
 
 
 		# spike in conversion efficiency calculation with epilog
-		# TODO: do we need these checks here, or are they carried over from
-		# the section where methlation is called for the actual input reads?
-		epilog_output_dir = os.path.join(
-				param.pipeline_outfolder, "epilog_" + args.genome_assembly)
-		ngstk.make_sure_path_exists (epilog_output_dir)
-
 		pm.timestamp("### Spike-in Epilog Methcalling: ")
 		ngstk.make_sure_path_exists(spikein_folder)
-		epi_cmd = build_epilog_command(out_spikein_sorted, resources.spikein_methpositions, context="C")
+		epi_cmd = build_epilog_command(out_spikein_sorted, resources.spikein_methpositions,
+			context="C", outdir=spikein_folder, skip_epis=True)
 		pm.run(epi_cmd, nofail=True)
 
 		"""
