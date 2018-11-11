@@ -433,15 +433,23 @@ def main(cmdl):
 
 	################################################################################
 
+	def build_epilog_command(readsfile, sitesfile, context):
+		outdir = os.path.dirname(readsfile)
+		outfile = os.path.join(outdir, "all_calls.txt")
+		epis_file = os.path.join(outdir, "all_epialleles.txt") if param.epilog.epialleles else None
+		return get_epi_cmd(tools.epilog, readsfile, sitesfile, outfile,
+			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.read_length_threshold,
+			strand_method=param.epilog.strand_method, rrbs_fill=args.rrbs_fill,
+			mem_gig=param.epilog.mem_gig, context=context, cores=pm.cores,
+			keep_chrom_files=param.epilog.keep_chrom_files, epis_file=epis_file)
+
 	if args.epilog:
 		pm.timestamp("### Epilog methylation calling: ")
 		epilog_output_dir = os.path.join(
 				param.pipeline_outfolder, "epilog_" + args.genome_assembly)
 		ngstk.make_sure_path_exists (epilog_output_dir)
 
-		epi_cmd = get_epi_cmd(tools.epilog, out_bsmap, resources.methpositions,
-			epilog_output_dir, param.epilog.read_length_threshold, param.epilog.qual_threshold,
-			param.epilog.strand_method, rrbs_fill=args.rrbs_fill, mem_gig=param.epilog.mem_gig, context=param.epilog.context, cores=pm.cores)
+		epi_cmd = build_epilog_command(out_bsmap, resources.methpositions, context=param.epilog.context)
 		pm.run(epi_cmd, lock_name="epilog", nofail=True)
 
 		"""
@@ -563,10 +571,7 @@ def main(cmdl):
 
 		pm.timestamp("### Epilog methylation calling (spike-in): ")
 		ngstk.make_sure_path_exists(spikein_folder)
-		epi_cmd = get_epi_cmd(tools.epilog, out_bsmap, resources.spikein_methpositions,
-			spikein_folder, param.epilog.read_length_threshold, param.epilog.qual_threshold,
-			param.epilog.strand_method, rrbs_fill=0, mem_gig=param.epilog.mem_gig, context="C",
-			cores=pm.cores)
+		epi_cmd = build_epilog_command(out_bsmap, resources.spikein_methpositions, context="C")
 		pm.run(epi_cmd, lock_name="epilog", nofail=True)
 
 	"""

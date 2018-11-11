@@ -41,3 +41,5 @@ parameters:
     strand_method: flag
     mem_gig: 4
     context: CG
+    epialleles: true
+    keep_chrom_files: false

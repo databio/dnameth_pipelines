@@ -4,8 +4,9 @@ __author__ = "Vince Reuter"
 __email__ = "vince.reuter@gmail.com"
 
 
-def get_epi_cmd(jar, readsfile, sitesfile, outdir, min_rlen, min_qual,
-    strand_method, rrbs_fill, mem_gig, context="CG", cores=1):
+def get_epi_cmd(jar, readsfile, sitesfile, outfile, min_rlen, min_qual,
+    strand_method, rrbs_fill, mem_gig,
+    context="CG", cores=1, keep_chrom_files=False, epis_file=None):
     """
     Create base for epiallele processing command.
 
@@ -17,8 +18,8 @@ def get_epi_cmd(jar, readsfile, sitesfile, outdir, min_rlen, min_qual,
         Path to sorted, aligned BAM with reads to analyze.
     sitesfile : str
         Path to gzipped, tabix-indexed file with sites to analyze.
-    outdir : str
-        Path to folder for output files.
+    outfile : str
+        Path to file for site-level methylation call data (main target).
     min_rlen : int
         Minimum number of bases aligned for a read to be used in analysis.
     min_qual : int
@@ -33,7 +34,13 @@ def get_epi_cmd(jar, readsfile, sitesfile, outdir, min_rlen, min_qual,
     context : str
         Methylation context (sense strand, e.g. 'CG' for typical mammalian analysis)
     cores : int
-        Number of cores to use for processing
+        Number of cores to use for processing.
+    keep_chrom_files : bool
+        Whether the per-chromosome output files from epilog should be retained
+        along with the main, merged output files.
+    epis_file : str, optional
+        Path to file for epiallele observation records; if unspecified, no
+        epiallele processing will be performed.
 
     Returns
     -------
@@ -85,5 +92,13 @@ def get_epi_cmd(jar, readsfile, sitesfile, outdir, min_rlen, min_qual,
 
     if problems:
         raise Exception("Problems: {}".format(", ".join(problems)))
-    return "java -Xmx{m}g -jar {j} --minBaseQuality {q} --minReadLength {rl} --context {ctx} --rrbsFill {base_fill} --cores {cores} --strandMethod {sm} -O {o} {r} {s}".format(
-        m=mem_gig, j=jar, rl=min_rlen, q=min_qual, ctx=context, base_fill=rrbs_fill, sm=strand_method, o=outdir, r=readsfile, s=sitesfile, cores=cores)
+
+    cmd = "java -Xmx{m}g -jar {j} --minBaseQuality {q} --minReadLength {rl} --context {ctx} --rrbsFill {base_fill} --cores {cores} --strandMethod {sm} -O {o} {r} {s}".format(
+        m=mem_gig, j=jar, rl=min_rlen, q=min_qual, ctx=context, base_fill=rrbs_fill, sm=strand_method, o=outfile, r=readsfile, s=sitesfile, cores=cores)
+
+    if keep_chrom_files:
+        cmd += " --keepChromFiles"
+    if epis_file:
+        cmd += " --outputEpialleles {}".format(epis_file)
+
+    return cmd
