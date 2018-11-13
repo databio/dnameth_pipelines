@@ -6,7 +6,8 @@ __email__ = "vince.reuter@gmail.com"
 
 def get_epi_cmd(jar, readsfile, sitesfile, outfile, min_rlen, min_qual,
     strand_method, rrbs_fill, mem_gig,
-    context="CG", cores=1, keep_chrom_files=False, epis_file=None):
+    context="CG", cores=1, keep_chrom_files=False,
+    epis_file=None, process_logfile=None):
     """
     Create base for epiallele processing command.
 
@@ -41,6 +42,8 @@ def get_epi_cmd(jar, readsfile, sitesfile, outfile, min_rlen, min_qual,
     epis_file : str, optional
         Path to file for epiallele observation records; if unspecified, no
         epiallele processing will be performed.
+    process_logfile : str, optional
+        Path to file for epiallele processing performance statistics
 
     Returns
     -------
@@ -100,5 +103,7 @@ def get_epi_cmd(jar, readsfile, sitesfile, outfile, min_rlen, min_qual,
         cmd += " --keepChromFiles"
     if epis_file:
         cmd += " --outputEpialleles {}".format(epis_file)
+    if process_logfile:
+        cmd += " --processLogfile {}".format(process_logfile)
 
     return cmd

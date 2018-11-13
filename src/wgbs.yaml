@@ -43,3 +43,4 @@ parameters:
     context: CG
     epialleles: true
     keep_chrom_files: false
+    track_process_stats: true
