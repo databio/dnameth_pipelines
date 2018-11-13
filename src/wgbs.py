@@ -462,7 +462,7 @@ def main(cmdl):
 		process_logfile = os.path.join(outdir, "processing_statistics.txt") \
 			if param.epilog.track_process_stats else None
 		return outfile, get_epi_cmd(tools.epilog, readsfile, sitesfile, outfile,
-			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.read_length_threshold,
+			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.qual_threshold,
 			strand_method=param.epilog.strand_method, rrbs_fill=0,
 			mem_gig=param.epilog.mem_gig, context=context, cores=pm.cores,
 			keep_chrom_files=param.epilog.keep_chrom_files, epis_file=epis_file,
