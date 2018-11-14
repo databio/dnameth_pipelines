@@ -370,6 +370,59 @@ def main(cmdl):
 	pm.clean_add(out_sam_filter) # after filtering
 
 
+	# Epilog analysis
+	################################################################################
+
+	def build_epilog_command(readsfile, sitesfile, context, outdir, skip_epis=False):
+		ngstk.make_sure_path_exists(outdir)
+		outfile = os.path.join(outdir, "all_calls.txt")
+		epis_file = os.path.join(outdir, "all_epialleles.txt") \
+			if param.epilog.epialleles and not skip_epis else None
+		process_logfile = os.path.join(outdir, "processing_statistics.txt") \
+			if param.epilog.track_process_stats else None
+		return outfile, get_epi_cmd(tools.epilog, readsfile, sitesfile, outfile,
+			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.qual_threshold,
+			strand_method=param.epilog.strand_method, rrbs_fill=0,
+			memtext=pm.mem, context=context, cores=pm.cores,
+			keep_chrom_files=param.epilog.keep_chrom_files, epis_file=epis_file,
+			process_logfile=process_logfile)
+
+	if args.epilog:
+		# out_bismark must be indexed in order for epilog to use it
+		# should we do this on out_ded
+		out_dedup_sorted = re.sub(r'.bam$', "_sort.bam", out_dedup)
+		cmd2 = tools.samtools + " sort -@ " + str(pm.cores) + " -o " + out_dedup_sorted + " " + out_dedup
+		cmd3 = tools.samtools + " index " + out_dedup_sorted
+		pm.run([cmd2, cmd3], out_dedup_sorted + ".bai")
+		epilog_output_dir = os.path.join(
+			param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+		pm.timestamp("### Epilog Methcalling: ")
+		epi_tgt, epi_cmd = build_epilog_command(
+			out_dedup_sorted, resources.methpositions,
+			context=param.epilog.context, outdir=epilog_output_dir)
+		pm.run(epi_cmd, target=epi_tgt, nofail=True)
+
+		"""
+		epilog_outfile = os.path.join(
+				epilog_output_dir, args.sample_name + "_epilog.bed")
+		epilog_summary_file = os.path.join(
+				epilog_output_dir, args.sample_name + "_epilog_summary.bed")
+
+		cmd = tools.epilog
+		cmd += " call"
+		cmd += " --infile=" + out_dedup_sorted  # absolute path to the aligned bam
+		cmd += " --positions=" + resources.methpositions
+		cmd += " --outfile=" + epilog_outfile
+		cmd += " --summary-filename=" + epilog_summary_file
+		cmd += " --cores=" + str(pm.cores)
+		cmd += " --qual-threshold=" + str(param.epilog.qual_threshold)
+		cmd += " --read-length-threshold=" + str(param.epilog.read_length_threshold)
+		cmd += " --wgbs"    # Turn off RRBS mode
+
+		pm.run(cmd, epilog_outfile, nofail=True)
+		"""
+
+
 	# Methylation extractor
 	################################################################################
 	# REMARK NS:
@@ -460,55 +513,6 @@ def main(cmdl):
 
 	pm.run([cmd1, cmd2], out_bigwig)
 
-	################################################################################
-
-	def build_epilog_command(readsfile, sitesfile, context, outdir, skip_epis=False):
-		ngstk.make_sure_path_exists(outdir)
-		outfile = os.path.join(outdir, "all_calls.txt")
-		epis_file = os.path.join(outdir, "all_epialleles.txt") \
-			if param.epilog.epialleles and not skip_epis else None
-		process_logfile = os.path.join(outdir, "processing_statistics.txt") \
-			if param.epilog.track_process_stats else None
-		return outfile, get_epi_cmd(tools.epilog, readsfile, sitesfile, outfile,
-			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.qual_threshold,
-			strand_method=param.epilog.strand_method, rrbs_fill=0,
-			memtext=pm.mem, context=context, cores=pm.cores,
-			keep_chrom_files=param.epilog.keep_chrom_files, epis_file=epis_file,
-			process_logfile=process_logfile)
-
-	if args.epilog:
-		# out_bismark must be indexed in order for epilog to use it
-		# should we do this on out_ded
-		out_dedup_sorted = re.sub(r'.bam$',"_sort.bam", out_dedup)
-		cmd2 = tools.samtools + " sort -@ " + str(pm.cores) + " -o " + out_dedup_sorted + " " + out_dedup
-		cmd3 = tools.samtools + " index " + out_dedup_sorted
-		pm.run([cmd2, cmd3], out_dedup_sorted + ".bai")
-		epilog_output_dir = os.path.join(
-				param.pipeline_outfolder, "epilog_" + args.genome_assembly)
-		pm.timestamp("### Epilog Methcalling: ")
-		epi_tgt, epi_cmd = build_epilog_command(out_dedup_sorted, resources.methpositions,
-			context=param.epilog.context, outdir=epilog_output_dir)
-		pm.run(epi_cmd, target=epi_tgt, nofail=True)
-
-		"""
-		epilog_outfile = os.path.join(
-				epilog_output_dir, args.sample_name + "_epilog.bed")
-		epilog_summary_file = os.path.join(
-				epilog_output_dir, args.sample_name + "_epilog_summary.bed")
-	
-		cmd = tools.epilog
-		cmd += " call"
-		cmd += " --infile=" + out_dedup_sorted  # absolute path to the aligned bam
-		cmd += " --positions=" + resources.methpositions
-		cmd += " --outfile=" + epilog_outfile
-		cmd += " --summary-filename=" + epilog_summary_file
-		cmd += " --cores=" + str(pm.cores)
-		cmd += " --qual-threshold=" + str(param.epilog.qual_threshold)
-		cmd += " --read-length-threshold=" + str(param.epilog.read_length_threshold)
-		cmd += " --wgbs"    # Turn off RRBS mode
-	
-		pm.run(cmd, epilog_outfile, nofail=True)
-		"""
 
 	# Spike-in alignment
 	################################################################################
