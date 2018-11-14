@@ -43,3 +43,4 @@ parameters:
     epialleles: true
     keep_chrom_files: false
     track_process_stats: true
+    no_epi_stats: false

@@ -433,7 +433,8 @@ def main(cmdl):
 
 	################################################################################
 
-	def build_epilog_command(readsfile, sitesfile, context, outdir, skip_epis=False):
+	def build_epilog_command(
+		readsfile, sitesfile, context, outdir, skip_epis=False, no_epi_stats=False):
 		ngstk.make_sure_path_exists(outdir)
 		outfile = os.path.join(outdir, "all_calls.txt")
 		epis_file = os.path.join(outdir, "all_epialleles.txt") \
@@ -445,14 +446,16 @@ def main(cmdl):
 			strand_method=param.epilog.strand_method, rrbs_fill=args.rrbs_fill,
 			memtext=pm.mem, context=context, cores=pm.cores,
 			keep_chrom_files=param.epilog.keep_chrom_files,
-			epis_file=epis_file, process_logfile=process_logfile)
+			epis_file=epis_file, process_logfile=process_logfile,
+			no_epi_stats=skip_epis or no_epi_stats)
 
 	if args.epilog:
 		pm.timestamp("### Epilog methylation calling: ")
 		epilog_output_dir = os.path.join(
 				param.pipeline_outfolder, "epilog_" + args.genome_assembly)
 		epi_tgt, epi_cmd = build_epilog_command(out_bsmap, resources.methpositions,
-			context=param.epilog.context, outdir=epilog_output_dir)
+			context=param.epilog.context, outdir=epilog_output_dir,
+			no_epi_stats=param.epilog.no_epi_stats)
 		pm.run(epi_cmd, target=epi_tgt, lock_name="epilog", nofail=True)
 
 		"""
@@ -569,7 +572,7 @@ def main(cmdl):
 		# spike in conversion efficiency calculation with epilog
 		pm.timestamp("### Epilog methylation calling (spike-in): ")
 		epi_tgt, epi_cmd = build_epilog_command(out_bsmap, resources.spikein_methpositions,
-			context="C", outdir=spikein_folder, skip_epis=True)
+			context="C", outdir=spikein_folder, skip_epis=True, no_epi_stats=True)
 		pm.run(epi_cmd, target=epi_tgt, lock_name="epilog", nofail=True)
 
 	"""

@@ -373,7 +373,8 @@ def main(cmdl):
 	# Epilog analysis
 	################################################################################
 
-	def build_epilog_command(readsfile, sitesfile, context, outdir, skip_epis=False):
+	def build_epilog_command(
+		readsfile, sitesfile, context, outdir, skip_epis=False, no_epi_stats=False):
 		ngstk.make_sure_path_exists(outdir)
 		outfile = os.path.join(outdir, "all_calls.txt")
 		epis_file = os.path.join(outdir, "all_epialleles.txt") \
@@ -385,7 +386,7 @@ def main(cmdl):
 			strand_method=param.epilog.strand_method, rrbs_fill=0,
 			memtext=pm.mem, context=context, cores=pm.cores,
 			keep_chrom_files=param.epilog.keep_chrom_files, epis_file=epis_file,
-			process_logfile=process_logfile)
+			process_logfile=process_logfile, no_epi_stats=skip_epis or no_epi_stats)
 
 	if args.epilog:
 		# out_bismark must be indexed in order for epilog to use it
@@ -399,7 +400,8 @@ def main(cmdl):
 		pm.timestamp("### Epilog Methcalling: ")
 		epi_tgt, epi_cmd = build_epilog_command(
 			out_dedup_sorted, resources.methpositions,
-			context=param.epilog.context, outdir=epilog_output_dir)
+			context=param.epilog.context, outdir=epilog_output_dir,
+			no_epi_stats=param.epilog.no_epi_stats)
 		pm.run(epi_cmd, target=epi_tgt, nofail=True)
 
 		"""
@@ -595,8 +597,9 @@ def main(cmdl):
 		# spike in conversion efficiency calculation with epilog
 		pm.timestamp("### Spike-in Epilog Methcalling: ")
 		ngstk.make_sure_path_exists(spikein_folder)
-		epi_tgt, epi_cmd = build_epilog_command(out_spikein_sorted, resources.spikein_methpositions,
-			context="C", outdir=spikein_folder, skip_epis=True)
+		epi_tgt, epi_cmd = build_epilog_command(
+			out_spikein_sorted, resources.spikein_methpositions,
+			context="C", outdir=spikein_folder, skip_epis=True, no_epi_stats=True)
 		pm.run(epi_cmd, target=epi_tgt, nofail=True)
 
 		"""

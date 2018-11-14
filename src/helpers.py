@@ -6,7 +6,7 @@ __email__ = "vince.reuter@gmail.com"
 
 def get_epi_cmd(jar, readsfile, sitesfile, outfile, min_rlen, min_qual,
     strand_method, rrbs_fill, memtext,
-    context="CG", cores=1, keep_chrom_files=False,
+    context="CG", cores=1, keep_chrom_files=False, no_epi_stats=False,
     epis_file=None, process_logfile=None):
     """
     Create base for epiallele processing command.
@@ -36,6 +36,8 @@ def get_epi_cmd(jar, readsfile, sitesfile, outfile, min_rlen, min_qual,
         Methylation context (sense strand, e.g. 'CG' for typical mammalian analysis)
     cores : int
         Number of cores to use for processing.
+    no_epi_stats : bool, default True
+        Skip epiallele diversity/heterogeneity statistics
     keep_chrom_files : bool
         Whether the per-chromosome output files from epilog should be retained
         along with the main, merged output files.
@@ -94,5 +96,7 @@ def get_epi_cmd(jar, readsfile, sitesfile, outfile, min_rlen, min_qual,
         cmd += " --outputEpialleles {}".format(epis_file)
     if process_logfile:
         cmd += " --processLogfile {}".format(process_logfile)
+    if no_epi_stats:
+        cmd += " --noEpiStats"
 
     return cmd
