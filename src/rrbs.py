@@ -276,7 +276,7 @@ def main(cmdl):
 	# bsmap2.90 requires that
 	cmd2 = tools.samtools + " sort -o " + out_bsmap + " " + out_bsmap
 	cmd3 = tools.samtools + " index " + out_bsmap
-	pm.run([cmd2, cmd3], out_bsmap + ".bai", nofail=True)
+	pm.run([cmd2, cmd3], out_bsmap + ".bai")
 
 	# Clean up big intermediate files:
 	pm.clean_add(os.path.join(bsmap_folder, "*.fastq"))
