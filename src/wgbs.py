@@ -45,6 +45,10 @@ def _parse_args(cmdl):
 	else:
 		args.paired_end = False
 
+	if not args.input:
+		parser.print_help()
+		raise SystemExit
+
 	return args
 
 
@@ -56,10 +60,7 @@ def main(cmdl):
 	################################################################################
 	# If 2 input files are given, then these are to be merged.
 	# Must be done here to initialize the sample name correctly
-
-	merge = False
 	if len(args.input) > 1:
-		merge = True
 		if args.sample_name == "default":
 			args.sample_name = "merged"
 	else:
@@ -67,9 +68,6 @@ def main(cmdl):
 			# Default sample name is derived from the input file
 			args.sample_name = os.path.splitext(os.path.basename(args.input[0]))[0]
 
-	if not args.input:
-		parser.print_help()
-		raise SystemExit
 
 	# Create a PipelineManager object and start the pipeline
 	outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
@@ -474,7 +472,7 @@ def main(cmdl):
 		return outfile, get_epi_cmd(tools.epilog, readsfile, sitesfile, outfile,
 			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.qual_threshold,
 			strand_method=param.epilog.strand_method, rrbs_fill=0,
-			mem_gig=param.epilog.mem_gig, context=context, cores=pm.cores,
+			memtext=pm.mem, context=context, cores=pm.cores,
 			keep_chrom_files=param.epilog.keep_chrom_files, epis_file=epis_file,
 			process_logfile=process_logfile)
 

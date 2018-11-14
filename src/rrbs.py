@@ -443,7 +443,7 @@ def main(cmdl):
 		return outfile, get_epi_cmd(tools.epilog, readsfile, sitesfile, outfile,
 			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.qual_threshold,
 			strand_method=param.epilog.strand_method, rrbs_fill=args.rrbs_fill,
-			mem_gig=param.epilog.mem_gig, context=context, cores=pm.cores,
+			memtext=pm.mem, context=context, cores=pm.cores,
 			keep_chrom_files=param.epilog.keep_chrom_files,
 			epis_file=epis_file, process_logfile=process_logfile)
 

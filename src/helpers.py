@@ -5,7 +5,7 @@ __email__ = "vince.reuter@gmail.com"
 
 
 def get_epi_cmd(jar, readsfile, sitesfile, outfile, min_rlen, min_qual,
-    strand_method, rrbs_fill, mem_gig,
+    strand_method, rrbs_fill, memtext,
     context="CG", cores=1, keep_chrom_files=False,
     epis_file=None, process_logfile=None):
     """
@@ -30,8 +30,8 @@ def get_epi_cmd(jar, readsfile, sitesfile, outfile, min_rlen, min_qual,
         Name of strategy to determine read orientation; 'tag' or 'flag'
     rrbs_fill : int
         Number of bases at read end to ignore due to RRBS "fill-in"
-    mem_gig : int
-        Number of gigabytes of memory.
+    memtext : str
+        Text specification of memory, e.g. 16000m or 4g.
     context : str
         Methylation context (sense strand, e.g. 'CG' for typical mammalian analysis)
     cores : int
@@ -56,12 +56,9 @@ def get_epi_cmd(jar, readsfile, sitesfile, outfile, min_rlen, min_qual,
 
     contexts = ["C", "CG"]
 
-    def mem_err_msg():
-        return "Mem spec must be nonnegative integer; got {}".format(mem_gig)
-
     problems = []
 
-    pos_int_vals = {"Memory": mem_gig, "Length": min_rlen, "Quality": min_qual}
+    pos_int_vals = {"Length": min_rlen, "Quality": min_qual}
     for label, value in pos_int_vals.items():
         valid = False
         try:
@@ -70,14 +67,6 @@ def get_epi_cmd(jar, readsfile, sitesfile, outfile, min_rlen, min_qual,
             pass
         if not valid:
             problems.append("Did not get nonnegative value -- {} = {}".format(label, value))
-
-    try:
-        mem_gig = int(mem_gig)
-    except (TypeError, ValueError):
-        problems.append(mem_err_msg())
-    else:
-        if mem_gig < 0:
-            problems.append(mem_err_msg())
 
     problems.extend(
         ["{} isn't a file: {}".format(ft, fp)
@@ -96,8 +85,8 @@ def get_epi_cmd(jar, readsfile, sitesfile, outfile, min_rlen, min_qual,
     if problems:
         raise Exception("Problems: {}".format(", ".join(problems)))
 
-    cmd = "java -Xmx{m}g -jar {j} --minBaseQuality {q} --minReadLength {rl} --context {ctx} --rrbsFill {base_fill} --cores {cores} --strandMethod {sm} -O {o} {r} {s}".format(
-        m=mem_gig, j=jar, rl=min_rlen, q=min_qual, ctx=context, base_fill=rrbs_fill, sm=strand_method, o=outfile, r=readsfile, s=sitesfile, cores=cores)
+    cmd = "java -Xmx{m} -jar {j} --minBaseQuality {q} --minReadLength {rl} --context {ctx} --rrbsFill {base_fill} --cores {cores} --strandMethod {sm} -O {o} {r} {s}".format(
+        m=memtext, j=jar, rl=min_rlen, q=min_qual, ctx=context, base_fill=rrbs_fill, sm=strand_method, o=outfile, r=readsfile, s=sitesfile, cores=cores)
 
     if keep_chrom_files:
         cmd += " --keepChromFiles"

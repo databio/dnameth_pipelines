@@ -65,7 +65,6 @@ parameters:
     qual_threshold: 20
     read_length_threshold: 20
     strand_method: flag
-    mem_gig: 4
     context: CG
     epialleles: true
     keep_chrom_files: false
