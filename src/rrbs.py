@@ -215,6 +215,7 @@ def main(cmdl):
 		follow = ngstk.check_trim(trimmed_fastq, args.paired_end, trimmed_fastq_R2,
 			fastqc_folder = os.path.join(param.pipeline_outfolder, "fastqc/")))
 
+
 	pm.clean_add(os.path.join(fastq_folder, "*.fastq"), conditional = True)
 	pm.clean_add(os.path.join(fastq_folder, "*.fq"), conditional = True)
 	pm.clean_add(os.path.join(fastq_folder, "*.log"), conditional = True)

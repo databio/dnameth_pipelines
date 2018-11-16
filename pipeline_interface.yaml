@@ -71,10 +71,10 @@ pipelines:
       medium:
         file_size: "2"
         cores: "4"
-        mem: "16000"
+        mem: "24000"
         time: "1-12:00:00"
       high:
         file_size: "4"
         cores: "6"
-        mem: "16000"
+        mem: "24000"
         time: "2-00:00:00"
