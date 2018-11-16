@@ -437,12 +437,13 @@ def main(cmdl):
 	def build_epilog_command(
 		readsfile, sitesfile, context, outdir, skip_epis=False, no_epi_stats=False):
 		ngstk.make_sure_path_exists(outdir)
-		outfile = os.path.join(outdir, "all_calls.txt")
+		site_calls_file = os.path.join(outdir, "all_calls.txt")
 		epis_file = os.path.join(outdir, "all_epialleles.txt") \
 			if param.epilog.epialleles and not skip_epis else None
 		process_logfile = os.path.join(outdir, "processing_statistics.txt") \
 			if param.epilog.track_process_stats else None
-		return outfile, get_epi_cmd(tools.epilog, readsfile, sitesfile, outfile,
+		target = epis_file or site_calls_file
+		return target, get_epi_cmd(tools.epilog, readsfile, sitesfile, site_calls_file,
 			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.qual_threshold,
 			strand_method=param.epilog.strand_method, rrbs_fill=args.rrbs_fill,
 			memtext=pm.mem, context=context, cores=pm.cores,
