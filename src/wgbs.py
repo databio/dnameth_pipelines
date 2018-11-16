@@ -15,6 +15,7 @@ import os
 import re
 import subprocess
 import pypiper
+from pypiper.folder_context import FolderContext
 from helpers import get_epi_cmd
 
 
@@ -310,19 +311,12 @@ def main(cmdl):
 	cmd += out_bismark
 	cmd += " --bam"
 
-	pm.run(cmd, out_dedup, follow = lambda:
-		pm.report_result("Deduplicated_reads", ngstk.count_reads(out_dedup, args.paired_end)))
+	with FolderContext(bismark_folder):
+		pm.run(cmd, out_dedup, follow = lambda: pm.report_result(
+			"Deduplicated_reads", ngstk.count_reads(out_dedup, args.paired_end)))
 
 	if not os.path.isfile(out_dedup):
-		print("WARNING -- Missing deduplication target: {}".format(out_dedup))
-		alt_dest_maybe = os.path.join(os.getcwd(), os.path.split(out_dedup)[1])
-		if os.path.isfile(alt_dest_maybe):
-			print("Found likely rerouted deduplication output: {}".format(alt_dest_maybe))
-			import shutil
-			print("Moving {} to expected deduplication target: {}".format(alt_dest_maybe, out_dedup))
-			shutil.move(alt_dest_maybe, out_dedup)
-		else:
-			pm.fail_pipeline(IOError("Missing deduplication target: {}".format(out_dedup)))
+		pm.fail_pipeline(IOError("Missing deduplication target: {}".format(out_dedup)))
 
 	pm.timestamp("### Aligned read filtering: ")
 
