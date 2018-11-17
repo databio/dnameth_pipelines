@@ -15,8 +15,7 @@ import os
 import re
 import subprocess
 import pypiper
-from pypiper.folder_context import FolderContext
-from helpers import get_epi_cmd
+from helpers import FolderContext, get_epi_cmd
 
 
 def _parse_args(cmdl):
