@@ -35,12 +35,13 @@ pipelines:
         file_size: "10"
         cores: "24"
         mem: "64000"
-        time: "8-00:00:00"
+        time: "7-00:00:00"
       huge:
         file_size: "30"
-        cores: "24"
-        mem: "64000"
-        time: "50-00:00:00"
+        cores: "16"
+        mem: "128000"
+        time: "4-00:00:00"
+        partition: "largemem"
 
   rrbs:
     name: RRBS
@@ -70,10 +71,10 @@ pipelines:
       medium:
         file_size: "2"
         cores: "4"
-        mem: "16000"
+        mem: "24000"
         time: "1-12:00:00"
       high:
         file_size: "4"
         cores: "6"
-        mem: "16000"
+        mem: "24000"
         time: "2-00:00:00"

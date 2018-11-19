@@ -23,7 +23,7 @@ tools:
   bismark_methylation_extractor: bismark_methylation_extractor
   samtools: samtools
   biseqMethCalling_tools: ${RESOURCES}/tools
-  epilog: epilog
+  epilog: ${EPILOG}
 
 parameters:
   # parameters passed to bioinformatic tools, subclassed by tool
@@ -35,5 +35,12 @@ parameters:
     nondirectional: false
     maxins: 5000
   epilog:
-    qual_threshold: 30
-    read_length_threshold: 30
+    rrbs_fill: 0
+    qual_threshold: 20
+    read_length_threshold: 20
+    strand_method: flag
+    context: CG
+    epialleles: true
+    keep_chrom_files: false
+    track_process_stats: true
+    no_epi_stats: false
