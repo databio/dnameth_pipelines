@@ -14,7 +14,7 @@ __version__ = "0.3.0-dev"
 import os
 import re
 import pypiper
-from helpers import get_epi_cmd
+from epilog_commands import *
 
 
 def _parse_args(cmdl):
@@ -447,7 +447,7 @@ def main(cmdl):
 			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.qual_threshold,
 			strand_method=param.epilog.strand_method, rrbs_fill=args.rrbs_fill,
 			memtext=pm.mem, context=context, cores=pm.cores,
-			keep_chrom_files=param.epilog.keep_chrom_files,
+			strand_specific=param.epilog.keep_chrom_files,
 			epis_file=epis_file, process_logfile=process_logfile,
 			no_epi_stats=skip_epis or no_epi_stats)
 

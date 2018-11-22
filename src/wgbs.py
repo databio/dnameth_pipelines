@@ -15,7 +15,8 @@ import os
 import re
 import subprocess
 import pypiper
-from helpers import FolderContext, get_epi_cmd
+from epilog_commands import *
+from helpers import FolderContext
 
 
 def _parse_args(cmdl):
@@ -367,7 +368,8 @@ def main(cmdl):
 	################################################################################
 
 	def build_epilog_command(
-		readsfile, sitesfile, context, outdir, skip_epis=False, no_epi_stats=False):
+		readsfile, sitesfile, context, outdir, strand_specific=param.epilog.strand_specific,
+		skip_epis=False, no_epi_stats=False):
 		ngstk.make_sure_path_exists(outdir)
 		site_calls_file = os.path.join(outdir, "all_calls.txt")
 		epis_file = os.path.join(outdir, "all_epialleles.txt") \
@@ -379,7 +381,7 @@ def main(cmdl):
 			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.qual_threshold,
 			strand_method=param.epilog.strand_method, rrbs_fill=0,
 			memtext=pm.mem, context=context, cores=pm.cores,
-			keep_chrom_files=param.epilog.keep_chrom_files, epis_file=epis_file,
+			strand_specific=strand_specific, epis_file=epis_file,
 			process_logfile=process_logfile, no_epi_stats=skip_epis or no_epi_stats)
 
 	if args.epilog:

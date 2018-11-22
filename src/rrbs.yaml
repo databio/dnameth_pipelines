@@ -67,6 +67,6 @@ parameters:
     strand_method: flag
     context: CG
     epialleles: true
-    keep_chrom_files: false
+    strand_specific: false
     track_process_stats: true
     no_epi_stats: false
