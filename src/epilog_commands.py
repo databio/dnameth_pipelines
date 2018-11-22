@@ -19,7 +19,7 @@ SUFFIX_BY_TYPE = {SINGLE_SITES_DATA_TYPE_NAME: "calls", EPIALLELES_DATA_TYPE_NAM
 
 
 def get_epilog_full_command(prog_spec, readsfile, sitesfile, outfile, min_rlen, min_qual,
-    strand_method, rrbs_fill, context="CG", downstream_processing=False,
+    strand_method, rrbs_fill, context="CG", downstream_processing=True,
     strand_specific=False, no_epi_stats=False, epis_file=None, process_logfile=None):
     """
     Create base for epiallele processing command.
@@ -45,7 +45,7 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outfile, min_rlen, 
         Number of bases at read end to ignore due to RRBS "fill-in"
     context : str
         Methylation context (sense strand, e.g. 'CG' for typical mammalian analysis)
-    downstream_processing : bool, default False
+    downstream_processing : bool, default True
         Processing/analysis downstream of initial calls is allowed.
     strand_specific : bool, default False
         Indicate no strand merger is desired.
@@ -60,7 +60,7 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outfile, min_rlen, 
     Returns
     -------
     str
-        Base of command for epiallele processing.
+        Command for main epilog processing
 
     """
 
@@ -109,9 +109,11 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outfile, min_rlen, 
     return cmd
 
 
-def get_epilog_main_command(prog_spec, readsfile, sitesfile, outfile, min_rlen, min_qual, strand_method, rrbs_fill, context="CG"):
-    return get_epilog_full_command(readsfile, sitesfile, outfile,
-        min_rlen, min_qual, strand_method, rrbs_fill, prog_spec, context=context)
+def get_epilog_main_command(prog_spec, readsfile, sitesfile,
+    single_calls_file, epis_file, min_rlen, min_qual, strand_method, rrbs_fill, context="CG"):
+    """ Version of the main epilog processing that implies epiallele processing and skips downstream analysis. """
+    return get_epilog_full_command(prog_spec, readsfile, sitesfile, single_calls_file, min_rlen, min_qual,
+        strand_method, rrbs_fill, epis_file=epis_file, context=context, downstream_processing=False)
 
 
 def get_epilog_union_command(prog_spec, data_type, folder, output=None):

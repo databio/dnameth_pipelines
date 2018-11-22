@@ -385,20 +385,25 @@ def main(cmdl):
 			process_logfile=process_logfile, no_epi_stats=skip_epis or no_epi_stats)
 
 	if args.epilog:
-		# out_bismark must be indexed in order for epilog to use it
-		# should we do this on out_ded
+
+		# Sort and index the deduplicated alignments.
 		out_dedup_sorted = re.sub(r'.bam$', "_sort.bam", out_dedup)
 		cmd2 = tools.samtools + " sort -@ " + str(pm.cores) + " -o " + out_dedup_sorted + " " + out_dedup
 		cmd3 = tools.samtools + " index " + out_dedup_sorted
 		pm.run([cmd2, cmd3], out_dedup_sorted + ".bai")
+
 		epilog_output_dir = os.path.join(
 			param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+
 		pm.timestamp("### Epilog Methcalling: ")
+
 		epi_tgt, epi_cmd = build_epilog_command(
 			out_dedup_sorted, resources.methpositions,
 			context=param.epilog.context, outdir=epilog_output_dir,
 			no_epi_stats=param.epilog.no_epi_stats)
 		pm.run(epi_cmd, target=epi_tgt, nofail=True)
+
+
 
 		"""
 		epilog_outfile = os.path.join(
