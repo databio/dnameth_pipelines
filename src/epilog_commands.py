@@ -59,8 +59,9 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outfile, min_rlen, 
 
     Returns
     -------
-    str
-        Command for main epilog processing
+    str, str or list of str
+        Command for main epilog processing, and a pypiper "target"
+        (path to calls file, or that and epiallele path if applicable)
 
     """
 
@@ -93,25 +94,35 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outfile, min_rlen, 
         b=prog_spec.get_command_base(), rl=min_rlen, q=min_qual, ctx=context,
         base_fill=rrbs_fill, sm=strand_method, o=outfile, r=readsfile, s=sitesfile, cores=prog_spec.cores)
 
+    if epis_file:
+        cmd += " --outputEpialleles {}".format(epis_file)
+        target = [epis_file, outfile]
+    else:
+        target = outfile
+
     if process_logfile:
         cmd += " --processLogfile {}".format(process_logfile)
 
     if downstream_processing:
         if strand_specific:
             cmd += " --strandSpecific"
-        if epis_file:
-            cmd += " --outputEpialleles {}".format(epis_file)
         if no_epi_stats:
             cmd += " --noEpiStats"
     elif epis_file:
         print("WARNING: Epialleles file ({}) is specified, but downstream processing is not activated and will be skipped".format(epis_file))
 
-    return cmd
+    return cmd, target
 
 
 def get_epilog_main_command(prog_spec, readsfile, sitesfile,
     single_calls_file, epis_file, min_rlen, min_qual, strand_method, rrbs_fill, context="CG"):
-    """ Version of the main epilog processing that implies epiallele processing and skips downstream analysis. """
+    """
+    Version of the main epilog processing that implies epiallele processing and skips downstream analysis.
+
+    :return list of str: A two-item list in which the first item is the path to
+        the epiallele calls file, and the second is the path to the single-site
+        calls file.
+    """
     return get_epilog_full_command(prog_spec, readsfile, sitesfile, single_calls_file, min_rlen, min_qual,
         strand_method, rrbs_fill, epis_file=epis_file, context=context, downstream_processing=False)
 

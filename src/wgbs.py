@@ -592,7 +592,7 @@ def main(cmdl):
 			cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "testxmz.py")
 			cmd1 += " " + out_spikein_sorted + " " + chrom
 			cmd1 += " >> " + pm.pipeline_stats_file
-			pm.callprint(cmd1, shell=True, nofail=True)
+			pm.callprint(cmd1, nofail=True)
 
 
 		# spike in conversion efficiency calculation with epilog
