@@ -2,10 +2,8 @@
 
 import os
 
-
 __author__ = "Vince Reuter"
 __email__ = "vince.reuter@gmail.com"
-
 
 
 class FolderContext(object):
@@ -33,3 +31,26 @@ class FolderContext(object):
             raise RuntimeError("Return path is no longer a directory: {}".
                                format(self._prevdir))
         os.chdir(self._prevdir)
+
+
+def missing_targets(targets, good=lambda f: os.path.isfile(f)):
+    """
+    Find missing target(s) of a command.
+
+    :param str | list[str] t: Single target path, or collection of them
+    :param callable(str) -> bool good: Predicate to evaluate on a path; assumption
+        is that each path is a file and therefore default predicate is
+        path's existence as a file.
+    :return list[str]: Each target that isn't a file
+    """
+    import sys
+    if sys.version_info < (3, 3):
+        from collections import Iterable
+    else:
+        from collections.abc import Iterable
+    if isinstance(targets, str):
+        targets = [targets]
+    elif not isinstance(targets, Iterable):
+        raise TypeError(
+            "Target(s) to check should be a collection (or maybe string); got {} ({})".format(targets, type(targets)))
+    return [p for p in targets if not good(p)]

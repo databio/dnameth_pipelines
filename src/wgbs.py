@@ -16,7 +16,7 @@ import re
 import subprocess
 import pypiper
 from epilog_commands import *
-from helpers import FolderContext
+from helpers import FolderContext, missing_targets
 
 
 def _parse_args(cmdl):
@@ -387,6 +387,7 @@ def main(cmdl):
 	if args.epilog:
 
 		prog_spec = ProgSpec(jar=tools.epilog, memory=pm.mem, cores=pm.cores)
+		epilog_is_healthy = True
 
 		# Sort and index the deduplicated alignments.
 		out_dedup_sorted = re.sub(r'.bam$', "_sort.bam", out_dedup)
@@ -405,6 +406,15 @@ def main(cmdl):
 			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.qual_threshold,
 			strand_method=param.epilog.strand_method, rrbs_fill=0, context=param.epilog.context)
 		pm.run(epi_main_cmd, target=epi_main_tgt, nofail=True)
+
+		missing = missing_targets(epi_main_tgt)
+		if missing:
+			epilog_is_healthy = False
+			print("Missing main target(s): {}".format(", ".join(missing)))
+			missing = []
+
+		if epilog_is_healthy:
+			pass
 
 		"""
 		epilog_outfile = os.path.join(
