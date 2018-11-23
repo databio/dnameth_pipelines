@@ -16,7 +16,7 @@ import re
 import subprocess
 import pypiper
 from epilog_commands import *
-from helpers import FolderContext, missing_targets
+from helpers import FolderContext, missing_targets, ProgSpec
 
 
 def _parse_args(cmdl):
@@ -367,27 +367,15 @@ def main(cmdl):
 	# Epilog analysis
 	################################################################################
 
-	def build_epilog_command(
-		readsfile, sitesfile, context, outdir, strand_specific=param.epilog.strand_specific,
-		skip_epis=False, no_epi_stats=False):
-		ngstk.make_sure_path_exists(outdir)
-		site_calls_file = os.path.join(outdir, "all_calls.txt")
-		epis_file = os.path.join(outdir, "all_epialleles.txt") \
-			if param.epilog.epialleles and not skip_epis else None
-		process_logfile = os.path.join(outdir, "processing_statistics.txt") \
-			if param.epilog.track_process_stats else None
-		target = epis_file or site_calls_file
-		return target, get_epi_cmd(tools.epilog, readsfile, sitesfile, site_calls_file,
+	epilog_prog_spec = ProgSpec(jar=tools.epilog, memory=pm.mem, cores=pm.cores)
+
+	def make_epi_main_cmd(readsfile, sitesfile, outdir, context, epis, process_logfile=None):
+		return get_epilog_main_command(epilog_prog_spec, readsfile, sitesfile, outdir,
 			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.qual_threshold,
 			strand_method=param.epilog.strand_method, rrbs_fill=0,
-			memtext=pm.mem, context=context, cores=pm.cores,
-			strand_specific=strand_specific, epis_file=epis_file,
-			process_logfile=process_logfile, no_epi_stats=skip_epis or no_epi_stats)
+			context=context, epis=epis, process_logfile=process_logfile)
 
 	if args.epilog:
-
-		prog_spec = ProgSpec(jar=tools.epilog, memory=pm.mem, cores=pm.cores)
-		epilog_is_healthy = True
 
 		# Sort and index the deduplicated alignments.
 		out_dedup_sorted = re.sub(r'.bam$', "_sort.bam", out_dedup)
@@ -401,40 +389,40 @@ def main(cmdl):
 
 		pm.timestamp("### Epilog Methcalling: ")
 
-		epi_main_cmd, epi_main_tgt = get_epilog_main_command(
-			prog_spec, out_dedup_sorted, resources.methpositions, epilog_output_dir,
-			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.qual_threshold,
-			strand_method=param.epilog.strand_method, rrbs_fill=0, context=param.epilog.context)
+		# "Initial" / "main" processing (calls + epialleles, each combined for all chromosomes)
+		epi_main_cmd, epi_main_tgt = make_epi_main_cmd(
+			out_dedup_sorted, resources.methpositions, epilog_output_dir, context="CG", epis=True,
+			process_logfile=os.path.join(epilog_output_dir, "processing_performance.log"))
 		pm.run(epi_main_cmd, target=epi_main_tgt, nofail=True)
 
+		# Proceed with strand merger (if desired) based on the presence of the targets.
 		missing = missing_targets(epi_main_tgt)
 		if missing:
-			epilog_is_healthy = False
 			print("Missing main target(s): {}".format(", ".join(missing)))
-			missing = []
+		elif not param.epilog.strand_specific:
+			pm.timestamp("### Epilog strand merger")
+			merge_cmd, merged_epi_tgt = get_epilog_strand_merge_command(
+				epilog_prog_spec, epi_main_tgt.epis_file, data_type="epialleles")
+			pm.run(merge_cmd, merged_epi_tgt, nofail=True)
+			merge_cmd, merged_ss_tgt = get_epilog_strand_merge_command(
+				epilog_prog_spec, epi_main_tgt.single_sites_file, data_type="sites")
+			pm.run(merge_cmd, merged_ss_tgt, nofail=True)
+			epis_file = merged_epi_tgt
+		else:
+			epis_file = epi_main_tgt.epis_file
 
-		if epilog_is_healthy:
-			pass
-
-		"""
-		epilog_outfile = os.path.join(
-				epilog_output_dir, args.sample_name + "_epilog.bed")
-		epilog_summary_file = os.path.join(
-				epilog_output_dir, args.sample_name + "_epilog_summary.bed")
-
-		cmd = tools.epilog
-		cmd += " call"
-		cmd += " --infile=" + out_dedup_sorted  # absolute path to the aligned bam
-		cmd += " --positions=" + resources.methpositions
-		cmd += " --outfile=" + epilog_outfile
-		cmd += " --summary-filename=" + epilog_summary_file
-		cmd += " --cores=" + str(pm.cores)
-		cmd += " --qual-threshold=" + str(param.epilog.qual_threshold)
-		cmd += " --read-length-threshold=" + str(param.epilog.read_length_threshold)
-		cmd += " --wgbs"    # Turn off RRBS mode
-
-		pm.run(cmd, epilog_outfile, nofail=True)
-		"""
+		if not param.epilog.no_epi_stats:
+			if missing:
+				print("Due to missing results upstream, epiallele statistics cannot be calculated")
+			elif not os.path.isfile(epis_file):
+				print("Due to missing epialleles file ({}), epiallele statistics cannot be calculated".
+					format(epis_file))
+			else:
+				epilog_stats_target = os.path.join(epilog_output_dir, epis_file)
+				epi_stats_cmd, epi_stats_tgt = get_epilog_epistats_command(
+					epilog_prog_spec, infile=epis_file, outfile=epilog_stats_target,
+					stranded=param.epilog.strand_specific)
+				pm.run(epi_stats_cmd, epi_stats_tgt, nofail=True)
 
 
 	# Methylation extractor
@@ -609,9 +597,8 @@ def main(cmdl):
 		# spike in conversion efficiency calculation with epilog
 		pm.timestamp("### Spike-in Epilog Methcalling: ")
 		ngstk.make_sure_path_exists(spikein_folder)
-		epi_tgt, epi_cmd = build_epilog_command(
-			out_spikein_sorted, resources.spikein_methpositions,
-			context="C", outdir=spikein_folder, skip_epis=True, no_epi_stats=True)
+		epi_tgt, epi_cmd = make_epi_main_cmd(out_spikein_sorted,
+			resources.spikein_methpositions, spikein_folder, context="C", epis=False)
 		pm.run(epi_cmd, target=epi_tgt, nofail=True)
 
 		"""

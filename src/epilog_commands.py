@@ -1,13 +1,12 @@
 """ Helper functions and data types """
 
 import os
-
+from helpers import EpilogTarget
 
 __author__ = "Vince Reuter"
 __email__ = "vince.reuter@gmail.com"
 
-
-__all__ = ["ProgSpec", "get_epilog_full_command", "get_epilog_main_command",
+__all__ = ["get_epilog_full_command", "get_epilog_main_command",
     "get_epilog_union_command", "get_epilog_union_calls_command", "get_epilog_union_epis_command",
     "get_epilog_strand_merge_command", "get_epilog_epistats_command"]
 
@@ -94,16 +93,16 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir,
     def get_outpath(fn):
         return os.path.join(outdir, fn)
 
-    target = get_outpath(name_ss_file)
+    single_sites_file = get_outpath(name_ss_file)
 
     cmd = "{b} --minBaseQuality {q} --minReadLength {rl} --context {ctx} --rrbsFill {base_fill} --cores {cores} --strandMethod {sm} -O {o} {r} {s}".format(
         b=prog_spec.get_command_base(), rl=min_rlen, q=min_qual, ctx=context,
-        base_fill=rrbs_fill, sm=strand_method, o=target, r=readsfile, s=sitesfile, cores=prog_spec.cores)
+        base_fill=rrbs_fill, sm=strand_method, o=single_sites_file, r=readsfile, s=sitesfile, cores=prog_spec.cores)
 
     if epis:
         epis_file = get_outpath("all_epialleles.txt")
         cmd += " --outputEpialleles {}".format(epis_file)
-        target = [epis_file, target]
+    else: epis_file = None
     if process_logfile:
         cmd += " --processLogfile {}".format(process_logfile)
     if halt:
@@ -115,10 +114,12 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir,
 
     # TODO: though this is not going to be the encouraged route, while/if it's to be provided, consider the downstream file(s) as targets.
     # TODO: beware, though, of the effect on the "main-only" function that calls into this. Its targets are the main files.
-    return cmd, target
+    return cmd, EpilogTarget(single_sites_file=single_sites_file, epis_file=epis_file)
 
 
-def get_epilog_main_command(prog_spec, readsfile, sitesfile, outdir, min_rlen, min_qual, strand_method, rrbs_fill, context="CG", epis=True):
+def get_epilog_main_command(
+    prog_spec, readsfile, sitesfile, outdir, min_rlen, min_qual,
+    strand_method, rrbs_fill, context="CG", epis=True, process_logfile=None):
     """
     Version of the main epilog processing that implies epiallele processing and skips downstream analysis.
 
@@ -128,7 +129,7 @@ def get_epilog_main_command(prog_spec, readsfile, sitesfile, outdir, min_rlen, m
     """
     # TODO: if the target-returning scheme from the full command creator changes, target creation will need separate handling here.
     return get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir, min_rlen, min_qual,
-        strand_method, rrbs_fill, context=context, epis=epis, halt="union")
+        strand_method, rrbs_fill, context=context, epis=epis, halt="union", process_logfile=process_logfile)
 
 
 def get_epilog_union_command(prog_spec, data_type, folder, output=None):
@@ -199,60 +200,6 @@ def get_epilog_epistats_command(prog_spec, infile, outfile, stranded=None, gff=F
     elif stranded:
         cmd += " --hasStrandCol"
     return cmd, outfile
-
-
-class ProgSpec(object):
-    """ Resource specification for a downstream analysis program. """
-
-    def __init__(self, jar, memory, cores=1):
-        """
-        A JAR path, memory text, and number of processors specifies program resources.
-
-        :param str jar: Path to JAR in which to find program
-        :param str memory: Memory specification; include units and be aware
-            of your cluster's / computer's units
-        :param int cores: Number of cores to use
-        """
-
-        self.memory = memory
-
-        if not os.path.isfile(jar):
-            raise ValueError("Missing JAR: {}".format(jar))
-        self.jar = jar
-
-        def check_cores(n):
-            try:
-                n = int(n)
-            except:
-                return False
-            return (n > 0) and n
-        cores = check_cores(cores)
-        if not cores:
-            raise ValueError("Invalid cores specification ({}); provide a nonnegative integer".format(cores))
-        self.cores = cores
-
-    def get_command_base(self, pkg_prog_pair=None):
-        """
-        Get the base for a command assocaited with this program specification.
-
-        :param str, str pkg_prog_pair: Pair of package name and program name; no specification implies main JAR program
-        :return str: Base of command associated with this program specification
-        """
-        base = "java -Xmx{}".format(self.memory)
-        if pkg_prog_pair is None:
-            return "{b} -jar {j}".format(b=base, j=self.jar)
-        else:
-            try:
-                pkg, prog = pkg_prog_pair
-            except (TypeError, ValueError):
-                raise ValueError("If specifying program, provide a 2-tuple of package name and program name; got {} ({})".
-                    format(pkg_prog_pair, type(pkg_prog_pair)))
-            return "{b} -cp {j} {p}".format(b=base, j=self.jar, p=_get_program(pkg, prog))
-
-
-def _get_program(pkg, prog):
-    """ Get fully qualified classpath for program to run. """
-    return ".".join(["episcall", pkg, prog])
 
 
 def _validate_data_type(dt):

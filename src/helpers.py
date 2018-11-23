@@ -1,9 +1,44 @@
 """ Helper functions and data types """
 
 import os
+import sys
+if sys.version_info < (3, 3):
+    from collections import Sequence
+else:
+    from collections.abc import Sequence
+
 
 __author__ = "Vince Reuter"
 __email__ = "vince.reuter@gmail.com"
+
+
+class EpilogTarget(Sequence):
+    """
+    Representation of the main epilog targets.
+
+    This class offer flexibility with respect to presence/absence of
+    epialleles file and provides named access to the targets while mixing in
+    Sequence behavior for use more like a list.
+    """
+
+    def __init__(self, single_sites_file, epis_file=None):
+        self._ss = single_sites_file
+        self._epi = epis_file
+        self._files = [epis_file, single_sites_file] if epis_file else [single_sites_file]
+
+    @property
+    def single_sites_file(self):
+        return self._ss
+
+    @property
+    def epis_file(self):
+        return self._epi
+
+    def __getitem__(self, item):
+        return self._files[item]
+
+    def __len__(self):
+        return len(self._files)
 
 
 class FolderContext(object):
@@ -31,6 +66,62 @@ class FolderContext(object):
             raise RuntimeError("Return path is no longer a directory: {}".
                                format(self._prevdir))
         os.chdir(self._prevdir)
+
+
+class ProgSpec(object):
+    """ Resource specification for a downstream analysis program. """
+
+    def __init__(self, jar, memory, cores=1):
+        """
+        A JAR path, memory text, and number of processors specifies program resources.
+
+        :param str jar: Path to JAR in which to find program
+        :param str memory: Memory specification; include units and be aware
+            of your cluster's / computer's units
+        :param int cores: Number of cores to use
+        """
+
+        self.memory = memory
+
+        if not os.path.isfile(jar):
+            raise ValueError("Missing JAR: {}".format(jar))
+        self.jar = jar
+
+        def check_cores(n):
+            try:
+                n = int(n)
+            except:
+                return False
+            return (n > 0) and n
+
+        cores = check_cores(cores)
+        if not cores:
+            raise ValueError("Invalid cores specification ({}); provide a nonnegative integer".format(cores))
+        self.cores = cores
+
+    def get_command_base(self, pkg_prog_pair=None):
+        """
+        Get the base for a command assocaited with this program specification.
+
+        :param str, str pkg_prog_pair: Pair of package name and program name; no specification implies main JAR program
+        :return str: Base of command associated with this program specification
+        """
+        base = "java -Xmx{}".format(self.memory)
+        if pkg_prog_pair is None:
+            return "{b} -jar {j}".format(b=base, j=self.jar)
+        else:
+            try:
+                pkg, prog = pkg_prog_pair
+            except (TypeError, ValueError):
+                raise ValueError(
+                    "If specifying program, provide a 2-tuple of package name and program name; got {} ({})".
+                    format(pkg_prog_pair, type(pkg_prog_pair)))
+            return "{b} -cp {j} {p}".format(b=base, j=self.jar, p=self._get_program(pkg, prog))
+
+    @staticmethod
+    def _get_program(pkg, prog):
+        """ Get fully qualified classpath for program to run. """
+        return ".".join(["episcall", pkg, prog])
 
 
 def missing_targets(targets, good=lambda f: os.path.isfile(f)):
