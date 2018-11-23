@@ -7,7 +7,7 @@ __author__ = "Vince Reuter"
 __email__ = "vince.reuter@gmail.com"
 
 
-__all__ = ["get_epilog_full_command", "get_epilog_main_command",
+__all__ = ["ProgSpec", "get_epilog_full_command", "get_epilog_main_command",
     "get_epilog_union_command", "get_epilog_union_calls_command", "get_epilog_union_epis_command",
     "get_epilog_strand_merge_command", "get_epilog_epistats_command"]
 
@@ -18,9 +18,9 @@ EPIALLELES_DATA_TYPE_NAME = "epialleles"
 SUFFIX_BY_TYPE = {SINGLE_SITES_DATA_TYPE_NAME: "calls", EPIALLELES_DATA_TYPE_NAME: "epialleles"}
 
 
-def get_epilog_full_command(prog_spec, readsfile, sitesfile, outfile, min_rlen, min_qual,
-    strand_method, rrbs_fill, context="CG", downstream_processing=True,
-    strand_specific=False, no_epi_stats=False, epis_file=None, process_logfile=None):
+def get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir,
+    min_rlen, min_qual, strand_method, rrbs_fill, context="CG",
+    epis=True, halt=None, strand_specific=False, no_epi_stats=False, process_logfile=None):
     """
     Create base for epiallele processing command.
 
@@ -32,8 +32,8 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outfile, min_rlen, 
         Path to sorted, aligned BAM with reads to analyze.
     sitesfile : str
         Path to gzipped, tabix-indexed file with sites to analyze.
-    outfile : str
-        Path to file for site-level methylation call data (main target).
+    outdir : str
+        Path to output folder for single-site (and epiallele, as desired) output.
     min_rlen : int
         Minimum number of bases aligned for a read to be used in analysis.
     min_qual : int
@@ -45,15 +45,14 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outfile, min_rlen, 
         Number of bases at read end to ignore due to RRBS "fill-in"
     context : str
         Methylation context (sense strand, e.g. 'CG' for typical mammalian analysis)
-    downstream_processing : bool, default True
-        Processing/analysis downstream of initial calls is allowed.
+    epis : bool
+        Produce epiallele results in addition to the more single-site-oriented output
+    halt : str, optional
+        Name of processing stage after which to halt; if omitted, run as much as possible
     strand_specific : bool, default False
         Indicate no strand merger is desired.
     no_epi_stats : bool, default True
         Skip epiallele diversity/heterogeneity statistics
-    epis_file : str, optional
-        Path to file for epiallele observation records; if unspecified, no
-        epiallele processing will be performed.
     process_logfile : str, optional
         Path to file for epiallele processing performance statistics
 
@@ -90,32 +89,36 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outfile, min_rlen, 
     if problems:
         raise Exception("Problems: {}".format(", ".join(problems)))
 
+    name_ss_file = "all_calls.txt"
+
+    def get_outpath(fn):
+        return os.path.join(outdir, fn)
+
+    target = get_outpath(name_ss_file)
+
     cmd = "{b} --minBaseQuality {q} --minReadLength {rl} --context {ctx} --rrbsFill {base_fill} --cores {cores} --strandMethod {sm} -O {o} {r} {s}".format(
         b=prog_spec.get_command_base(), rl=min_rlen, q=min_qual, ctx=context,
-        base_fill=rrbs_fill, sm=strand_method, o=outfile, r=readsfile, s=sitesfile, cores=prog_spec.cores)
+        base_fill=rrbs_fill, sm=strand_method, o=target, r=readsfile, s=sitesfile, cores=prog_spec.cores)
 
-    if epis_file:
+    if epis:
+        epis_file = get_outpath("all_epialleles.txt")
         cmd += " --outputEpialleles {}".format(epis_file)
-        target = [epis_file, outfile]
-    else:
-        target = outfile
-
+        target = [epis_file, target]
     if process_logfile:
         cmd += " --processLogfile {}".format(process_logfile)
+    if halt:
+        cmd += " "
+    if strand_specific:
+        cmd += " --strandSpecific"
+    if no_epi_stats:
+        cmd += " --noEpiStats"
 
-    if downstream_processing:
-        if strand_specific:
-            cmd += " --strandSpecific"
-        if no_epi_stats:
-            cmd += " --noEpiStats"
-    elif epis_file:
-        print("WARNING: Epialleles file ({}) is specified, but downstream processing is not activated and will be skipped".format(epis_file))
-
+    # TODO: though this is not going to be the encouraged route, while/if it's to be provided, consider the downstream file(s) as targets.
+    # TODO: beware, though, of the effect on the "main-only" function that calls into this. Its targets are the main files.
     return cmd, target
 
 
-def get_epilog_main_command(prog_spec, readsfile, sitesfile,
-    single_calls_file, epis_file, min_rlen, min_qual, strand_method, rrbs_fill, context="CG"):
+def get_epilog_main_command(prog_spec, readsfile, sitesfile, outdir, min_rlen, min_qual, strand_method, rrbs_fill, context="CG", epis=True):
     """
     Version of the main epilog processing that implies epiallele processing and skips downstream analysis.
 
@@ -123,8 +126,9 @@ def get_epilog_main_command(prog_spec, readsfile, sitesfile,
         the epiallele calls file, and the second is the path to the single-site
         calls file.
     """
-    return get_epilog_full_command(prog_spec, readsfile, sitesfile, single_calls_file, min_rlen, min_qual,
-        strand_method, rrbs_fill, epis_file=epis_file, context=context, downstream_processing=False)
+    # TODO: if the target-returning scheme from the full command creator changes, target creation will need separate handling here.
+    return get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir, min_rlen, min_qual,
+        strand_method, rrbs_fill, context=context, epis=epis, halt="union")
 
 
 def get_epilog_union_command(prog_spec, data_type, folder, output=None):

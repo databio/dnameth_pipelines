@@ -386,6 +386,8 @@ def main(cmdl):
 
 	if args.epilog:
 
+		prog_spec = ProgSpec(jar=tools.epilog, memory=pm.mem, cores=pm.cores)
+
 		# Sort and index the deduplicated alignments.
 		out_dedup_sorted = re.sub(r'.bam$', "_sort.bam", out_dedup)
 		cmd2 = tools.samtools + " sort -@ " + str(pm.cores) + " -o " + out_dedup_sorted + " " + out_dedup
@@ -394,16 +396,15 @@ def main(cmdl):
 
 		epilog_output_dir = os.path.join(
 			param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+		ngstk.make_sure_path_exists(epilog_output_dir)
 
 		pm.timestamp("### Epilog Methcalling: ")
 
-		epi_tgt, epi_cmd = build_epilog_command(
-			out_dedup_sorted, resources.methpositions,
-			context=param.epilog.context, outdir=epilog_output_dir,
-			no_epi_stats=param.epilog.no_epi_stats)
-		pm.run(epi_cmd, target=epi_tgt, nofail=True)
-
-
+		epi_main_cmd, epi_main_tgt = get_epilog_main_command(
+			prog_spec, out_dedup_sorted, resources.methpositions, epilog_output_dir,
+			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.qual_threshold,
+			strand_method=param.epilog.strand_method, rrbs_fill=0, context=param.epilog.context)
+		pm.run(epi_main_cmd, target=epi_main_tgt, nofail=True)
 
 		"""
 		epilog_outfile = os.path.join(
