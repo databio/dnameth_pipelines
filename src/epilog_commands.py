@@ -8,13 +8,41 @@ __email__ = "vince.reuter@gmail.com"
 
 __all__ = ["get_epilog_full_command", "get_epilog_main_command",
     "get_epilog_union_command", "get_epilog_union_calls_command", "get_epilog_union_epis_command",
-    "get_epilog_strand_merge_command", "get_epilog_epistats_command"]
+    "get_epilog_strand_merge_command", "get_epilog_epistats_command", "make_epi_main_cmd"]
 
 
 # Downstream processing constants
 SINGLE_SITES_DATA_TYPE_NAME = "sites"
 EPIALLELES_DATA_TYPE_NAME = "epialleles"
 SUFFIX_BY_TYPE = {SINGLE_SITES_DATA_TYPE_NAME: "calls", EPIALLELES_DATA_TYPE_NAME: "epialleles"}
+
+
+def make_epi_main_cmd(
+    param, prog_spec, readsfile, sitesfile, outdir,
+    rrbs_fill, context, epis=True, process_logfile=None):
+    """
+    Simplified version of the builder of the main epilog processing command.
+
+    :param param:
+    :param helpers.ProgSpec prog_spec: JAR, memory allocation, and cores count
+    :param str readsfile: Sorted, aligned BAM
+    :param str sitesfile: Gzipped tabix-indexed collection of genome positions
+        at which to look for methylation
+    :param str outdir: Path to folder in which to place output
+    :param int rrbs_fill: Number of bases to ignore for "RRBS fill-in"
+    :param str context: Sequence context
+    :param bool epis: Whether to examine epialleles
+    :param str process_logfile: Path to file to which to write epilog
+        basic processing performance numbers
+    :return str, Sequence of str: Command to run main epilog processing, and
+        sequence of targets (files) that it should produce
+    """
+    return get_epilog_main_command(
+        prog_spec, readsfile, sitesfile, outdir,
+        min_rlen=param.epilog.read_length_threshold,
+        min_qual=param.epilog.qual_threshold,
+        strand_method=param.epilog.strand_method, rrbs_fill=rrbs_fill,
+        context=context, epis=epis, process_logfile=process_logfile)
 
 
 def get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir,

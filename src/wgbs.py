@@ -369,12 +369,6 @@ def main(cmdl):
 
 	epilog_prog_spec = ProgSpec(jar=tools.epilog, memory=pm.mem, cores=pm.cores)
 
-	def make_epi_main_cmd(readsfile, sitesfile, outdir, context, epis, process_logfile=None):
-		return get_epilog_main_command(epilog_prog_spec, readsfile, sitesfile, outdir,
-			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.qual_threshold,
-			strand_method=param.epilog.strand_method, rrbs_fill=0,
-			context=context, epis=epis, process_logfile=process_logfile)
-
 	if args.epilog:
 
 		# Sort and index the deduplicated alignments.
@@ -390,9 +384,9 @@ def main(cmdl):
 		pm.timestamp("### Epilog Methcalling: ")
 
 		# "Initial" / "main" processing (calls + epialleles, each combined for all chromosomes)
-		epi_main_cmd, epi_main_tgt = make_epi_main_cmd(
-			out_dedup_sorted, resources.methpositions, epilog_output_dir, context="CG", epis=True,
-			process_logfile=os.path.join(epilog_output_dir, "processing_performance.log"))
+		epi_main_cmd, epi_main_tgt = make_epi_main_cmd(param, epilog_prog_spec,
+			out_dedup_sorted, resources.methpositions, epilog_output_dir, rrbs_fill=0,
+			context="CG", epis=True, process_logfile=os.path.join(epilog_output_dir, "processing_performance.log"))
 		pm.run(epi_main_cmd, target=epi_main_tgt, nofail=True)
 
 		# Proceed with strand merger (if desired) based on the presence of the targets.
@@ -597,8 +591,8 @@ def main(cmdl):
 		# spike in conversion efficiency calculation with epilog
 		pm.timestamp("### Spike-in Epilog Methcalling: ")
 		ngstk.make_sure_path_exists(spikein_folder)
-		epi_tgt, epi_cmd = make_epi_main_cmd(out_spikein_sorted,
-			resources.spikein_methpositions, spikein_folder, context="C", epis=False)
+		epi_tgt, epi_cmd = make_epi_main_cmd(param, epilog_prog_spec, out_spikein_sorted,
+			resources.spikein_methpositions, spikein_folder, rrbs_fill=0, context="C", epis=False)
 		pm.run(epi_cmd, target=epi_tgt, nofail=True)
 
 		"""
