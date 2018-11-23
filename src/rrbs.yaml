@@ -61,7 +61,6 @@ parameters:
     maxProcesses: 4
 
   epilog:
-    rrbs_fill: 4
     qual_threshold: 20
     read_length_threshold: 20
     strand_method: flag

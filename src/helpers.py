@@ -84,7 +84,7 @@ class ProgSpec(object):
         self.memory = memory
 
         if not os.path.isfile(jar):
-            raise ValueError("Missing JAR: {}".format(jar))
+            raise MissingEpilogError("Path to JAR isn't a file: {}".format(jar))
         self.jar = jar
 
         def check_cores(n):
@@ -145,3 +145,8 @@ def missing_targets(targets, good=lambda f: os.path.isfile(f)):
         raise TypeError(
             "Target(s) to check should be a collection (or maybe string); got {} ({})".format(targets, type(targets)))
     return [p for p in targets if not good(p)]
+
+
+class MissingEpilogError(Exception):
+    """ Exception for when a program specification's JAR is not a file. """
+    pass

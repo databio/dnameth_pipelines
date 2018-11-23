@@ -16,7 +16,7 @@ import re
 import subprocess
 import pypiper
 from epilog_commands import *
-from helpers import FolderContext, missing_targets, ProgSpec
+from helpers import FolderContext, MissingEpilogError, ProgSpec
 
 
 def _parse_args(cmdl):
@@ -329,8 +329,6 @@ def main(cmdl):
 	#cmd = tools.samtools + " sort -n -o " + out_dedup + " " + out_dedup.replace(".bam", "_sorted") + " | " + tools.samtools + " view -h - >" + out_sam
 	#cmd = tools.samtools + " sort -n " + out_dedup + " " + " | " + tools.samtools + " view -h - >" + out_sam
 	cmd = tools.samtools + " sort -n " + out_dedup + " -o " + out_sam
-
-
 	pm.run(cmd, out_sam, shell=True)
 
 	#sorted file same size as presorted?
@@ -367,9 +365,17 @@ def main(cmdl):
 	# Epilog analysis
 	################################################################################
 
-	epilog_prog_spec = ProgSpec(jar=tools.epilog, memory=pm.mem, cores=pm.cores)
-
+	# Create the program specification, in scope both for ordinary and spike-in.
 	if args.epilog:
+		try:
+			epilog_prog_spec = ProgSpec(jar=tools.epilog, memory=pm.mem, cores=pm.cores)
+		except MissingEpilogError as e:
+			print("ERROR: {} --  skipping epilog".format(str(e)))
+			epilog_prog_spec = None
+	else:
+		epilog_prog_spec = None
+
+	if epilog_prog_spec:
 
 		# Sort and index the deduplicated alignments.
 		out_dedup_sorted = re.sub(r'.bam$', "_sort.bam", out_dedup)
@@ -377,46 +383,16 @@ def main(cmdl):
 		cmd3 = tools.samtools + " index " + out_dedup_sorted
 		pm.run([cmd2, cmd3], out_dedup_sorted + ".bai")
 
+		# Separate output subfolder for epilog
 		epilog_output_dir = os.path.join(
 			param.pipeline_outfolder, "epilog_" + args.genome_assembly)
 		ngstk.make_sure_path_exists(epilog_output_dir)
 
 		pm.timestamp("### Epilog Methcalling: ")
-
-		# "Initial" / "main" processing (calls + epialleles, each combined for all chromosomes)
-		epi_main_cmd, epi_main_tgt = make_epi_main_cmd(param, epilog_prog_spec,
-			out_dedup_sorted, resources.methpositions, epilog_output_dir, rrbs_fill=0,
-			context="CG", epis=True, process_logfile=os.path.join(epilog_output_dir, "processing_performance.log"))
-		pm.run(epi_main_cmd, target=epi_main_tgt, nofail=True)
-
-		# Proceed with strand merger (if desired) based on the presence of the targets.
-		missing = missing_targets(epi_main_tgt)
-		if missing:
-			print("Missing main target(s): {}".format(", ".join(missing)))
-		elif not param.epilog.strand_specific:
-			pm.timestamp("### Epilog strand merger")
-			merge_cmd, merged_epi_tgt = get_epilog_strand_merge_command(
-				epilog_prog_spec, epi_main_tgt.epis_file, data_type="epialleles")
-			pm.run(merge_cmd, merged_epi_tgt, nofail=True)
-			merge_cmd, merged_ss_tgt = get_epilog_strand_merge_command(
-				epilog_prog_spec, epi_main_tgt.single_sites_file, data_type="sites")
-			pm.run(merge_cmd, merged_ss_tgt, nofail=True)
-			epis_file = merged_epi_tgt
-		else:
-			epis_file = epi_main_tgt.epis_file
-
-		if not param.epilog.no_epi_stats:
-			if missing:
-				print("Due to missing results upstream, epiallele statistics cannot be calculated")
-			elif not os.path.isfile(epis_file):
-				print("Due to missing epialleles file ({}), epiallele statistics cannot be calculated".
-					format(epis_file))
-			else:
-				epilog_stats_target = os.path.join(epilog_output_dir, epis_file)
-				epi_stats_cmd, epi_stats_tgt = get_epilog_epistats_command(
-					epilog_prog_spec, infile=epis_file, outfile=epilog_stats_target,
-					stranded=param.epilog.strand_specific)
-				pm.run(epi_stats_cmd, epi_stats_tgt, nofail=True)
+		run_main_epi_pipe(pm, epiconf=param.epilog, prog_spec=epilog_prog_spec,
+			readsfile=out_dedup_sorted, sitesfile=param.epilog.methpositions,
+			outdir=epilog_output_dir, rrbs_fill=0)
+		pm.timestamp("### COMPLETE: epilog")
 
 
 	# Methylation extractor
@@ -589,11 +565,14 @@ def main(cmdl):
 
 
 		# spike in conversion efficiency calculation with epilog
-		pm.timestamp("### Spike-in Epilog Methcalling: ")
-		ngstk.make_sure_path_exists(spikein_folder)
-		epi_tgt, epi_cmd = make_epi_main_cmd(param, epilog_prog_spec, out_spikein_sorted,
-			resources.spikein_methpositions, spikein_folder, rrbs_fill=0, context="C", epis=False)
-		pm.run(epi_cmd, target=epi_tgt, nofail=True)
+		if epilog_prog_spec:
+			ngstk.make_sure_path_exists(spikein_folder)
+			pm.timestamp("### Spike-in Epilog Methcalling: ")
+			epi_tgt, epi_cmd = make_main_epi_cmd(
+				epiconf=param.epilog, prog_spec=epilog_prog_spec,
+				readsfile=out_spikein_sorted, sitesfile=resources.spikein_methpositions,
+				outdir=spikein_folder, rrbs_fill=0, context="C", epis=False)
+			pm.run(epi_cmd, target=epi_tgt, lock_name="epilog_spikein", nofail=True)
 
 		"""
 		epilog_spike_outfile=os.path.join(

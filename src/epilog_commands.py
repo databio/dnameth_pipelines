@@ -6,9 +6,11 @@ from helpers import EpilogTarget
 __author__ = "Vince Reuter"
 __email__ = "vince.reuter@gmail.com"
 
-__all__ = ["get_epilog_full_command", "get_epilog_main_command",
-    "get_epilog_union_command", "get_epilog_union_calls_command", "get_epilog_union_epis_command",
-    "get_epilog_strand_merge_command", "get_epilog_epistats_command", "make_epi_main_cmd"]
+__all__ = [
+    "get_epilog_full_command", "get_epilog_union_command",
+    "get_epilog_union_calls_command", "get_epilog_union_epis_command",
+    "get_epilog_strand_merge_command", "get_epilog_epistats_command",
+    "get_proc_stat_log", "make_main_epi_cmd", "run_main_epi_pipe"]
 
 
 # Downstream processing constants
@@ -17,13 +19,14 @@ EPIALLELES_DATA_TYPE_NAME = "epialleles"
 SUFFIX_BY_TYPE = {SINGLE_SITES_DATA_TYPE_NAME: "calls", EPIALLELES_DATA_TYPE_NAME: "epialleles"}
 
 
-def make_epi_main_cmd(
-    param, prog_spec, readsfile, sitesfile, outdir,
+def make_main_epi_cmd(
+    epiconf, prog_spec, readsfile, sitesfile, outdir,
     rrbs_fill, context, epis=True, process_logfile=None):
     """
     Simplified version of the builder of the main epilog processing command.
 
-    :param param:
+    :param pypiper.AttributeDict epiconf: Methylation downstream analysis
+        configuration/parameterization
     :param helpers.ProgSpec prog_spec: JAR, memory allocation, and cores count
     :param str readsfile: Sorted, aligned BAM
     :param str sitesfile: Gzipped tabix-indexed collection of genome positions
@@ -37,17 +40,15 @@ def make_epi_main_cmd(
     :return str, Sequence of str: Command to run main epilog processing, and
         sequence of targets (files) that it should produce
     """
-    return get_epilog_main_command(
-        prog_spec, readsfile, sitesfile, outdir,
-        min_rlen=param.epilog.read_length_threshold,
-        min_qual=param.epilog.qual_threshold,
-        strand_method=param.epilog.strand_method, rrbs_fill=rrbs_fill,
-        context=context, epis=epis, process_logfile=process_logfile)
+    return get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir,
+        min_rlen=epiconf.read_length_threshold, min_qual=epiconf.qual_threshold,
+        strand_method=epiconf.strand_method, rrbs_fill=rrbs_fill,
+        context=context, epis=epis, halt="union", process_logfile=process_logfile)
 
 
 def get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir,
-    min_rlen, min_qual, strand_method, rrbs_fill, context="CG",
-    epis=True, halt=None, strand_specific=False, no_epi_stats=False, process_logfile=None):
+    min_rlen, min_qual, strand_method, rrbs_fill, context, epis=True,
+    halt=None, strand_specific=False, no_epi_stats=False, process_logfile=None):
     """
     Create base for epiallele processing command.
 
@@ -130,7 +131,8 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir,
     if epis:
         epis_file = get_outpath("all_epialleles.txt")
         cmd += " --outputEpialleles {}".format(epis_file)
-    else: epis_file = None
+    else:
+        epis_file = None
     if process_logfile:
         cmd += " --processLogfile {}".format(process_logfile)
     if halt:
@@ -143,21 +145,6 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir,
     # TODO: though this is not going to be the encouraged route, while/if it's to be provided, consider the downstream file(s) as targets.
     # TODO: beware, though, of the effect on the "main-only" function that calls into this. Its targets are the main files.
     return cmd, EpilogTarget(single_sites_file=single_sites_file, epis_file=epis_file)
-
-
-def get_epilog_main_command(
-    prog_spec, readsfile, sitesfile, outdir, min_rlen, min_qual,
-    strand_method, rrbs_fill, context="CG", epis=True, process_logfile=None):
-    """
-    Version of the main epilog processing that implies epiallele processing and skips downstream analysis.
-
-    :return list of str: A two-item list in which the first item is the path to
-        the epiallele calls file, and the second is the path to the single-site
-        calls file.
-    """
-    # TODO: if the target-returning scheme from the full command creator changes, target creation will need separate handling here.
-    return get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir, min_rlen, min_qual,
-        strand_method, rrbs_fill, context=context, epis=epis, halt="union", process_logfile=process_logfile)
 
 
 def get_epilog_union_command(prog_spec, data_type, folder, output=None):
@@ -228,6 +215,68 @@ def get_epilog_epistats_command(prog_spec, infile, outfile, stranded=None, gff=F
     elif stranded:
         cmd += " --hasStrandCol"
     return cmd, outfile
+
+
+def get_proc_stat_log(folder):
+    """
+    From epilog output folder, get path to file for processing performance.
+
+    :param str folder: Path to folder in which to place the processing stats file
+    :return str: Path to file for processing stats
+    """
+    return os.path.join(folder, "processing_performance.log")
+
+
+def run_main_epi_pipe(pm, epiconf, prog_spec, readsfile, sitesfile, outdir, rrbs_fill):
+    """
+    Run downstream methylation analysis for a sample's "real" (non-spike-in) data.
+
+    :param pypiper.PipelineManager pm: Pipeline manager, to run commands
+    :param pypiper.AttributeDict epiconf: epilog parameterization
+    :param helpers.ProgSpec prog_spec: JAR, memory spec text, and cores count
+    :param str readsfile: Path to aligned, dedup, sorted, indexed BAM
+    :param str sitesfile: Path to gzipped, tabix-indexed collection of methylation
+        positions to consider
+    :param str outdir: Path to epilog output folder
+    :param int rrbs_fill: Number of bases to disregard on account of RRBS
+    """
+
+    from helpers import missing_targets
+
+    epi_main_cmd, epi_main_tgt = make_main_epi_cmd(
+        epiconf, prog_spec, readsfile, sitesfile, outdir,
+        rrbs_fill=rrbs_fill, context=epiconf.context,
+        epis=True, process_logfile=get_proc_stat_log(outdir))
+    pm.run(epi_main_cmd, target=epi_main_tgt, lock_name="epilog_main", nofail=True)
+
+    # Proceed with strand merger (if desired) based on the presence of the targets.
+    missing = missing_targets(epi_main_tgt)
+    if missing:
+        print("Missing main epilog target(s): {}".format(", ".join(missing)))
+    elif not epiconf.strand_specific:
+        pm.timestamp("### Epilog strand merger")
+        merge_cmd, merged_epi_tgt = get_epilog_strand_merge_command(
+            prog_spec, epi_main_tgt.epis_file, data_type="epialleles")
+        pm.run(merge_cmd, merged_epi_tgt, lock_name="epilog_merge_epis", nofail=True)
+        merge_cmd, merged_ss_tgt = get_epilog_strand_merge_command(
+            prog_spec, epi_main_tgt.single_sites_file, data_type="sites")
+        pm.run(merge_cmd, merged_ss_tgt, lock_name="epilog_merge_single", nofail=True)
+        epis_file = merged_epi_tgt
+    else:
+        epis_file = epi_main_tgt.epis_file
+
+    if not epiconf.no_epi_stats:
+        def exp_skip(exp):
+            print("Due to {}, {}".format(exp, "epiallele statistics cannot be calculated."))
+        if missing:
+            exp_skip("missing results upstream")
+        elif not os.path.isfile(epis_file):
+            exp_skip("missing epialleles file ({})".format(epis_file))
+        else:
+            epilog_stats_target = os.path.join(outdir, epis_file)
+            epi_stats_cmd, epi_stats_tgt = get_epilog_epistats_command(prog_spec,
+                infile=epis_file, outfile=epilog_stats_target, stranded=epiconf.strand_specific)
+            pm.run(epi_stats_cmd, epi_stats_tgt, lock_name="epilog_epistats", nofail=True)
 
 
 def _validate_data_type(dt):
