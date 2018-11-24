@@ -273,7 +273,7 @@ def run_main_epi_pipe(pm, epiconf, prog_spec, readsfile, sitesfile, outdir, rrbs
         elif not os.path.isfile(epis_file):
             exp_skip("missing epialleles file ({})".format(epis_file))
         else:
-            epilog_stats_target = os.path.join(outdir, epis_file)
+            epilog_stats_target = os.path.join(outdir, "epiallele_statistics.txt")
             epi_stats_cmd, epi_stats_tgt = get_epilog_epistats_command(prog_spec,
                 infile=epis_file, outfile=epilog_stats_target, stranded=epiconf.strand_specific)
             pm.run(epi_stats_cmd, epi_stats_tgt, lock_name="epilog_epistats", nofail=True)
