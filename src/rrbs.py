@@ -14,7 +14,8 @@ __version__ = "0.3.0-dev"
 import os
 import re
 import pypiper
-from helpers import get_epi_cmd
+from epilog_commands import *
+from helpers import MissingEpilogError, ProgSpec
 
 
 def _parse_args(cmdl):
@@ -42,6 +43,9 @@ def _parse_args(cmdl):
 		help="Number of bases from to prepend to R1 from R2 for dark sequencing")
 
 	args = parser.parse_args(cmdl)
+
+	if args.rrbs_fill < 0:
+		raise ValueError("Negative RRBS fill-in value: {}".format(args.rrbs_fill))
 
 	# Translate pypiper method of read type specification into flag-like option.
 	if args.single_or_paired == "paired":
@@ -124,14 +128,14 @@ def main(cmdl):
 
 	# We need to detect the quality encoding type of the fastq.
 
-	if args.paired_end: 
+	if args.paired_end:
 		# Just look at the first read
 		cmd = tools.python + " -u " + os.path.join(tools.scripts_dir,
 		"detect_quality_code.py") + " -f " + unaligned_fastq[0]
 	else:
 		cmd = tools.python + " -u " + os.path.join(tools.scripts_dir,
 		"detect_quality_code.py") + " -f " + unaligned_fastq
-		
+
 	encoding_string = pm.checkprint(cmd)
 	if encoding_string.find("phred33") != -1:
 		encoding = "phred33"
@@ -434,31 +438,25 @@ def main(cmdl):
 
 	################################################################################
 
-	def build_epilog_command(
-		readsfile, sitesfile, context, outdir, skip_epis=False, no_epi_stats=False):
-		ngstk.make_sure_path_exists(outdir)
-		site_calls_file = os.path.join(outdir, "all_calls.txt")
-		epis_file = os.path.join(outdir, "all_epialleles.txt") \
-			if param.epilog.epialleles and not skip_epis else None
-		process_logfile = os.path.join(outdir, "processing_statistics.txt") \
-			if param.epilog.track_process_stats else None
-		target = epis_file or site_calls_file
-		return target, get_epi_cmd(tools.epilog, readsfile, sitesfile, site_calls_file,
-			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.qual_threshold,
-			strand_method=param.epilog.strand_method, rrbs_fill=args.rrbs_fill,
-			memtext=pm.mem, context=context, cores=pm.cores,
-			keep_chrom_files=param.epilog.keep_chrom_files,
-			epis_file=epis_file, process_logfile=process_logfile,
-			no_epi_stats=skip_epis or no_epi_stats)
-
+	# Create the program specification, in scope both for ordinary and spike-in.
 	if args.epilog:
-		pm.timestamp("### Epilog methylation calling: ")
+		try:
+			epilog_prog_spec = ProgSpec(jar=tools.epilog, memory=pm.mem, cores=pm.cores)
+		except MissingEpilogError as e:
+			print("ERROR: {} --  skipping epilog".format(str(e)))
+			epilog_prog_spec = None
+	else:
+		epilog_prog_spec = None
+
+	if epilog_prog_spec:
 		epilog_output_dir = os.path.join(
-				param.pipeline_outfolder, "epilog_" + args.genome_assembly)
-		epi_tgt, epi_cmd = build_epilog_command(out_bsmap, resources.methpositions,
-			context=param.epilog.context, outdir=epilog_output_dir,
-			no_epi_stats=param.epilog.no_epi_stats)
-		pm.run(epi_cmd, target=epi_tgt, lock_name="epilog", nofail=True)
+			param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+		ngstk.make_sure_path_exists(epilog_output_dir)
+		pm.timestamp("### Epilog Methcalling: ")
+		run_main_epi_pipe(pm, epiconf=param.epilog, prog_spec=epilog_prog_spec,
+			readsfile=out_bsmap, sitesfile=param.epilog.methpositions,
+			outdir=epilog_output_dir, rrbs_fill=args.rrbs_fill)
+		pm.timestamp("### COMPLETE: epilog processing")
 
 		"""
 		epilog_outfile = os.path.join(
@@ -570,11 +568,14 @@ def main(cmdl):
 		cmd1 += " >> " + pm.pipeline_stats_file
 		pm.run(cmd1, lock_name="spikein", nofail=True)
 
-	if args.epilog:
+	if epilog_prog_spec:
 		# spike in conversion efficiency calculation with epilog
+		ngstk.make_sure_path_exists(spikein_folder)
 		pm.timestamp("### Epilog methylation calling (spike-in): ")
-		epi_tgt, epi_cmd = build_epilog_command(out_bsmap, resources.spikein_methpositions,
-			context="C", outdir=spikein_folder, skip_epis=True, no_epi_stats=True)
+		epi_tgt, epi_cmd = make_main_epi_cmd(
+			epiconf=param.epilog, prog_spec=epilog_prog_spec,
+			readsfile=out_spikein_sorted, sitesfile=resources.spikein_methpositions,
+			outdir=spikein_folder, rrbs_fill=args.rrbs_fill, context="C", epis=False)
 		pm.run(epi_cmd, target=epi_tgt, lock_name="epilog", nofail=True)
 
 	"""

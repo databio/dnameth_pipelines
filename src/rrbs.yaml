@@ -61,12 +61,11 @@ parameters:
     maxProcesses: 4
 
   epilog:
-    rrbs_fill: 4
     qual_threshold: 20
     read_length_threshold: 20
     strand_method: flag
     context: CG
     epialleles: true
-    keep_chrom_files: false
+    strand_specific: false
     track_process_stats: true
     no_epi_stats: false

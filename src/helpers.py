@@ -1,110 +1,44 @@
 """ Helper functions and data types """
 
 import os
+import sys
+if sys.version_info < (3, 3):
+    from collections import Sequence
+else:
+    from collections.abc import Sequence
 
 
 __author__ = "Vince Reuter"
 __email__ = "vince.reuter@gmail.com"
 
 
-
-def get_epi_cmd(jar, readsfile, sitesfile, outfile, min_rlen, min_qual,
-    strand_method, rrbs_fill, memtext,
-    context="CG", cores=1, keep_chrom_files=False, no_epi_stats=False,
-    epis_file=None, process_logfile=None):
+class EpilogTarget(Sequence):
     """
-    Create base for epiallele processing command.
+    Representation of the main epilog targets.
 
-    Parameters
-    ----------
-    jar : str
-        Path to JAR file for epiallele software.
-    readsfile : str
-        Path to sorted, aligned BAM with reads to analyze.
-    sitesfile : str
-        Path to gzipped, tabix-indexed file with sites to analyze.
-    outfile : str
-        Path to file for site-level methylation call data (main target).
-    min_rlen : int
-        Minimum number of bases aligned for a read to be used in analysis.
-    min_qual : int
-        Minimum base call quality at a site and neighbor site(s) for it to
-        be used in analysis.
-    strand_method : str
-        Name of strategy to determine read orientation; 'tag' or 'flag'
-    rrbs_fill : int
-        Number of bases at read end to ignore due to RRBS "fill-in"
-    memtext : str
-        Text specification of memory, e.g. 16000m or 4g.
-    context : str
-        Methylation context (sense strand, e.g. 'CG' for typical mammalian analysis)
-    cores : int
-        Number of cores to use for processing.
-    no_epi_stats : bool, default True
-        Skip epiallele diversity/heterogeneity statistics
-    keep_chrom_files : bool
-        Whether the per-chromosome output files from epilog should be retained
-        along with the main, merged output files.
-    epis_file : str, optional
-        Path to file for epiallele observation records; if unspecified, no
-        epiallele processing will be performed.
-    process_logfile : str, optional
-        Path to file for epiallele processing performance statistics
-
-    Returns
-    -------
-    str
-        Base of command for epiallele processing.
-
+    This class offer flexibility with respect to presence/absence of
+    epialleles file and provides named access to the targets while mixing in
+    Sequence behavior for use more like a list.
     """
 
-    import os
+    def __init__(self, single_sites_file, epis_file=None):
+        self._ss = single_sites_file
+        self._epi = epis_file
+        self._files = [epis_file, single_sites_file] if epis_file else [single_sites_file]
 
-    contexts = ["C", "CG"]
+    @property
+    def single_sites_file(self):
+        return self._ss
 
-    problems = []
+    @property
+    def epis_file(self):
+        return self._epi
 
-    pos_int_vals = {"Length": min_rlen, "Quality": min_qual}
-    for label, value in pos_int_vals.items():
-        valid = False
-        try:
-            valid = int(value) >= 0
-        except (TypeError, ValueError):
-            pass
-        if not valid:
-            problems.append("Did not get nonnegative value -- {} = {}".format(label, value))
+    def __getitem__(self, item):
+        return self._files[item]
 
-    problems.extend(
-        ["{} isn't a file: {}".format(ft, fp)
-         for ft, fp in zip(["JAR", "Reads", "Sites"], [jar, readsfile, sitesfile])
-         if not os.path.isfile(fp)])
-
-    if context not in contexts:
-        problems.append("Invalid context ({}); choose one: {}".format(context, ", ".join(contexts)))
-
-    try:
-        if int(cores) < 1:
-            problems.append("Too few cores: {}".format(cores))
-    except (TypeError, ValueError):
-        problems.append("Invalid cores count: {}".format(cores))
-
-    if problems:
-        raise Exception("Problems: {}".format(", ".join(problems)))
-
-    cmd = "java -Xmx{m} -jar {j} --minBaseQuality {q} --minReadLength {rl} --context {ctx} --rrbsFill {base_fill} --cores {cores} --strandMethod {sm} -O {o} {r} {s}".format(
-        m=memtext, j=jar, rl=min_rlen, q=min_qual, ctx=context, base_fill=rrbs_fill, sm=strand_method, o=outfile, r=readsfile, s=sitesfile, cores=cores)
-
-    if keep_chrom_files:
-        cmd += " --keepChromFiles"
-    if epis_file:
-        cmd += " --outputEpialleles {}".format(epis_file)
-    if process_logfile:
-        cmd += " --processLogfile {}".format(process_logfile)
-    if no_epi_stats:
-        cmd += " --noEpiStats"
-
-    return cmd
-
+    def __len__(self):
+        return len(self._files)
 
 
 class FolderContext(object):
@@ -132,3 +66,87 @@ class FolderContext(object):
             raise RuntimeError("Return path is no longer a directory: {}".
                                format(self._prevdir))
         os.chdir(self._prevdir)
+
+
+class ProgSpec(object):
+    """ Resource specification for a downstream analysis program. """
+
+    def __init__(self, jar, memory, cores=1):
+        """
+        A JAR path, memory text, and number of processors specifies program resources.
+
+        :param str jar: Path to JAR in which to find program
+        :param str memory: Memory specification; include units and be aware
+            of your cluster's / computer's units
+        :param int cores: Number of cores to use
+        """
+
+        self.memory = memory
+
+        if not os.path.isfile(jar):
+            raise MissingEpilogError("Path to JAR isn't a file: {}".format(jar))
+        self.jar = jar
+
+        def check_cores(n):
+            try:
+                n = int(n)
+            except:
+                return False
+            return (n > 0) and n
+
+        cores = check_cores(cores)
+        if not cores:
+            raise ValueError("Invalid cores specification ({}); provide a nonnegative integer".format(cores))
+        self.cores = cores
+
+    def get_command_base(self, pkg_prog_pair=None):
+        """
+        Get the base for a command assocaited with this program specification.
+
+        :param str, str pkg_prog_pair: Pair of package name and program name; no specification implies main JAR program
+        :return str: Base of command associated with this program specification
+        """
+        base = "java -Xmx{}".format(self.memory)
+        if pkg_prog_pair is None:
+            return "{b} -jar {j}".format(b=base, j=self.jar)
+        else:
+            try:
+                pkg, prog = pkg_prog_pair
+            except (TypeError, ValueError):
+                raise ValueError(
+                    "If specifying program, provide a 2-tuple of package name and program name; got {} ({})".
+                    format(pkg_prog_pair, type(pkg_prog_pair)))
+            return "{b} -cp {j} {p}".format(b=base, j=self.jar, p=self._get_program(pkg, prog))
+
+    @staticmethod
+    def _get_program(pkg, prog):
+        """ Get fully qualified classpath for program to run. """
+        return ".".join(["episcall", pkg, prog])
+
+
+def missing_targets(targets, good=lambda f: os.path.isfile(f)):
+    """
+    Find missing target(s) of a command.
+
+    :param str | list[str] t: Single target path, or collection of them
+    :param callable(str) -> bool good: Predicate to evaluate on a path; assumption
+        is that each path is a file and therefore default predicate is
+        path's existence as a file.
+    :return list[str]: Each target that isn't a file
+    """
+    import sys
+    if sys.version_info < (3, 3):
+        from collections import Iterable
+    else:
+        from collections.abc import Iterable
+    if isinstance(targets, str):
+        targets = [targets]
+    elif not isinstance(targets, Iterable):
+        raise TypeError(
+            "Target(s) to check should be a collection (or maybe string); got {} ({})".format(targets, type(targets)))
+    return [p for p in targets if not good(p)]
+
+
+class MissingEpilogError(Exception):
+    """ Exception for when a program specification's JAR is not a file. """
+    pass
