@@ -390,7 +390,7 @@ def main(cmdl):
 
 		pm.timestamp("### Epilog Methcalling: ")
 		run_main_epi_pipe(pm, epiconf=param.epilog, prog_spec=epilog_prog_spec,
-			readsfile=out_dedup_sorted, sitesfile=param.epilog.methpositions,
+			readsfile=out_dedup_sorted, sitesfile=resources.methpositions,
 			outdir=epilog_output_dir, rrbs_fill=0)
 		pm.timestamp("### COMPLETE: epilog")
 

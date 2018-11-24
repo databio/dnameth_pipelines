@@ -454,7 +454,7 @@ def main(cmdl):
 		ngstk.make_sure_path_exists(epilog_output_dir)
 		pm.timestamp("### Epilog Methcalling: ")
 		run_main_epi_pipe(pm, epiconf=param.epilog, prog_spec=epilog_prog_spec,
-			readsfile=out_bsmap, sitesfile=param.epilog.methpositions,
+			readsfile=out_bsmap, sitesfile=resources.methpositions,
 			outdir=epilog_output_dir, rrbs_fill=args.rrbs_fill)
 		pm.timestamp("### COMPLETE: epilog processing")
 
