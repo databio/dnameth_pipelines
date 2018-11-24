@@ -136,7 +136,7 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir,
     if process_logfile:
         cmd += " --processLogfile {}".format(process_logfile)
     if halt:
-        cmd += " "
+        cmd += " --through {}".format(halt)
     if strand_specific:
         cmd += " --strandSpecific"
     if no_epi_stats:
