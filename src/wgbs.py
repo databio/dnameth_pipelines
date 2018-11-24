@@ -454,16 +454,18 @@ def main(cmdl):
 
 	# convert the bismark report to the simpler coverage format and adjust the coordinates
 	# of CpG's on the reverse strand while doing so (by substracting 1 from the start):
-	cmd = tools.Rscript + " " + os.path.join(tools.scripts_dir, "convertBismarkReport.R") # disable coverage filter, because we have already used `awk` to achieve this result
-	cmd += " --formats=cov,min"
-	cmd += " --noCovFilter"
-	if keep_non_standard_chromosomes:
-		cmd += " --noChromFilter"
-	if not adjust_minus_strand:
-		cmd += " --noAdjustMinusStrand"
-	cmd += " -i " + out_cpg_report_filt
-	pm.run(cmd,  out_cpg_report_filt_cov)
-
+	if os.path.getsize(out_cpg_report_filt) == 0:
+		print("Methylation report () is empty -- skipping conversion".format(out_cpg_report_filt))
+	else:
+		cmd = tools.Rscript + " " + os.path.join(tools.scripts_dir, "convertBismarkReport.R") # disable coverage filter, because we have already used `awk` to achieve this result
+		cmd += " --formats=cov,min"
+		cmd += " --noCovFilter"
+		if keep_non_standard_chromosomes:
+			cmd += " --noChromFilter"
+		if not adjust_minus_strand:
+			cmd += " --noAdjustMinusStrand"
+		cmd += " -i " + out_cpg_report_filt
+		pm.run(cmd, out_cpg_report_filt_cov, nofail=True)
 
 	# tidy up:
 	if not keep_bismark_report:
