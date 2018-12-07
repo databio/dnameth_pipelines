@@ -1,6 +1,7 @@
 """ Helper functions and data types """
 
 import os
+import re
 import sys
 if sys.version_info < (3, 3):
     from collections import Sequence
@@ -122,6 +123,35 @@ class ProgSpec(object):
     def _get_program(pkg, prog):
         """ Get fully qualified classpath for program to run. """
         return ".".join(["episcall", pkg, prog])
+
+
+def get_dedup_bismark_cmd(paired, infile,
+    outdir=None, prog="deduplicate_bismark", compress=True):
+    """
+    Create command with which to run deduplication with bismark.
+
+    :param bool paired: Whether the reads are from a paired-end protocol.
+    :param str infile: Path to aligned reads file to deduplicate.
+    :param str | NoneType outdir: Path to output folder; if unspecified,
+        the parent of the infile will be used
+    :param str prog: Path to program to run, or name of program on PATH
+    :param bool compress: Whether to compress the SAM output (into BAM)
+    :return str, str: Command with which to run bismark deduplication, and the
+        output file that the command should create once executed
+    """
+    read_end_type = "paired" if paired else "single"
+    if not os.path.isfile(infile):
+        raise Exception("Input to {} is not a file: {}".format(prog, infile))
+    cmd = "{} --{} {}".format(prog, read_end_type, infile)
+    outfile = re.sub(r'.bam$', '.deduplicated.bam', infile)
+    outdir = outdir or os.path.dirname(outfile)
+    if outdir:
+        if not os.path.isdir(outdir):
+            raise Exception("Output folder for {} isn't a directory: {}".format(prog, outdir))
+        cmd += " --output_dir {}".format(outdir)
+    if compress:
+        cmd += " --bam"
+    return cmd, outfile
 
 
 def missing_targets(targets, good=lambda f: os.path.isfile(f)):

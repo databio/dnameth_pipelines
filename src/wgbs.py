@@ -16,7 +16,7 @@ import re
 import subprocess
 import pypiper
 from epilog_commands import *
-from helpers import FolderContext, MissingEpilogError, ProgSpec
+from helpers import FolderContext, MissingEpilogError, ProgSpec, get_dedup_bismark_cmd
 
 
 def _parse_args(cmdl):
@@ -300,21 +300,12 @@ def main(cmdl):
 
 	pm.timestamp("### PCR duplicate removal: ")
 	# Bismark's deduplication forces output naming, how annoying.
-	out_dedup = os.path.join(bismark_folder, args.sample_name + "_pe.deduplicated.bam")
+	#out_dedup = os.path.join(bismark_folder, args.sample_name + "_pe.deduplicated.bam")
 	out_dedup = re.sub(r'.bam$', '.deduplicated.bam', out_bismark)
-
-	cmd = tools.deduplicate_bismark
-	if args.paired_end:
-		cmd += " --paired "
-	else:
-		cmd += " --single "
-	cmd += out_bismark
-	cmd += " --bam"
-
+	cmd, out_dedup = get_dedup_bismark_cmd(paired=args.paired_end, infile=out_bismark, prog=tools.deduplicate_bismark)
 	with FolderContext(bismark_folder):
 		pm.run(cmd, out_dedup, follow = lambda: pm.report_result(
 			"Deduplicated_reads", ngstk.count_reads(out_dedup, args.paired_end)))
-
 	if not os.path.isfile(out_dedup):
 		pm.fail_pipeline(IOError("Missing deduplication target: {}".format(out_dedup)))
 
@@ -537,17 +528,8 @@ def main(cmdl):
 		pm.timestamp("### PCR duplicate removal (Spike-in): ")
 		# Bismark's deduplication forces output naming, how annoying.
 		#out_spikein_dedup = spikein_folder + args.sample_name + ".spikein.aln.deduplicated.bam"
-		out_spikein_dedup = re.sub(r'.bam$', '.deduplicated.bam', out_spikein)
-
-
-		cmd = tools.deduplicate_bismark
-		if args.paired_end:
-			cmd += " --paired "
-		else:
-			cmd += " --single "
-		cmd += out_spikein
-		cmd += " --bam"
-
+		cmd, out_spikein_dedup = get_dedup_bismark_cmd(
+			paired=args.paired_end, infile=out_spikein, prog=tools.deduplicate_bismark)
 		out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_spikein_dedup)
 		cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
 		cmd3 = tools.samtools + " index " + out_spikein_sorted
