@@ -15,7 +15,7 @@ import os
 import re
 import pypiper
 from epilog_commands import *
-from helpers import MissingEpilogError, ProgSpec
+from helpers import MissingEpilogError, ProgSpec, get_dedup_bismark_cmd
 
 
 def _parse_args(cmdl):
@@ -541,16 +541,8 @@ def main(cmdl):
 	pm.timestamp("### PCR duplicate removal (spike-in): ")
 	# Bismark's deduplication forces output naming, how annoying.
 	#out_spikein_dedup = spikein_folder + args.sample_name + ".spikein.aln.deduplicated.bam"
-	out_spikein_dedup = re.sub(r'.bam$', '.deduplicated.bam', out_spikein)
-	if not args.paired_end:
-		cmd = tools.deduplicate_bismark + " --single "    # TODO: needs module load bismark or absolute path to this tool
-		cmd += out_spikein
-		cmd += " --bam"
-	else:
-		cmd = tools.deduplicate_bismark + " --paired "
-		cmd += out_spikein
-		cmd += " --bam"
-
+	cmd, out_spikein_dedup = get_dedup_bismark_cmd(paired=args.paired_end,
+		infile=out_spikein, prog=tools.deduplicate_bismark)
 	out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_spikein_dedup)
 	cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
 	cmd3 = tools.samtools + " index " + out_spikein_sorted
