@@ -11,11 +11,13 @@ __license__ = "GPL3"
 __version__ = "0.2.0"
 
 
+import copy
 import os
 import re
 import subprocess
 import pypiper
-from helpers import FolderContext, get_epi_cmd
+from epilog_commands import *
+from helpers import FolderContext, MissingEpilogError, ProgSpec, get_dedup_bismark_cmd
 
 
 def _parse_args(cmdl):
@@ -299,21 +301,12 @@ def main(cmdl):
 
 	pm.timestamp("### PCR duplicate removal: ")
 	# Bismark's deduplication forces output naming, how annoying.
-	out_dedup = os.path.join(bismark_folder, args.sample_name + "_pe.deduplicated.bam")
+	#out_dedup = os.path.join(bismark_folder, args.sample_name + "_pe.deduplicated.bam")
 	out_dedup = re.sub(r'.bam$', '.deduplicated.bam', out_bismark)
-
-	cmd = tools.deduplicate_bismark
-	if args.paired_end:
-		cmd += " --paired "
-	else:
-		cmd += " --single "
-	cmd += out_bismark
-	cmd += " --bam"
-
+	cmd, out_dedup = get_dedup_bismark_cmd(paired=args.paired_end, infile=out_bismark, prog=tools.deduplicate_bismark)
 	with FolderContext(bismark_folder):
 		pm.run(cmd, out_dedup, follow = lambda: pm.report_result(
 			"Deduplicated_reads", ngstk.count_reads(out_dedup, args.paired_end)))
-
 	if not os.path.isfile(out_dedup):
 		pm.fail_pipeline(IOError("Missing deduplication target: {}".format(out_dedup)))
 
@@ -328,8 +321,6 @@ def main(cmdl):
 	#cmd = tools.samtools + " sort -n -o " + out_dedup + " " + out_dedup.replace(".bam", "_sorted") + " | " + tools.samtools + " view -h - >" + out_sam
 	#cmd = tools.samtools + " sort -n " + out_dedup + " " + " | " + tools.samtools + " view -h - >" + out_sam
 	cmd = tools.samtools + " sort -n " + out_dedup + " -o " + out_sam
-
-
 	pm.run(cmd, out_sam, shell=True)
 
 	#sorted file same size as presorted?
@@ -366,57 +357,34 @@ def main(cmdl):
 	# Epilog analysis
 	################################################################################
 
-	def build_epilog_command(
-		readsfile, sitesfile, context, outdir, skip_epis=False, no_epi_stats=False):
-		ngstk.make_sure_path_exists(outdir)
-		site_calls_file = os.path.join(outdir, "all_calls.txt")
-		epis_file = os.path.join(outdir, "all_epialleles.txt") \
-			if param.epilog.epialleles and not skip_epis else None
-		process_logfile = os.path.join(outdir, "processing_statistics.txt") \
-			if param.epilog.track_process_stats else None
-		target = epis_file or site_calls_file
-		return target, get_epi_cmd(tools.epilog, readsfile, sitesfile, site_calls_file,
-			min_rlen=param.epilog.read_length_threshold, min_qual=param.epilog.qual_threshold,
-			strand_method=param.epilog.strand_method, rrbs_fill=0,
-			memtext=pm.mem, context=context, cores=pm.cores,
-			keep_chrom_files=param.epilog.keep_chrom_files, epis_file=epis_file,
-			process_logfile=process_logfile, no_epi_stats=skip_epis or no_epi_stats)
-
+	# Create the program specification, in scope both for ordinary and spike-in.
 	if args.epilog:
-		# out_bismark must be indexed in order for epilog to use it
-		# should we do this on out_ded
+		try:
+			epilog_prog_spec = ProgSpec(jar=tools.epilog, memory=pm.mem, cores=pm.cores)
+		except MissingEpilogError as e:
+			print("ERROR: {} --  skipping epilog".format(str(e)))
+			epilog_prog_spec = None
+	else:
+		epilog_prog_spec = None
+
+	if epilog_prog_spec:
+
+		# Sort and index the deduplicated alignments.
 		out_dedup_sorted = re.sub(r'.bam$', "_sort.bam", out_dedup)
 		cmd2 = tools.samtools + " sort -@ " + str(pm.cores) + " -o " + out_dedup_sorted + " " + out_dedup
 		cmd3 = tools.samtools + " index " + out_dedup_sorted
 		pm.run([cmd2, cmd3], out_dedup_sorted + ".bai")
+
+		# Separate output subfolder for epilog
 		epilog_output_dir = os.path.join(
 			param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+		ngstk.make_sure_path_exists(epilog_output_dir)
+
 		pm.timestamp("### Epilog Methcalling: ")
-		epi_tgt, epi_cmd = build_epilog_command(
-			out_dedup_sorted, resources.methpositions,
-			context=param.epilog.context, outdir=epilog_output_dir,
-			no_epi_stats=param.epilog.no_epi_stats)
-		pm.run(epi_cmd, target=epi_tgt, nofail=True)
-
-		"""
-		epilog_outfile = os.path.join(
-				epilog_output_dir, args.sample_name + "_epilog.bed")
-		epilog_summary_file = os.path.join(
-				epilog_output_dir, args.sample_name + "_epilog_summary.bed")
-
-		cmd = tools.epilog
-		cmd += " call"
-		cmd += " --infile=" + out_dedup_sorted  # absolute path to the aligned bam
-		cmd += " --positions=" + resources.methpositions
-		cmd += " --outfile=" + epilog_outfile
-		cmd += " --summary-filename=" + epilog_summary_file
-		cmd += " --cores=" + str(pm.cores)
-		cmd += " --qual-threshold=" + str(param.epilog.qual_threshold)
-		cmd += " --read-length-threshold=" + str(param.epilog.read_length_threshold)
-		cmd += " --wgbs"    # Turn off RRBS mode
-
-		pm.run(cmd, epilog_outfile, nofail=True)
-		"""
+		run_main_epi_pipe(pm, epiconf=param.epilog, prog_spec=epilog_prog_spec,
+			readsfile=out_dedup_sorted, sitesfile=resources.methpositions,
+			outdir=epilog_output_dir, rrbs_fill=0)
+		pm.timestamp("### COMPLETE: epilog")
 
 
 	# Methylation extractor
@@ -478,16 +446,18 @@ def main(cmdl):
 
 	# convert the bismark report to the simpler coverage format and adjust the coordinates
 	# of CpG's on the reverse strand while doing so (by substracting 1 from the start):
-	cmd = tools.Rscript + " " + os.path.join(tools.scripts_dir, "convertBismarkReport.R") # disable coverage filter, because we have already used `awk` to achieve this result
-	cmd += " --formats=cov,min"
-	cmd += " --noCovFilter"
-	if keep_non_standard_chromosomes:
-		cmd += " --noChromFilter"
-	if not adjust_minus_strand:
-		cmd += " --noAdjustMinusStrand"
-	cmd += " -i " + out_cpg_report_filt
-	pm.run(cmd,  out_cpg_report_filt_cov)
-
+	if os.path.getsize(out_cpg_report_filt) == 0:
+		print("Methylation report () is empty -- skipping conversion".format(out_cpg_report_filt))
+	else:
+		cmd = tools.Rscript + " " + os.path.join(tools.scripts_dir, "convertBismarkReport.R") # disable coverage filter, because we have already used `awk` to achieve this result
+		cmd += " --formats=cov,min"
+		cmd += " --noCovFilter"
+		if keep_non_standard_chromosomes:
+			cmd += " --noChromFilter"
+		if not adjust_minus_strand:
+			cmd += " --noAdjustMinusStrand"
+		cmd += " -i " + out_cpg_report_filt
+		pm.run(cmd, out_cpg_report_filt_cov, nofail=True)
 
 	# tidy up:
 	if not keep_bismark_report:
@@ -559,17 +529,8 @@ def main(cmdl):
 		pm.timestamp("### PCR duplicate removal (Spike-in): ")
 		# Bismark's deduplication forces output naming, how annoying.
 		#out_spikein_dedup = spikein_folder + args.sample_name + ".spikein.aln.deduplicated.bam"
-		out_spikein_dedup = re.sub(r'.bam$', '.deduplicated.bam', out_spikein)
-
-
-		cmd = tools.deduplicate_bismark
-		if args.paired_end:
-			cmd += " --paired "
-		else:
-			cmd += " --single "
-		cmd += out_spikein
-		cmd += " --bam"
-
+		cmd, out_spikein_dedup = get_dedup_bismark_cmd(
+			paired=args.paired_end, infile=out_spikein, prog=tools.deduplicate_bismark)
 		out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_spikein_dedup)
 		cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
 		cmd3 = tools.samtools + " index " + out_spikein_sorted
@@ -585,16 +546,19 @@ def main(cmdl):
 			cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "testxmz.py")
 			cmd1 += " " + out_spikein_sorted + " " + chrom
 			cmd1 += " >> " + pm.pipeline_stats_file
-			pm.callprint(cmd1, shell=True, nofail=True)
+			pm.callprint(cmd1, nofail=True)
 
 
 		# spike in conversion efficiency calculation with epilog
-		pm.timestamp("### Spike-in Epilog Methcalling: ")
-		ngstk.make_sure_path_exists(spikein_folder)
-		epi_tgt, epi_cmd = build_epilog_command(
-			out_spikein_sorted, resources.spikein_methpositions,
-			context="C", outdir=spikein_folder, skip_epis=True, no_epi_stats=True)
-		pm.run(epi_cmd, target=epi_tgt, nofail=True)
+		if epilog_prog_spec:
+			ngstk.make_sure_path_exists(spikein_folder)
+			pm.timestamp("### Spike-in Epilog Methcalling: ")
+			spikein_epiconf = copy.deepcopy(param.epilog)
+			spikein_epiconf.context = "C"
+			spikein_epiconf.no_epi_stats = True    # Always skip stats for spike-in.
+			run_main_epi_pipe(pm, epiconf=spikein_epiconf, prog_spec=epilog_prog_spec,
+				readsfile=out_spikein_sorted, sitesfile=resources.spikein_methpositions,
+				outdir=spikein_folder, rrbs_fill=0)
 
 		"""
 		epilog_spike_outfile=os.path.join(

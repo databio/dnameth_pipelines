@@ -19,17 +19,24 @@ open(my $fhout, ">", $fileout);
 while($seq1header = <$fh>) {
     
     $seq1 = <$fh>;
-    <$fh2>; # skip seq2 header
+    $seq2header = <$fh2>;
     $seq2 = <$fh2>;
     $seq2add = substr($seq2, 0, $addlength); #bases that will be added to seq1
     <$fh2>; # skip third line
     $linethree = <$fh>;
     
-    # updated fastq file
-    print $fhout $seq1header;
-    print $fhout ($seq2add . $seq1);
-    print $fhout $linethree; # line three of seq1
-    print $fhout (substr(<$fh2>, 0, $addlength) . <$fh>); # concatenate quality scores
+    # add this read to updated fastq file only if it passed filter 
+    # (filtered=N means it was not filtered so we should keep it)
+    if (($seq1header =~ /:N:/) and ($seq2header =~ /:N:/)) {
+        print $fhout $seq1header;
+        print $fhout ($seq2add . $seq1);
+        print $fhout $linethree; # line three of seq1
+        print $fhout (substr(<$fh2>, 0, $addlength) . <$fh>); # concatenate quality scores
+    } else {
+        # skip quality scores to move to next read
+        <$fh>;
+        <$fh2>;
+    }
 }
 
 
