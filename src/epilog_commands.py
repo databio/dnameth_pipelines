@@ -252,7 +252,8 @@ def run_main_epi_pipe(pm, epiconf, prog_spec, readsfile, sitesfile, outdir, rrbs
     # Proceed with strand merger (if desired) based on the presence of the targets.
     missing = missing_targets(epi_main_tgt)
     if missing:
-        print("Missing main epilog target(s): {}".format(", ".join(missing)))
+        print("Epilog processing cannot proceed -- main target(s) missing: "
+              "{}".format(", ".join(missing)))
     elif not epiconf.strand_specific:
         pm.timestamp("### Epilog strand merger")
         merge_cmd, merged_epi_tgt = get_epilog_strand_merge_command(

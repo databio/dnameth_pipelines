@@ -11,6 +11,7 @@ __license__ = "GPL3"
 __version__ = "0.2.0"
 
 
+import copy
 import os
 import re
 import subprocess
@@ -552,11 +553,12 @@ def main(cmdl):
 		if epilog_prog_spec:
 			ngstk.make_sure_path_exists(spikein_folder)
 			pm.timestamp("### Spike-in Epilog Methcalling: ")
-			epi_tgt, epi_cmd = make_main_epi_cmd(
-				epiconf=param.epilog, prog_spec=epilog_prog_spec,
+			spikein_epiconf = copy.deepcopy(param.epilog)
+			spikein_epiconf.context = "C"
+			spikein_epiconf.no_epi_stats = True    # Always skip stats for spike-in.
+			run_main_epi_pipe(pm, epiconf=spikein_epiconf, prog_spec=epilog_prog_spec,
 				readsfile=out_spikein_sorted, sitesfile=resources.spikein_methpositions,
-				outdir=spikein_folder, rrbs_fill=0, context="C", epis=False)
-			pm.run(epi_cmd, target=epi_tgt, lock_name="epilog_spikein", nofail=True)
+				outdir=spikein_folder, rrbs_fill=0)
 
 		"""
 		epilog_spike_outfile=os.path.join(

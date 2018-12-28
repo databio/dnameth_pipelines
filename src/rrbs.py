@@ -11,6 +11,7 @@ __license__ = "GPL3"
 __version__ = "0.3.0-dev"
 
 
+import copy
 import os
 import re
 import pypiper
@@ -564,11 +565,12 @@ def main(cmdl):
 		# spike in conversion efficiency calculation with epilog
 		ngstk.make_sure_path_exists(spikein_folder)
 		pm.timestamp("### Epilog methylation calling (spike-in): ")
-		epi_tgt, epi_cmd = make_main_epi_cmd(
-			epiconf=param.epilog, prog_spec=epilog_prog_spec,
+		spikein_epiconf = copy.deepcopy(param.epilog)
+		spikein_epiconf.context = "C"
+		spikein_epiconf.no_epi_stats = True  # Always skip stats for spike-in.
+		run_main_epi_pipe(pm, epiconf=spikein_epiconf, prog_spec=epilog_prog_spec,
 			readsfile=out_spikein_sorted, sitesfile=resources.spikein_methpositions,
-			outdir=spikein_folder, rrbs_fill=args.rrbs_fill, context="C", epis=False)
-		pm.run(epi_cmd, target=epi_tgt, lock_name="epilog", nofail=True)
+			outdir=spikein_folder, rrbs_fill=args.rrbs_fill)
 
 	"""
 	epilog_spike_outfile=os.path.join(
