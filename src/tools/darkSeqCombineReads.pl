@@ -39,7 +39,7 @@ while($seq1header = <$fh>) {
         # you could delete this for loop to save computational time
         ## for the bases that overlap, keep whichever has the best quality score
         ## loop through overlapping bases, add whichever has the best score to $seq2add
-        for (my $i=$addlength; i < $seq2length; $i++) {
+        for (my $i=$addlength; $i < $seq2length; $i++) {
         
             # only compare quality scores if bases don't match
             # perl is zero indexed so $addength + 1 (1 index) base is the first to be compared
