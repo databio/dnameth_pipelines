@@ -20,7 +20,7 @@ while($seq1header = <$fh>) {
     
     $seq1 = <$fh>;
     $seq2header = <$fh2>;
-    $seq2 = <$fh2>;
+    chomp($seq2 = <$fh2>);
     $seq2length = length $seq2;
     $seq2add = substr($seq2, 0, $addlength); #bases that will be added to seq1
     <$fh2>; # skip third line
