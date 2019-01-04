@@ -43,16 +43,16 @@ while($seq1header = <$fh>) {
         
             # only compare quality scores if bases don't match
             # perl is zero indexed so $addength + 1 (1 index) base is the first to be compared
-            if (substr($seq2, i, 1) ne substr($seq1, i-$addlength, 1)) {
-                $thisbase1 = substr($seq1, i-$addlength, 1);
-                $thisbase2 = substr($seq2, i, 1);
+            if (substr($seq2, $i, 1) ne substr($seq1, $i-$addlength, 1)) {
+                $thisbase1 = substr($seq1, $i-$addlength, 1);
+                $thisbase2 = substr($seq2, $i, 1);
                 
                 # compare quality scores, if seq2 is better then change
                 # otherwise keep current base and quality score
                 # higher number/ASCII character is better phred score
-                if (ord(substr($qual2, i, 1)) > ord(substr($qual1, i-$addlength, 1))) {
-                    substr($newseq, i, 1) = thisbase2;
-                    substr($newqual, i, 1) = substr($qual2, i, 1);
+                if (ord(substr($qual2, $i, 1)) > ord(substr($qual1, $i-$addlength, 1))) {
+                    substr($newseq, $i, 1) = $thisbase2;
+                    substr($newqual, $i, 1) = substr($qual2, $i, 1);
                 }
             }
             # else, make no changes to existing base

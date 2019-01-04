@@ -1,0 +1,20 @@
+@correctnumberofbasesadded?:1:1 1:N:0
+CCCAAAAAAAAAA
++
+!!!JJJJJJJJJJ
+@arecorrectbasesfromR1replaced?:1:2 1:N:0
+CCCACCAAAAAAA
++
+!!!JJJJJJJJJJ
+@iftiekeepR1?:1:3 1:N:0
+CCCAAAAAAAAAA
++
+!!!JJJJJJJJJJ
+@ifbaseissamedontreplace:1:4 1:N:0
+CCCAAAAAAAAAA
++
+!!!IIIJJJJJJJ
+@arecorrectbasesfromR1replaced?:1:5 1:N:0
+CGGGGACAATTGG
++
+IIIHHIJJJJJJJ
