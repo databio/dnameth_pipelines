@@ -84,7 +84,7 @@ class ProgSpec(object):
 
         self.memory = memory
 
-        if not os.path.isfile(jar):
+        if not os.path.isfile(os.path.expanduser(os.path.expandvars(jar))):
             raise MissingEpilogError("Path to JAR isn't a file: {}".format(jar))
         self.jar = jar
 
