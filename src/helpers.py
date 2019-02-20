@@ -35,6 +35,11 @@ class EpilogTarget(Sequence):
     def epis_file(self):
         return self._epi
 
+    @property
+    def files(self):
+        import copy
+        return copy.copy(self._files)
+
     def __getitem__(self, item):
         return self._files[item]
 

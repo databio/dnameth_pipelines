@@ -37,7 +37,7 @@ def make_main_epi_cmd(
     :param bool epis: Whether to examine epialleles
     :param str process_logfile: Path to file to which to write epilog
         basic processing performance numbers
-    :return str, Sequence of str: Command to run main epilog processing, and
+    :return str, EpilogTarget: Command to run main epilog processing, and
         sequence of targets (files) that it should produce
     """
     return get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir,
@@ -86,7 +86,7 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir,
 
     Returns
     -------
-    str, str or list of str
+    str, EpilogTarget
         Command for main epilog processing, and a pypiper "target"
         (path to calls file, or that and epiallele path if applicable)
 
@@ -247,7 +247,8 @@ def run_main_epi_pipe(pm, epiconf, prog_spec, readsfile, sitesfile, outdir, rrbs
         epiconf, prog_spec, readsfile, sitesfile, outdir,
         rrbs_fill=rrbs_fill, context=epiconf.context,
         epis=True, process_logfile=get_proc_stat_log(outdir))
-    pm.run(epi_main_cmd, target=epi_main_tgt, lock_name="epilog_main", nofail=True)
+    pm.run(epi_main_cmd, target=epi_main_tgt.files,
+           lock_name="epilog_main", nofail=True)
 
     # Proceed with strand merger (if desired) based on the presence of the targets.
     missing = missing_targets(epi_main_tgt)

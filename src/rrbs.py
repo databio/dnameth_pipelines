@@ -110,7 +110,7 @@ def main(cmdl):
 
 
 
-	if args.dark_bases:
+	if args.dark_bases and args.dark_bases != 0:
 		pm.timestamp("### Dark sequencing mode: ")
 		cmd = tools.scripts_dir + "/darkSeqCombineReads.pl " + \
 			out_fastq_pre + "_R1.fastq " +\
