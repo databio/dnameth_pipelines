@@ -89,7 +89,8 @@ class ProgSpec(object):
 
         self.memory = memory
 
-        if not os.path.isfile(os.path.expanduser(os.path.expandvars(jar))):
+        jar = expand_path(jar)
+        if not os.path.isfile(jar):
             raise MissingEpilogError("Path to JAR isn't a file: {}".format(jar))
         self.jar = jar
 
@@ -128,6 +129,16 @@ class ProgSpec(object):
     def _get_program(pkg, prog):
         """ Get fully qualified classpath for program to run. """
         return ".".join(["episcall", pkg, prog])
+
+
+def expand_path(p):
+    """
+    Expand environment and user variable(s) in a filepath.
+
+    :param str p: Path in which to expand variables
+    :return str: Fully expanded filepath
+    """
+    return os.path.expanduser(os.path.expandvars(p))
 
 
 def get_dedup_bismark_cmd(paired, infile,

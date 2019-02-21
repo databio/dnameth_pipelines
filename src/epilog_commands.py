@@ -1,7 +1,7 @@
 """ Helper functions and data types """
 
 import os
-from helpers import EpilogTarget
+from helpers import expand_path, EpilogTarget
 
 __author__ = "Vince Reuter"
 __email__ = "vince.reuter@gmail.com"
@@ -107,6 +107,9 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir,
             pass
         if not valid:
             problems.append("Did not get nonnegative value -- {} = {}".format(label, value))
+
+    readsfile = expand_path(readsfile)
+    sitesfile = expand_path(sitesfile)
 
     problems.extend(["Missing {} file: {}".format(ft, fp) for ft, fp in
         zip(["reads", "sites"], [readsfile, sitesfile]) if not os.path.isfile(fp)])
