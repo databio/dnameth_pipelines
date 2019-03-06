@@ -1,7 +1,7 @@
 """ Helper functions and data types """
 
 import os
-from helpers import expand_path, EpilogTarget
+from helpers import expand_path, EpilogTarget, EpilogPretestError
 
 __author__ = "Vince Reuter"
 __email__ = "vince.reuter@gmail.com"
@@ -39,6 +39,8 @@ def make_main_epi_cmd(
         basic processing performance numbers
     :return str, EpilogTarget: Command to run main epilog processing, and
         sequence of targets (files) that it should produce
+    :raise EpilogPretestError: if one of the necessary preconditions to run
+        epilog is violated
     """
     return get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir,
         min_rlen=epiconf.read_length_threshold, min_qual=epiconf.qual_threshold,
@@ -83,6 +85,8 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir,
         Skip epiallele diversity/heterogeneity statistics
     process_logfile : str, optional
         Path to file for epiallele processing performance statistics
+    :raise EpilogPretestError: if one of the necessary preconditions to run
+        epilog is violated
 
     Returns
     -------
@@ -118,7 +122,7 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir,
         problems.append("Invalid context ({}); choose one: {}".format(context, ", ".join(contexts)))
 
     if problems:
-        raise Exception("Problems: {}".format(", ".join(problems)))
+        raise EpilogPretestError(problems)
 
     name_ss_file = "all_calls.txt"
 

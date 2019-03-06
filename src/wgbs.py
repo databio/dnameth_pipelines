@@ -17,7 +17,8 @@ import re
 import subprocess
 import pypiper
 from epilog_commands import *
-from helpers import FolderContext, MissingEpilogError, ProgSpec, get_dedup_bismark_cmd
+from helpers import EpilogPretestError, FolderContext, MissingEpilogError, \
+	ProgSpec, get_dedup_bismark_cmd
 
 
 def _parse_args(cmdl):
@@ -535,7 +536,7 @@ def main(cmdl):
 		cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
 		cmd3 = tools.samtools + " index " + out_spikein_sorted
 		cmd4 = "rm " + out_spikein_dedup
-		pm.run([cmd, cmd2, cmd3, cmd4], out_spikein_sorted +".bai", nofail=True)
+		pm.run([cmd, cmd2, cmd3, cmd4], out_spikein_sorted + ".bai", nofail=True)
 
 		# Spike-in methylation calling
 		################################################################################
@@ -548,7 +549,6 @@ def main(cmdl):
 			cmd1 += " >> " + pm.pipeline_stats_file
 			pm.callprint(cmd1, nofail=True)
 
-
 		# spike in conversion efficiency calculation with epilog
 		if epilog_prog_spec:
 			ngstk.make_sure_path_exists(spikein_folder)
@@ -556,9 +556,12 @@ def main(cmdl):
 			spikein_epiconf = copy.deepcopy(param.epilog)
 			spikein_epiconf.context = "C"
 			spikein_epiconf.no_epi_stats = True    # Always skip stats for spike-in.
-			run_main_epi_pipe(pm, epiconf=spikein_epiconf, prog_spec=epilog_prog_spec,
-				readsfile=out_spikein_sorted, sitesfile=resources.spikein_methpositions,
-				outdir=spikein_folder, rrbs_fill=0)
+			try:
+				run_main_epi_pipe(pm, epiconf=spikein_epiconf, prog_spec=epilog_prog_spec,
+					readsfile=out_spikein_sorted, sitesfile=resources.spikein_methpositions,
+					outdir=spikein_folder, rrbs_fill=0)
+			except EpilogPretestError as e:
+				print("WARNING -- Could not run epilog -- {}".format(e))
 
 		"""
 		epilog_spike_outfile=os.path.join(

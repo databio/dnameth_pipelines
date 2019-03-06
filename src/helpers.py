@@ -196,3 +196,16 @@ def missing_targets(targets, good=lambda f: os.path.isfile(f)):
 class MissingEpilogError(Exception):
     """ Exception for when a program specification's JAR is not a file. """
     pass
+
+
+class EpilogPretestError(Exception):
+    """ At least one precondition to run epilog is unmet. """
+
+    def __init__(self, problems):
+        """
+        Create the exception by providing precondition violation message(s).
+
+        :param Iterable[str] problems: precondition violation message(s)
+        """
+        msg = "Problem(s): {}".format("; ".join(problems))
+        super(EpilogPretestError, self).__init__(msg)
