@@ -54,46 +54,33 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir,
     """
     Create base for epiallele processing command.
 
-    Parameters
-    ----------
-    prog_spec : ProgSpec
-        Bundle of JAR, memory allocation, and number of cores
-    readsfile : str
-        Path to sorted, aligned BAM with reads to analyze.
-    sitesfile : str
-        Path to gzipped, tabix-indexed file with sites to analyze.
-    outdir : str
-        Path to output folder for single-site (and epiallele, as desired) output.
-    min_rlen : int
-        Minimum number of bases aligned for a read to be used in analysis.
-    min_qual : int
-        Minimum base call quality at a site and neighbor site(s) for it to
-        be used in analysis.
-    strand_method : str
-        Name of strategy to determine read orientation; 'tag' or 'flag'
-    rrbs_fill : int
-        Number of bases at read end to ignore due to RRBS "fill-in"
-    context : str
-        Methylation context (sense strand, e.g. 'CG' for typical mammalian analysis)
-    epis : bool
-        Produce epiallele results in addition to the more single-site-oriented output
-    halt : str, optional
-        Name of processing stage after which to halt; if omitted, run as much as possible
-    strand_specific : bool, default False
-        Indicate no strand merger is desired.
-    no_epi_stats : bool, default True
-        Skip epiallele diversity/heterogeneity statistics
-    process_logfile : str, optional
-        Path to file for epiallele processing performance statistics
+    :param ProgSpec prog_spec: Bundle of JAR, mem alloc, and number of cores
+    :param str readsfile: Path to sorted, aligned BAM with reads to analyze.
+    :param str sitesfile: Path to gzipped, tabix-indexed file with methyl sites.
+    :param str outdir: Path to output folder for single-site (and epiallele,
+        as desired) output.
+    :param int min_rlen: Minimum number of bases aligned for a read to be used.
+    :param int min_qual: Minimum base call quality at a site and neighbor
+        site(s) for it to be used.
+    :param str strand_method: Name of strategy to determine read orientation;
+        'tag' or 'flag'
+    :param int rrbs_fill: Number of bases at read end to ignore due to RRBS
+        "fill-in"
+    :param str context: Methylation context (sense strand, e.g. 'CG' for
+        typical mammalian analysis)
+    :param bool epis: Produce epiallele results in addition to the more
+        single-site-oriented output
+    :param str halt: Name of processing stage after which to halt; if omitted,
+        run as much as possible
+    :param bool strand_specific: Indicate no strand merger is desired.
+    :param bool no_epi_stats: Skip epiallele diversity/heterogeneity statistics
+    :param str process_logfile: Path to file for epiallele processing
+        performance statistics
     :raise EpilogPretestError: if one of the necessary preconditions to run
         epilog is violated
-
-    Returns
-    -------
-    str, EpilogTarget
-        Command for main epilog processing, and a pypiper "target"
-        (path to calls file, or that and epiallele path if applicable)
-
+    :return (str, EpilogTarget): Command for main epilog processing, and a
+        pypiper "target" (path to calls file, or that and epiallele path if
+        applicable)
     """
 
     import os
