@@ -17,7 +17,7 @@ import re
 import subprocess
 import pypiper
 from epilog_commands import *
-from helpers import EpilogPretestError, FolderContext, MissingEpilogError, \
+from helpers import FolderContext, MissingEpilogError, \
 	ProgSpec, get_dedup_bismark_cmd
 
 
@@ -560,7 +560,7 @@ def main(cmdl):
 				run_main_epi_pipe(pm, epiconf=spikein_epiconf, prog_spec=epilog_prog_spec,
 					readsfile=out_spikein_sorted, sitesfile=resources.spikein_methpositions,
 					outdir=spikein_folder, rrbs_fill=0)
-			except EpilogPretestError as e:
+			except Exception as e:
 				print("WARNING -- Could not run epilog -- {}".format(e))
 
 		"""
