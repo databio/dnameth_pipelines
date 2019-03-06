@@ -242,7 +242,7 @@ def run_main_epi_pipe(pm, epiconf, prog_spec, readsfile, sitesfile, outdir, rrbs
         rrbs_fill=rrbs_fill, context=epiconf.context,
         epis=True, process_logfile=get_proc_stat_log(outdir))
     pm.run(epi_main_cmd, target=epi_main_tgt.files,
-           lock_name="epilog_main", nofail=True)
+           lock_name="epilog_main", nofail=False)
 
     # Proceed with strand merger (if desired) based on the presence of the targets.
     missing = missing_targets(epi_main_tgt)
@@ -253,10 +253,10 @@ def run_main_epi_pipe(pm, epiconf, prog_spec, readsfile, sitesfile, outdir, rrbs
         pm.timestamp("### Epilog strand merger")
         merge_cmd, merged_epi_tgt = get_epilog_strand_merge_command(
             prog_spec, epi_main_tgt.epis_file, data_type="epialleles")
-        pm.run(merge_cmd, merged_epi_tgt, lock_name="epilog_merge_epis", nofail=True)
+        pm.run(merge_cmd, merged_epi_tgt, lock_name="epilog_merge_epis", nofail=False)
         merge_cmd, merged_ss_tgt = get_epilog_strand_merge_command(
             prog_spec, epi_main_tgt.single_sites_file, data_type="sites")
-        pm.run(merge_cmd, merged_ss_tgt, lock_name="epilog_merge_single", nofail=True)
+        pm.run(merge_cmd, merged_ss_tgt, lock_name="epilog_merge_single", nofail=False)
         epis_file = merged_epi_tgt
     else:
         epis_file = epi_main_tgt.epis_file
@@ -272,7 +272,7 @@ def run_main_epi_pipe(pm, epiconf, prog_spec, readsfile, sitesfile, outdir, rrbs
             epilog_stats_target = os.path.join(outdir, "epiallele_statistics.txt")
             epi_stats_cmd, epi_stats_tgt = get_epilog_epistats_command(prog_spec,
                 infile=epis_file, outfile=epilog_stats_target, stranded=epiconf.strand_specific)
-            pm.run(epi_stats_cmd, epi_stats_tgt, lock_name="epilog_epistats", nofail=True)
+            pm.run(epi_stats_cmd, epi_stats_tgt, lock_name="epilog_epistats", nofail=False)
 
 
 def _validate_data_type(dt):
