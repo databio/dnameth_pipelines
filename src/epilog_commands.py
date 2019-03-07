@@ -1,7 +1,7 @@
 """ Helper functions and data types """
 
 import os
-from helpers import expand_path, EpilogTarget
+from helpers import expand_path, EpilogTarget, EpilogPretestError
 
 __author__ = "Vince Reuter"
 __email__ = "vince.reuter@gmail.com"
@@ -39,6 +39,8 @@ def make_main_epi_cmd(
         basic processing performance numbers
     :return str, EpilogTarget: Command to run main epilog processing, and
         sequence of targets (files) that it should produce
+    :raise EpilogPretestError: if one of the necessary preconditions to run
+        epilog is violated
     """
     return get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir,
         min_rlen=epiconf.read_length_threshold, min_qual=epiconf.qual_threshold,
@@ -52,44 +54,33 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir,
     """
     Create base for epiallele processing command.
 
-    Parameters
-    ----------
-    prog_spec : ProgSpec
-        Bundle of JAR, memory allocation, and number of cores
-    readsfile : str
-        Path to sorted, aligned BAM with reads to analyze.
-    sitesfile : str
-        Path to gzipped, tabix-indexed file with sites to analyze.
-    outdir : str
-        Path to output folder for single-site (and epiallele, as desired) output.
-    min_rlen : int
-        Minimum number of bases aligned for a read to be used in analysis.
-    min_qual : int
-        Minimum base call quality at a site and neighbor site(s) for it to
-        be used in analysis.
-    strand_method : str
-        Name of strategy to determine read orientation; 'tag' or 'flag'
-    rrbs_fill : int
-        Number of bases at read end to ignore due to RRBS "fill-in"
-    context : str
-        Methylation context (sense strand, e.g. 'CG' for typical mammalian analysis)
-    epis : bool
-        Produce epiallele results in addition to the more single-site-oriented output
-    halt : str, optional
-        Name of processing stage after which to halt; if omitted, run as much as possible
-    strand_specific : bool, default False
-        Indicate no strand merger is desired.
-    no_epi_stats : bool, default True
-        Skip epiallele diversity/heterogeneity statistics
-    process_logfile : str, optional
-        Path to file for epiallele processing performance statistics
-
-    Returns
-    -------
-    str, EpilogTarget
-        Command for main epilog processing, and a pypiper "target"
-        (path to calls file, or that and epiallele path if applicable)
-
+    :param ProgSpec prog_spec: Bundle of JAR, mem alloc, and number of cores
+    :param str readsfile: Path to sorted, aligned BAM with reads to analyze.
+    :param str sitesfile: Path to gzipped, tabix-indexed file with methyl sites.
+    :param str outdir: Path to output folder for single-site (and epiallele,
+        as desired) output.
+    :param int min_rlen: Minimum number of bases aligned for a read to be used.
+    :param int min_qual: Minimum base call quality at a site and neighbor
+        site(s) for it to be used.
+    :param str strand_method: Name of strategy to determine read orientation;
+        'tag' or 'flag'
+    :param int rrbs_fill: Number of bases at read end to ignore due to RRBS
+        "fill-in"
+    :param str context: Methylation context (sense strand, e.g. 'CG' for
+        typical mammalian analysis)
+    :param bool epis: Produce epiallele results in addition to the more
+        single-site-oriented output
+    :param str halt: Name of processing stage after which to halt; if omitted,
+        run as much as possible
+    :param bool strand_specific: Indicate no strand merger is desired.
+    :param bool no_epi_stats: Skip epiallele diversity/heterogeneity statistics
+    :param str process_logfile: Path to file for epiallele processing
+        performance statistics
+    :raise EpilogPretestError: if one of the necessary preconditions to run
+        epilog is violated
+    :return (str, EpilogTarget): Command for main epilog processing, and a
+        pypiper "target" (path to calls file, or that and epiallele path if
+        applicable)
     """
 
     import os
@@ -118,7 +109,7 @@ def get_epilog_full_command(prog_spec, readsfile, sitesfile, outdir,
         problems.append("Invalid context ({}); choose one: {}".format(context, ", ".join(contexts)))
 
     if problems:
-        raise Exception("Problems: {}".format(", ".join(problems)))
+        raise EpilogPretestError(problems)
 
     name_ss_file = "all_calls.txt"
 
@@ -251,7 +242,7 @@ def run_main_epi_pipe(pm, epiconf, prog_spec, readsfile, sitesfile, outdir, rrbs
         rrbs_fill=rrbs_fill, context=epiconf.context,
         epis=True, process_logfile=get_proc_stat_log(outdir))
     pm.run(epi_main_cmd, target=epi_main_tgt.files,
-           lock_name="epilog_main", nofail=True)
+           lock_name="epilog_main", nofail=False)
 
     # Proceed with strand merger (if desired) based on the presence of the targets.
     missing = missing_targets(epi_main_tgt)
@@ -262,10 +253,10 @@ def run_main_epi_pipe(pm, epiconf, prog_spec, readsfile, sitesfile, outdir, rrbs
         pm.timestamp("### Epilog strand merger")
         merge_cmd, merged_epi_tgt = get_epilog_strand_merge_command(
             prog_spec, epi_main_tgt.epis_file, data_type="epialleles")
-        pm.run(merge_cmd, merged_epi_tgt, lock_name="epilog_merge_epis", nofail=True)
+        pm.run(merge_cmd, merged_epi_tgt, lock_name="epilog_merge_epis", nofail=False)
         merge_cmd, merged_ss_tgt = get_epilog_strand_merge_command(
             prog_spec, epi_main_tgt.single_sites_file, data_type="sites")
-        pm.run(merge_cmd, merged_ss_tgt, lock_name="epilog_merge_single", nofail=True)
+        pm.run(merge_cmd, merged_ss_tgt, lock_name="epilog_merge_single", nofail=False)
         epis_file = merged_epi_tgt
     else:
         epis_file = epi_main_tgt.epis_file
@@ -281,7 +272,7 @@ def run_main_epi_pipe(pm, epiconf, prog_spec, readsfile, sitesfile, outdir, rrbs
             epilog_stats_target = os.path.join(outdir, "epiallele_statistics.txt")
             epi_stats_cmd, epi_stats_tgt = get_epilog_epistats_command(prog_spec,
                 infile=epis_file, outfile=epilog_stats_target, stranded=epiconf.strand_specific)
-            pm.run(epi_stats_cmd, epi_stats_tgt, lock_name="epilog_epistats", nofail=True)
+            pm.run(epi_stats_cmd, epi_stats_tgt, lock_name="epilog_epistats", nofail=False)
 
 
 def _validate_data_type(dt):
