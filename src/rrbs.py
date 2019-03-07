@@ -8,7 +8,7 @@ __author__ = "Nathan Sheffield"
 __email__ = "nathan@code.databio.org"
 __credits__ = ["Charles Dietz", "Johanna Klughammer", "Christoph Bock", "Andreas Schoenegger"]
 __license__ = "GPL3"
-__version__ = "0.3.0-dev"
+__version__ = "0.4.0"
 
 
 import copy

@@ -1,13 +1,20 @@
 # Change log
 All notable changes to this project will be documented in this file.
 
-## [0.3.0] -- Unreleased
+## [0.4.0] -- 2019-03-07
+
+### Changed
+
+	- Fixed errors that would halt the whole pipeline on spike-in failure
+	- Added support for dark sequencing
+
+## [0.3.0] -- 2018-12-28
 
 ### Added
 
 	- Support for scala epilog methcalling.
 
-## [0.2.0] -- 10/25/2018
+## [0.2.0] -- 2018-10-25
 
 ### Added
 
