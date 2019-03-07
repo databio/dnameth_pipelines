@@ -1,0 +1,24 @@
+@correctnumberofbasesadded?:2:1 1:N:0
+CCCCCC
++
+!!!!!!
+@arecorrectbasesfromR1replaced?:2:2 1:N:0
+CCCCCC
++
+!!!JJJ
+@iftiekeepR1?:2:3 1:N:0
+CCCCCC
++
+!!!!J!
+@ifbaseissamedontreplace:2:4 1:N:0
+CCCCAA
++
+!!!!JJ
+@arecorrectbasesfromR1replaced?:2:5 1:N:0
+CGGGGA
++
+IIIIII
+@screenoutreadsthatdontpassfilter?:2:6 1:Y:0
+CCCCCC
++
+!!!!!!

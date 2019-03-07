@@ -8,7 +8,7 @@ __author__ = "Nathan Sheffield"
 __email__ = "nathan@code.databio.org"
 __credits__ = ["Charles Dietz", "Johanna Klughammer", "Christoph Bock", "Andreas Schoenegger"]
 __license__ = "GPL3"
-__version__ = "0.3.0-dev"
+__version__ = "0.4.0"
 
 
 import copy
@@ -16,7 +16,8 @@ import os
 import re
 import pypiper
 from epilog_commands import *
-from helpers import MissingEpilogError, ProgSpec, get_dedup_bismark_cmd
+from helpers import MissingEpilogError, ProgSpec, \
+	get_dedup_bismark_cmd
 
 
 def _parse_args(cmdl):
@@ -110,7 +111,7 @@ def main(cmdl):
 
 
 
-	if args.dark_bases:
+	if args.dark_bases and args.dark_bases != 0:
 		pm.timestamp("### Dark sequencing mode: ")
 		cmd = tools.scripts_dir + "/darkSeqCombineReads.pl " + \
 			out_fastq_pre + "_R1.fastq " +\
@@ -568,9 +569,12 @@ def main(cmdl):
 		spikein_epiconf = copy.deepcopy(param.epilog)
 		spikein_epiconf.context = "C"
 		spikein_epiconf.no_epi_stats = True  # Always skip stats for spike-in.
-		run_main_epi_pipe(pm, epiconf=spikein_epiconf, prog_spec=epilog_prog_spec,
-			readsfile=out_spikein_sorted, sitesfile=resources.spikein_methpositions,
-			outdir=spikein_folder, rrbs_fill=args.rrbs_fill)
+		try:
+			run_main_epi_pipe(pm, epiconf=spikein_epiconf, prog_spec=epilog_prog_spec,
+				readsfile=out_spikein_sorted, sitesfile=resources.spikein_methpositions,
+				outdir=spikein_folder, rrbs_fill=args.rrbs_fill)
+		except Exception as e:
+			print("WARNING -- Could not run epilog -- {}".format(e))
 
 	"""
 	epilog_spike_outfile=os.path.join(

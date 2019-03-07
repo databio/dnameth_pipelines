@@ -20,7 +20,8 @@ while($seq1header = <$fh>) {
     
     $seq1 = <$fh>;
     $seq2header = <$fh2>;
-    $seq2 = <$fh2>;
+    chomp($seq2 = <$fh2>);
+    $seq2length = length $seq2;
     $seq2add = substr($seq2, 0, $addlength); #bases that will be added to seq1
     <$fh2>; # skip third line
     $linethree = <$fh>;
@@ -28,10 +29,43 @@ while($seq1header = <$fh>) {
     # add this read to updated fastq file only if it passed filter 
     # (filtered=N means it was not filtered so we should keep it)
     if (($seq1header =~ /:N:/) and ($seq2header =~ /:N:/)) {
+                
+        $newseq = ($seq2add . $seq1);
+        $qual1 = <$fh>;
+        $qual2 = <$fh2>;
+        $newqual = (substr($qual2, 0, $addlength) . $qual1);
+        
+        # if you are not concerned with the overlapping sequence between R1 and R2
+        # you could delete this for loop to save computational time
+        ## for the bases that overlap, keep whichever has the best quality score
+        ## loop through overlapping bases, add whichever has the best score to $seq2add
+        for (my $i=$addlength; $i < $seq2length; $i++) {
+        
+            # only compare quality scores if bases don't match
+            # perl is zero indexed so $addength + 1 (1 index) base is the first to be compared
+            if (substr($seq2, $i, 1) ne substr($seq1, $i-$addlength, 1)) {
+                $thisbase1 = substr($seq1, $i-$addlength, 1);
+                $thisbase2 = substr($seq2, $i, 1);
+                
+                # compare quality scores, if seq2 is better then change
+                # otherwise keep current base and quality score
+                # higher number/ASCII character is better phred score
+                if (ord(substr($qual2, $i, 1)) > ord(substr($qual1, $i-$addlength, 1))) {
+                    substr($newseq, $i, 1) = $thisbase2;
+                    substr($newqual, $i, 1) = substr($qual2, $i, 1);
+                }
+            }
+            # else, make no changes to existing base
+        
+        }
+        
         print $fhout $seq1header;
-        print $fhout ($seq2add . $seq1);
+        print $fhout $newseq;
         print $fhout $linethree; # line three of seq1
-        print $fhout (substr(<$fh2>, 0, $addlength) . <$fh>); # concatenate quality scores
+        print $fhout $newqual; # concatenate quality scores
+        
+        
+        
     } else {
         # skip quality scores to move to next read
         <$fh>;

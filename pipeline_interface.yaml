@@ -57,6 +57,7 @@ pipelines:
       "--single-or-paired": read_type
     optional_arguments:
       "--input2": read2
+      "--dark-bases": dark_bases
     resources:
       default:
         file_size: "0"

@@ -35,6 +35,11 @@ class EpilogTarget(Sequence):
     def epis_file(self):
         return self._epi
 
+    @property
+    def files(self):
+        import copy
+        return copy.copy(self._files)
+
     def __getitem__(self, item):
         return self._files[item]
 
@@ -84,6 +89,7 @@ class ProgSpec(object):
 
         self.memory = memory
 
+        jar = expand_path(jar)
         if not os.path.isfile(jar):
             raise MissingEpilogError("Path to JAR isn't a file: {}".format(jar))
         self.jar = jar
@@ -123,6 +129,16 @@ class ProgSpec(object):
     def _get_program(pkg, prog):
         """ Get fully qualified classpath for program to run. """
         return ".".join(["episcall", pkg, prog])
+
+
+def expand_path(p):
+    """
+    Expand environment and user variable(s) in a filepath.
+
+    :param str p: Path in which to expand variables
+    :return str: Fully expanded filepath
+    """
+    return os.path.expanduser(os.path.expandvars(p))
 
 
 def get_dedup_bismark_cmd(paired, infile,
@@ -180,3 +196,16 @@ def missing_targets(targets, good=lambda f: os.path.isfile(f)):
 class MissingEpilogError(Exception):
     """ Exception for when a program specification's JAR is not a file. """
     pass
+
+
+class EpilogPretestError(Exception):
+    """ At least one precondition to run epilog is unmet. """
+
+    def __init__(self, problems):
+        """
+        Create the exception by providing precondition violation message(s).
+
+        :param Iterable[str] problems: precondition violation message(s)
+        """
+        msg = "Problem(s): {}".format("; ".join(problems))
+        super(EpilogPretestError, self).__init__(msg)
