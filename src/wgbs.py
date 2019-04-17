@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 
-"""
-WGBS pipeline
-"""
+""" Processing and analysis pipeline for data from a whole-genome bisulfite sequencing experiment. """
 
 __author__ = "Nathan Sheffield"
 __email__ = "nathan@code.databio.org"
-__credits__ = ["Charles Dietz", "Johanna Klughammer", "Christoph Bock", "Andreas Schoenegger"]
+__credits__ = ["Charles Dietz", "Johanna Klughammer", "Andreas Schoenegger", "Vince Reuter", "Christoph Bock"]
 __license__ = "GPL3"
-__version__ = "0.4.0"
+__version__ = "0.5dev"
 
 
 import copy
@@ -16,8 +14,9 @@ import os
 import re
 import subprocess
 import pypiper
+from pypiper.utils import head
 from epilog_commands import *
-from helpers import FolderContext, MissingEpilogError, \
+from helpers import get_qual_code_cmd, FolderContext, MissingEpilogError, \
 	ProgSpec, get_dedup_bismark_cmd
 
 
@@ -128,13 +127,7 @@ def main(cmdl):
 	pm.timestamp("### Adapter trimming: ")
 
 	# We need to detect the quality encoding type of the fastq.
-	if isinstance(unaligned_fastq, list):
-		example_fq = unaligned_fastq[0]
-	else:
-		example_fq = unaligned_fastq
-
-	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "detect_quality_code.py") + " -f " + example_fq
-	encoding_string = pm.checkprint(cmd)
+	encoding_string = pm.checkprint(get_qual_code_cmd(tools, head(unaligned_fastq)))
 	if encoding_string.find("phred33") != -1:
 		encoding = "phred33"
 	elif encoding_string.find("phred64") != -1:

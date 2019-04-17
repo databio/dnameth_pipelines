@@ -170,6 +170,18 @@ def get_dedup_bismark_cmd(paired, infile,
     return cmd, outfile
 
 
+def get_qual_code_cmd(tools, fqfile):
+    """
+    Get command to run quality code script.
+
+    :param attmap.AttMap tools: metadata encoding tools specifications
+    :param str fqfile: path to unaligned FASTQ file
+    :return str: command to run quality code script
+    """
+    script = os.path.join(tools.scripts_dir, "detect_quality_code.py")
+    return "{} -u {} -f {}".format(tools.python, script, fqfile)
+
+
 def missing_targets(targets, good=lambda f: os.path.isfile(f)):
     """
     Find missing target(s) of a command.

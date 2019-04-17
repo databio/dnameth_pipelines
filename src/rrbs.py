@@ -1,23 +1,22 @@
 #!/usr/bin/env python
 
-"""
-RRBS pipeline
-"""
+""" Processing and analysis pipeline for data from a reduced-representation bisulfite sequencing experiment. """
 
 __author__ = "Nathan Sheffield"
 __email__ = "nathan@code.databio.org"
-__credits__ = ["Charles Dietz", "Johanna Klughammer", "Christoph Bock", "Andreas Schoenegger"]
+__credits__ = ["Charles Dietz", "Johanna Klughammer", "Andreas Schoenegger", "Vince Reuter", "Christoph Bock"]
 __license__ = "GPL3"
-__version__ = "0.4.0"
+__version__ = "0.5dev"
 
 
 import copy
 import os
 import re
 import pypiper
+from pypiper.utils import head
 from epilog_commands import *
 from helpers import MissingEpilogError, ProgSpec, \
-	get_dedup_bismark_cmd
+	get_dedup_bismark_cmd, get_qual_code_cmd
 
 
 def _parse_args(cmdl):
@@ -109,8 +108,6 @@ def main(cmdl):
 	pm.report_result("Read_type", args.single_or_paired)
 	pm.report_result("Genome", args.genome_assembly)
 
-
-
 	if args.dark_bases and args.dark_bases != 0:
 		pm.timestamp("### Dark sequencing mode: ")
 		cmd = tools.scripts_dir + "/darkSeqCombineReads.pl " + \
@@ -123,22 +120,11 @@ def main(cmdl):
 		pm.run(cmd, unaligned_fastq)
 		args.paired_end = False
 
-
-
 	################################################################################
 	pm.timestamp("### Adapter trimming: ")
 
 	# We need to detect the quality encoding type of the fastq.
-
-	if args.paired_end:
-		# Just look at the first read
-		cmd = tools.python + " -u " + os.path.join(tools.scripts_dir,
-		"detect_quality_code.py") + " -f " + unaligned_fastq[0]
-	else:
-		cmd = tools.python + " -u " + os.path.join(tools.scripts_dir,
-		"detect_quality_code.py") + " -f " + unaligned_fastq
-
-	encoding_string = pm.checkprint(cmd)
+	encoding_string = pm.checkprint(get_qual_code_cmd(tools, head(unaligned_fastq)))
 	if encoding_string.find("phred33") != -1:
 		encoding = "phred33"
 	elif encoding_string.find("phred64") != -1:
