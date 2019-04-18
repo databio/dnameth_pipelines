@@ -10,6 +10,9 @@ pipelines:
     looper_args: True
     required_input_files: [data_source]
     ngs_input_files: [data_source]
+    outputs:
+      smooth_bw: "a_{sample.name}/b_{sample.protocol}.txt"
+      unalign: "u_{sample.name}_{sample.protocol}.txt"
     arguments:
       "--sample-name": sample_name
       "--genome": genome
@@ -50,6 +53,9 @@ pipelines:
     required_input_files: [data_source]
     all_input_files: [data_source, read1, read2]
     ngs_input_files: [data_source, read1, read2]
+    outputs:
+      smooth_bw: "a_{sample.name}/b_{sample.protocol}.txt"
+      unalign: "u_{sample.name}_{sample.protocol}.txt"
     arguments:
       "--sample-name": sample_name
       "--genome": genome
@@ -79,3 +85,4 @@ pipelines:
         cores: "6"
         mem: "24000"
         time: "2-00:00:00"
+
