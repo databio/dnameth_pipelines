@@ -95,7 +95,7 @@ def main(cmdl):
 
 	pm.config.parameters.pipeline_outfolder = outfolder
 
-	print(pm.config)
+	print("Pipeline settings: {}".format(pm.config))
 	tools = pm.config.tools  # Convenience alias
 	param = pm.config.parameters
 	resources = pm.config.resources
