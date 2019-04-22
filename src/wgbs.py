@@ -161,14 +161,13 @@ def main(cmdl):
 	cmd += " ILLUMINACLIP:" + resources.adapter_file + param.trimmomatic.illuminaclip
 
 	pm.run(cmd, trimmed_fastq,
-		follow = ngstk.check_trim(trimmed_fastq, args.paired_end, trimmed_fastq_R2,
-			fastqc_folder = os.path.join(param.pipeline_outfolder, "fastqc/")))
+		follow=ngstk.check_trim(trimmed_fastq, args.paired_end, trimmed_fastq_R2,
+			fastqc_folder=os.path.join(param.pipeline_outfolder, "fastqc/")))
 
 	pm.clean_add(os.path.join(fastq_folder, "*.fastq"), conditional=True)
 	pm.clean_add(os.path.join(fastq_folder, "*.fq"), conditional=True)
 	pm.clean_add(os.path.join(fastq_folder, "*.log"), conditional=True)
 	pm.clean_add(fastq_folder, conditional=True)
-
 
 	# WGBS alignment with bismark.
 	################################################################################
@@ -178,19 +177,15 @@ def main(cmdl):
 	# of cores that we aresupposed to. It will start 2 threads in
 	# normal mode, and 4 in --non-directional mode.
 
-	if param.bismark.nondirectional:
-		bismark_bowtie_threads = 4
-	else:
-		bismark_bowtie_threads = 2
-
+	bismark_bowtie_threads = 4 if param.bismark.nondirectional else 2
 	bismark_cores = int(pm.cores) // bismark_bowtie_threads
 
 	if int(pm.cores) % bismark_bowtie_threads != 0:
-		print("inefficient core request; make divisible by " + 	str(bismark_bowtie_threads))
+		print("inefficient core request; make divisible by " + str(bismark_bowtie_threads))
 
-	bismark_folder = os.path.join(param.pipeline_outfolder, "bismark_" + args.genome_assembly )
+	bismark_folder = os.path.join(param.pipeline_outfolder, "bismark_" + args.genome_assembly)
 	ngstk.make_sure_path_exists(bismark_folder)
-	bismark_temp = os.path.join(bismark_folder, "bismark_temp" )
+	bismark_temp = os.path.join(bismark_folder, "bismark_temp")
 	ngstk.make_sure_path_exists(bismark_temp)
 
 	if args.paired_end:
@@ -214,7 +209,7 @@ def main(cmdl):
 	if args.paired_end:
 		cmd += " --minins 0"
 		cmd += " --maxins " + str(param.bismark.maxins)
-	cmd += " -p " + str(bismark_cores) # Number of processors
+	cmd += " -p " + str(bismark_cores)    # Number of processors
 	cmd += " --basename=" + args.sample_name
 
 	# By default, BS-seq libraries are directional, but this can be turned off
@@ -227,17 +222,14 @@ def main(cmdl):
 		pm.report_result("Aligned_reads", ar)
 		rr = float(pm.get_stat("Raw_reads"))
 		tr = float(pm.get_stat("Trimmed_reads"))
-		pm.report_result("Alignment_rate", round(float(ar) *
-	 100 / float(tr), 2))
+		pm.report_result("Alignment_rate", round(float(ar) * 100 / float(tr), 2))
 		pm.report_result("Total_efficiency", round(float(ar) * 100 / float(rr), 2))
 
 		mr = ngstk.count_multimapping_reads(out_bismark, args.paired_end)
 		pm.report_result("Multimap_reads", mr)
-		pm.report_result("Multimap_rate", round(float(mr) *
-	 100 / float(tr), 2))
+		pm.report_result("Multimap_rate", round(float(mr) * 100 / float(tr), 2))
 
 	pm.run(cmd, out_bismark, follow = check_bismark)
-
 
 	# Secondary single mode:
 	# align unmapped in single end mode?
@@ -248,9 +240,9 @@ def main(cmdl):
 			read_string = "R" + str(read_n)
 			bismark2_folder = os.path.join(bismark_folder, "se" + str(read_string))
 			ngstk.make_sure_path_exists(bismark2_folder)
-			bismark2_temp = os.path.join(bismark2_folder, "bismark2_temp" )
+			bismark2_temp = os.path.join(bismark2_folder, "bismark2_temp")
 			ngstk.make_sure_path_exists(bismark2_temp)
-			out_bismark2 = os.path.join(bismark2_folder, args.sample_name + read_string +  ".bam")
+			out_bismark2 = os.path.join(bismark2_folder, args.sample_name + read_string + ".bam")
 
 			unmapped_reads_pre = os.path.join(bismark_folder, args.sample_name)
 
@@ -290,16 +282,13 @@ def main(cmdl):
 
 		pm.run(cmd, lock_name="rematch")
 
-
-
-
 	pm.timestamp("### PCR duplicate removal: ")
 	# Bismark's deduplication forces output naming, how annoying.
 	#out_dedup = os.path.join(bismark_folder, args.sample_name + "_pe.deduplicated.bam")
 	out_dedup = re.sub(r'.bam$', '.deduplicated.bam', out_bismark)
 	cmd, out_dedup = get_dedup_bismark_cmd(paired=args.paired_end, infile=out_bismark, prog=tools.deduplicate_bismark)
 	with FolderContext(bismark_folder):
-		pm.run(cmd, out_dedup, follow = lambda: pm.report_result(
+		pm.run(cmd, out_dedup, follow=lambda: pm.report_result(
 			"Deduplicated_reads", ngstk.count_reads(out_dedup, args.paired_end)))
 	if not os.path.isfile(out_dedup):
 		pm.fail_pipeline(IOError("Missing deduplication target: {}".format(out_dedup)))
@@ -347,28 +336,23 @@ def main(cmdl):
 	pm.clean_add(out_sam) # dedup conversion to sam
 	pm.clean_add(out_sam_filter) # after filtering
 
-
 	# Epilog analysis
 	################################################################################
 
 	# Create the program specification, in scope both for ordinary and spike-in.
+	epilog_prog_spec = None
 	if args.epilog:
 		try:
 			epilog_prog_spec = ProgSpec(jar=tools.epilog, memory=pm.mem, cores=pm.cores)
 		except MissingEpilogError as e:
 			print("ERROR: {} --  skipping epilog".format(str(e)))
-			epilog_prog_spec = None
-	else:
-		epilog_prog_spec = None
 
 	if epilog_prog_spec:
-
 		# Sort and index the deduplicated alignments.
 		out_dedup_sorted = re.sub(r'.bam$', "_sort.bam", out_dedup)
 		cmd2 = tools.samtools + " sort -@ " + str(pm.cores) + " -o " + out_dedup_sorted + " " + out_dedup
 		cmd3 = tools.samtools + " index " + out_dedup_sorted
 		pm.run([cmd2, cmd3], out_dedup_sorted + ".bai")
-
 		# Separate output subfolder for epilog
 		epilog_output_dir = os.path.join(
 			param.pipeline_outfolder, "epilog_" + args.genome_assembly)
@@ -379,7 +363,6 @@ def main(cmdl):
 			readsfile=out_dedup_sorted, sitesfile=resources.methpositions,
 			outdir=epilog_output_dir, rrbs_fill=0)
 		pm.timestamp("### COMPLETE: epilog")
-
 
 	# Methylation extractor
 	################################################################################
@@ -457,7 +440,6 @@ def main(cmdl):
 	if not keep_bismark_report:
 		pm.clean_add(out_cpg_report_filt)
 
-
 	# Make bigwig
 	################################################################################
 	pm.timestamp("### Make bigwig: ")
@@ -472,7 +454,6 @@ def main(cmdl):
 	cmd2 += " " + out_bigwig
 
 	pm.run([cmd1, cmd2], out_bigwig)
-
 
 	# Spike-in alignment
 	################################################################################
@@ -508,10 +489,9 @@ def main(cmdl):
 		if args.paired_end:
 			cmd += " --minins 0"
 			cmd += " --maxins " + str(param.bismark.maxins)
-		cmd += " --basename="  + out_spikein_base
+		cmd += " --basename=" + out_spikein_base
 		if param.bismark.nondirectional:
 			cmd += " --non_directional"
-
 
 		pm.run(cmd, out_spikein, nofail=True)
 		# Clean up the unmapped file which is copied from the parent
@@ -519,10 +499,13 @@ def main(cmdl):
 		pm.clean_add(os.path.join(spikein_folder, "*.fq"), conditional=False)
 		pm.clean_add(spikein_temp)
 
-
 		pm.timestamp("### PCR duplicate removal (Spike-in): ")
 		# Bismark's deduplication forces output naming, how annoying.
 		#out_spikein_dedup = spikein_folder + args.sample_name + ".spikein.aln.deduplicated.bam"
+		if not os.path.isfile(out_spikein):
+			print("Missing spike-in output file ({})".format(out_spikein))
+			print("Spike-in folder contents:\n{}".format("\n".join(os.listdir(bismark_folder))))
+			print("Spike-in tempfolder contents:\n{}".format("\n".join(os.listdir(spikein_temp))))
 		cmd, out_spikein_dedup = get_dedup_bismark_cmd(
 			paired=args.paired_end, infile=out_spikein, prog=tools.deduplicate_bismark)
 		out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_spikein_dedup)
@@ -589,7 +572,6 @@ def main(cmdl):
 			x = pm.checkprint(cmd_rate, shell=True)
 			pm.report_result(chrom+'_meth_EL', x)
 		"""
-
 
 	# Final sorting and indexing
 	################################################################################
