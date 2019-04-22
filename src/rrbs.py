@@ -15,7 +15,7 @@ import re
 import pypiper
 from pypiper.utils import head
 from epilog_commands import *
-from helpers import MissingEpilogError, ProgSpec, \
+from helpers import MissingEpilogError, MissingInputFileException, ProgSpec, \
 	get_dedup_bismark_cmd, get_qual_code_cmd
 
 
@@ -474,7 +474,7 @@ def main(cmdl):
 
 	# get unaligned reads out of BSMAP bam
 	bsmap_unalignable_bam = os.path.join(bsmap_folder, args.sample_name + "_unalignable.bam")
-	pm.run(tools.samtools + " view -bh -f 4 -F 128 "+out_bsmap+" > " + bsmap_unalignable_bam, bsmap_unalignable_bam, shell=True)
+	pm.run(tools.samtools + " view -bh -f 4 -F 128 " + out_bsmap + " > " + bsmap_unalignable_bam, bsmap_unalignable_bam, shell=True)
 
 	# Re-flag the unaligned paired-end reads to make them look like unpaired for Bismark
 	if args.paired_end:
@@ -488,7 +488,7 @@ def main(cmdl):
 
 	# convert BAM to fastq
 	bsmap_fastq_unalignable_pre = os.path.join(bsmap_folder, args.sample_name + "_unalignable")
-	bsmap_fastq_unalignable = bsmap_fastq_unalignable_pre  + "_R1.fastq"
+	bsmap_fastq_unalignable = bsmap_fastq_unalignable_pre + "_R1.fastq"
 	cmd = ngstk.bam_to_fastq(bsmap_unalignable_bam, bsmap_fastq_unalignable_pre, args.paired_end)
 	pm.run(cmd, bsmap_fastq_unalignable)
 
@@ -518,24 +518,26 @@ def main(cmdl):
 
 	# Clean up the unmapped file which is copied from the parent
 	# bismark folder to here:
-	pm.clean_add(os.path.join(spikein_folder,"*.fastq"), conditional=True)
-	pm.clean_add(os.path.join(spikein_folder,"*.fq"), conditional=True)
+	pm.clean_add(os.path.join(spikein_folder, "*.fastq"), conditional=True)
+	pm.clean_add(os.path.join(spikein_folder, "*.fq"), conditional=True)
 	pm.clean_add(out_spikein, conditional=True)
 	pm.clean_add(spikein_temp)
-
-
 
 	################################################################################
 	pm.timestamp("### PCR duplicate removal (spike-in): ")
 	# Bismark's deduplication forces output naming, how annoying.
 	#out_spikein_dedup = spikein_folder + args.sample_name + ".spikein.aln.deduplicated.bam"
-	cmd, out_spikein_dedup = get_dedup_bismark_cmd(paired=args.paired_end,
-		infile=out_spikein, prog=tools.deduplicate_bismark)
-	out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_spikein_dedup)
-	cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
-	cmd3 = tools.samtools + " index " + out_spikein_sorted
-	pm.run([cmd, cmd2, cmd3], out_spikein_sorted + ".bai", nofail=True)
-	pm.clean_add(out_spikein_dedup, conditional=False)
+	try:
+		cmd, out_spikein_dedup = get_dedup_bismark_cmd(paired=args.paired_end,
+			infile=out_spikein, prog=tools.deduplicate_bismark)
+	except MissingInputFileException as e:
+		print("Could not create Bismark deduplication command ({}); skipping spike-in")
+	else:
+		out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_spikein_dedup)
+		cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
+		cmd3 = tools.samtools + " index " + out_spikein_sorted
+		pm.run([cmd, cmd2, cmd3], out_spikein_sorted + ".bai", nofail=True)
+		pm.clean_add(out_spikein_dedup, conditional=False)
 
 	# Spike-in methylation calling
 	################################################################################
