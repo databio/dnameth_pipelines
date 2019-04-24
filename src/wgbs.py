@@ -70,7 +70,6 @@ def main(cmdl):
 			# Default sample name is derived from the input file
 			args.sample_name = os.path.splitext(os.path.basename(args.input[0]))[0]
 
-
 	# Create a PipelineManager object and start the pipeline
 	outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
 	pm = pypiper.PipelineManager(name="WGBS", outfolder=outfolder, args=args, version=__version__)
@@ -134,7 +133,6 @@ def main(cmdl):
 		encoding = "phred64"
 	else:
 		raise Exception("Unknown quality encoding type: "+encoding_string)
-
 
 	trimmed_fastq = out_fastq_pre + "_R1_trimmed.fq"
 	trimmed_fastq_R2 = out_fastq_pre + "_R2_trimmed.fq"
@@ -329,12 +327,12 @@ def main(cmdl):
 		pm.report_result("Filtered_reads", ngstk.count_reads(out_sam_filter, args.paired_end)))
 
 	# Clean up all intermediates
-	pm.clean_add(out_bismark) # initial mapped bam file
+	pm.clean_add(out_bismark)       # initial mapped bam file
 	pm.clean_add(os.path.join(bismark_folder, "*.fastq"))
 	pm.clean_add(os.path.join(bismark_folder, "*.fq"))
-	pm.clean_add(out_dedup) # deduplicated bam file
-	pm.clean_add(out_sam) # dedup conversion to sam
-	pm.clean_add(out_sam_filter) # after filtering
+	pm.clean_add(out_dedup)         # deduplicated bam file
+	pm.clean_add(out_sam)           # dedup conversion to sam
+	pm.clean_add(out_sam_filter)    # after filtering
 
 	# Epilog analysis
 	################################################################################
