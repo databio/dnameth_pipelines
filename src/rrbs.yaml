@@ -13,7 +13,6 @@ tools:
   picard: ${PICARD}
   trimmomatic: ${TRIMMOMATIC}
   trimmomatic_epignome: ${TRIMMOMATIC_EPIGNOME}
-  trimgalore: /cm/shared/apps/trim_galore/0.3.3/trim_galore
   bowtie1: bowtie
   bowtie2: bowtie2
   bedToBigBed: bedToBigBed
