@@ -15,7 +15,7 @@ import re
 import pypiper
 from pypiper.utils import head
 from epilog_commands import *
-from helpers import MissingEpilogError, ProgSpec, \
+from helpers import MissingEpilogError, MissingInputFileException, ProgSpec, \
 	get_dedup_bismark_cmd, get_qual_code_cmd
 
 
@@ -32,8 +32,6 @@ def _parse_args(cmdl):
 	parser = pypiper.add_pypiper_args(parser, all_args=True)
 
 	# Add any pipeline-specific arguments
-	parser.add_argument("-t", "--trimgalore", dest="trimgalore", action="store_true",
-		help='Use trimgalore instead of trimmomatic?')
 	parser.add_argument("-e", "--epilog", dest='epilog', action="store_true",
 		help='Use epilog for meth calling?')
 	parser.add_argument("--pdr", dest="pdr", action="store_true",
@@ -81,7 +79,7 @@ def main(cmdl):
 
 	pm.config.parameters.pipeline_outfolder = outfolder
 
-	print(pm.config)
+	print("Pipeline configuration: {}".format(pm.config))
 	tools = pm.config.tools  # Convenience alias
 	param = pm.config.parameters
 	resources = pm.config.resources
@@ -132,72 +130,43 @@ def main(cmdl):
 	else:
 		raise Exception("Unknown quality encoding type: "+encoding_string)
 
-	if args.trimgalore:
-		# Trim galore requires biopython, cutadapt modules. RSeQC as well (maybe?)
-		#   --- $trim_galore -q $q --phred33 -a $a --stringency $s -e $e --length $l --output_dir $output_dir $input_fastq
+	# Trimmomatic
 
-		raise NotImplementedError("TrimGalore no longer supported")
+	trimmed_fastq = out_fastq_pre + "_R1_trimmed.fq"
+	trimmed_fastq_R2 = out_fastq_pre + "_R2_trimmed.fq"
 
-		if args.paired_end:
-			raise NotImplementedError("TrimGalore for PE RRBS not implemented")
-		input_fastq = out_fastq_pre + "_R1.fastq "
+	# REMARK AS: instead of trim_galore we try to use Trimmomatic for now
+	# - we are more compatible with the other pipelines
+	# - better code base, not a python wrapper of a perl script (as trim_galore)
+	# - rrbs-mode not needed because biseq has the same functionality
 
-		# With trimgalore, the output file is predetermined.
-		trimmed_fastq = out_fastq_pre + "_R1_trimmed.fq"
+	# REMARK NS:
+	# The -Xmx4000m restricts heap memory allowed to java, and is necessary
+	# to prevent java from allocating lots of memory willy-nilly
+	# if it's on a machine with lots of memory, which can lead
+	# to jobs getting killed by a resource manager. By default, java will
+	# use more memory on systems that have more memory, leading to node-dependent
+	# killing effects that are hard to trace.
 
-		output_dir = fastq_folder
-
-		# Adapter
-		a = "AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC"
-
-		cmd = tools.trimgalore
-		cmd += " -q 20"  # quality trimming
-		cmd += " --" + encoding
-		cmd += " -a " + a
-		cmd += " --stringency 1"  # stringency: Overlap with adapter sequence required to trim a sequence
-		cmd += " -e 0.1"  # Maximum allowed error rate
-		cmd += " --length 16"  # Minimum Read length
-		# by unchangeable default Trimmomatic discards reads of lenth 0 (produced by ILLUMINACLIP):
-		cmd += " --output_dir " + output_dir + " " + input_fastq
-
+	cmd = tools.java + " -Xmx" + str(pm.mem) + " -jar " + tools.trimmomatic_epignome
+	if args.paired_end:
+		cmd += " PE"
 	else:
-		# Trimmomatic
-
-		trimmed_fastq = out_fastq_pre + "_R1_trimmed.fq"
-		trimmed_fastq_R2 = out_fastq_pre + "_R2_trimmed.fq"
-
-		# REMARK AS: instead of trim_galore we try to use Trimmomatic for now
-		# - we are more compatible with the other pipelines
-		# - better code base, not a python wrapper of a perl script (as trim_galore)
-		# - rrbs-mode not needed because biseq has the same functionality
-
-		# REMARK NS:
-		# The -Xmx4000m restricts heap memory allowed to java, and is necessary
-		# to prevent java from allocating lots of memory willy-nilly
-		# if it's on a machine with lots of memory, which can lead
-		# to jobs getting killed by a resource manager. By default, java will
-		# use more memory on systems that have more memory, leading to node-dependent
-		# killing effects that are hard to trace.
-
-		cmd = tools.java + " -Xmx" + str(pm.mem) + " -jar " + tools.trimmomatic_epignome
-		if args.paired_end:
-			cmd += " PE"
-		else:
-			cmd += " SE"
-		cmd += " -" + encoding
-		cmd += " -threads " + str(pm.cores) + " "
-		#cmd += " -trimlog " + os.path.join(fastq_folder, "trimlog.log") + " "
-		if args.paired_end:
-			cmd += out_fastq_pre + "_R1.fastq "
-			cmd += out_fastq_pre + "_R2.fastq "
-			cmd += out_fastq_pre + "_R1_trimmed.fq "
-			cmd += out_fastq_pre + "_R1_unpaired.fq "
-			cmd += out_fastq_pre + "_R2_trimmed.fq "
-			cmd += out_fastq_pre + "_R2_unpaired.fq "
-		else:
-			cmd += out_fastq_pre + "_R1.fastq "
-			cmd += out_fastq_pre + "_R1_trimmed.fq "
-		cmd += "ILLUMINACLIP:" + resources.adapter_file + param.trimmomatic.illuminaclip
+		cmd += " SE"
+	cmd += " -" + encoding
+	cmd += " -threads " + str(pm.cores) + " "
+	#cmd += " -trimlog " + os.path.join(fastq_folder, "trimlog.log") + " "
+	if args.paired_end:
+		cmd += out_fastq_pre + "_R1.fastq "
+		cmd += out_fastq_pre + "_R2.fastq "
+		cmd += out_fastq_pre + "_R1_trimmed.fq "
+		cmd += out_fastq_pre + "_R1_unpaired.fq "
+		cmd += out_fastq_pre + "_R2_trimmed.fq "
+		cmd += out_fastq_pre + "_R2_unpaired.fq "
+	else:
+		cmd += out_fastq_pre + "_R1.fastq "
+		cmd += out_fastq_pre + "_R1_trimmed.fq "
+	cmd += "ILLUMINACLIP:" + resources.adapter_file + param.trimmomatic.illuminaclip
 
 
 	# Trimming command has been constructed, using either trimming options.
@@ -474,7 +443,7 @@ def main(cmdl):
 
 	# get unaligned reads out of BSMAP bam
 	bsmap_unalignable_bam = os.path.join(bsmap_folder, args.sample_name + "_unalignable.bam")
-	pm.run(tools.samtools + " view -bh -f 4 -F 128 "+out_bsmap+" > " + bsmap_unalignable_bam, bsmap_unalignable_bam, shell=True)
+	pm.run(tools.samtools + " view -bh -f 4 -F 128 " + out_bsmap + " > " + bsmap_unalignable_bam, bsmap_unalignable_bam, shell=True)
 
 	# Re-flag the unaligned paired-end reads to make them look like unpaired for Bismark
 	if args.paired_end:
@@ -488,7 +457,7 @@ def main(cmdl):
 
 	# convert BAM to fastq
 	bsmap_fastq_unalignable_pre = os.path.join(bsmap_folder, args.sample_name + "_unalignable")
-	bsmap_fastq_unalignable = bsmap_fastq_unalignable_pre  + "_R1.fastq"
+	bsmap_fastq_unalignable = bsmap_fastq_unalignable_pre + "_R1.fastq"
 	cmd = ngstk.bam_to_fastq(bsmap_unalignable_bam, bsmap_fastq_unalignable_pre, args.paired_end)
 	pm.run(cmd, bsmap_fastq_unalignable)
 
@@ -518,24 +487,26 @@ def main(cmdl):
 
 	# Clean up the unmapped file which is copied from the parent
 	# bismark folder to here:
-	pm.clean_add(os.path.join(spikein_folder,"*.fastq"), conditional=True)
-	pm.clean_add(os.path.join(spikein_folder,"*.fq"), conditional=True)
+	pm.clean_add(os.path.join(spikein_folder, "*.fastq"), conditional=True)
+	pm.clean_add(os.path.join(spikein_folder, "*.fq"), conditional=True)
 	pm.clean_add(out_spikein, conditional=True)
 	pm.clean_add(spikein_temp)
-
-
 
 	################################################################################
 	pm.timestamp("### PCR duplicate removal (spike-in): ")
 	# Bismark's deduplication forces output naming, how annoying.
 	#out_spikein_dedup = spikein_folder + args.sample_name + ".spikein.aln.deduplicated.bam"
-	cmd, out_spikein_dedup = get_dedup_bismark_cmd(paired=args.paired_end,
-		infile=out_spikein, prog=tools.deduplicate_bismark)
-	out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_spikein_dedup)
-	cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
-	cmd3 = tools.samtools + " index " + out_spikein_sorted
-	pm.run([cmd, cmd2, cmd3], out_spikein_sorted + ".bai", nofail=True)
-	pm.clean_add(out_spikein_dedup, conditional=False)
+	try:
+		cmd, out_spikein_dedup = get_dedup_bismark_cmd(paired=args.paired_end,
+			infile=out_spikein, prog=tools.deduplicate_bismark)
+	except MissingInputFileException as e:
+		print("Could not create Bismark deduplication command ({}); skipping spike-in")
+	else:
+		out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_spikein_dedup)
+		cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
+		cmd3 = tools.samtools + " index " + out_spikein_sorted
+		pm.run([cmd, cmd2, cmd3], out_spikein_sorted + ".bai", nofail=True)
+		pm.clean_add(out_spikein_dedup, conditional=False)
 
 	# Spike-in methylation calling
 	################################################################################

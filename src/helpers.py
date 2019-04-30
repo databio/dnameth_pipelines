@@ -29,21 +29,48 @@ class EpilogTarget(Sequence):
 
     @property
     def single_sites_file(self):
+        """
+        Return the path to a 'calls' file (not epialleles), 1:1 row:site.
+
+        :return str: path to a site-wise / 'calls' file
+        """
         return self._ss
 
     @property
     def epis_file(self):
+        """
+        Return the path to a epialleles file.
+
+        :return str: path to epialleles file
+        """
         return self._epi
 
     @property
     def files(self):
+        """
+        Return collection of filepaths, each of which is an output target.
+
+        :return list[str]: list of filepaths targeted for output
+        """
         import copy
         return copy.copy(self._files)
 
     def __getitem__(self, item):
+        """
+        Retrieve the filepath at the given index.
+
+        :param int item: index of output/target filepath to fetch
+        :return str: path to output file target at given index
+        :raise IndexError: if the given index is not in [0, size)
+        """
         return self._files[item]
 
     def __len__(self):
+        """
+        A target's length/size is its number of files.
+
+        :return int: number of output file targets
+        """
         return len(self._files)
 
 
@@ -157,13 +184,13 @@ def get_dedup_bismark_cmd(paired, infile,
     """
     read_end_type = "paired" if paired else "single"
     if not os.path.isfile(infile):
-        raise Exception("Input to {} is not a file: {}".format(prog, infile))
+        raise MissingInputFileException("Input to {} is not a file: {}".format(prog, infile))
     cmd = "{} --{} {}".format(prog, read_end_type, infile)
     outfile = re.sub(r'.bam$', '.deduplicated.bam', infile)
     outdir = outdir or os.path.dirname(outfile)
     if outdir:
         if not os.path.isdir(outdir):
-            raise Exception("Output folder for {} isn't a directory: {}".format(prog, outdir))
+            raise IOError("Output folder for {} isn't a directory: {}".format(prog, outdir))
         cmd += " --output_dir {}".format(outdir)
     if compress:
         cmd += " --bam"
@@ -205,12 +232,22 @@ def missing_targets(targets, good=lambda f: os.path.isfile(f)):
     return [p for p in targets if not good(p)]
 
 
-class MissingEpilogError(Exception):
+class PipelineError(Exception):
+    """ Base class for custom exceptions among these pipelines """
+    pass
+
+
+class MissingInputFileException(PipelineError):
+    """ Exception for when at least one input file for a pipeline step is missing  """
+    pass
+
+
+class MissingEpilogError(PipelineError):
     """ Exception for when a program specification's JAR is not a file. """
     pass
 
 
-class EpilogPretestError(Exception):
+class EpilogPretestError(PipelineError):
     """ At least one precondition to run epilog is unmet. """
 
     def __init__(self, problems):

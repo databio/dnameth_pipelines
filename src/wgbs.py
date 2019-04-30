@@ -70,7 +70,6 @@ def main(cmdl):
 			# Default sample name is derived from the input file
 			args.sample_name = os.path.splitext(os.path.basename(args.input[0]))[0]
 
-
 	# Create a PipelineManager object and start the pipeline
 	outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
 	pm = pypiper.PipelineManager(name="WGBS", outfolder=outfolder, args=args, version=__version__)
@@ -95,7 +94,7 @@ def main(cmdl):
 
 	pm.config.parameters.pipeline_outfolder = outfolder
 
-	print(pm.config)
+	print("Pipeline settings: {}".format(pm.config))
 	tools = pm.config.tools  # Convenience alias
 	param = pm.config.parameters
 	resources = pm.config.resources
@@ -135,7 +134,6 @@ def main(cmdl):
 	else:
 		raise Exception("Unknown quality encoding type: "+encoding_string)
 
-
 	trimmed_fastq = out_fastq_pre + "_R1_trimmed.fq"
 	trimmed_fastq_R2 = out_fastq_pre + "_R2_trimmed.fq"
 
@@ -161,14 +159,13 @@ def main(cmdl):
 	cmd += " ILLUMINACLIP:" + resources.adapter_file + param.trimmomatic.illuminaclip
 
 	pm.run(cmd, trimmed_fastq,
-		follow = ngstk.check_trim(trimmed_fastq, args.paired_end, trimmed_fastq_R2,
-			fastqc_folder = os.path.join(param.pipeline_outfolder, "fastqc/")))
+		follow=ngstk.check_trim(trimmed_fastq, args.paired_end, trimmed_fastq_R2,
+			fastqc_folder=os.path.join(param.pipeline_outfolder, "fastqc/")))
 
 	pm.clean_add(os.path.join(fastq_folder, "*.fastq"), conditional=True)
 	pm.clean_add(os.path.join(fastq_folder, "*.fq"), conditional=True)
 	pm.clean_add(os.path.join(fastq_folder, "*.log"), conditional=True)
 	pm.clean_add(fastq_folder, conditional=True)
-
 
 	# WGBS alignment with bismark.
 	################################################################################
@@ -178,19 +175,15 @@ def main(cmdl):
 	# of cores that we aresupposed to. It will start 2 threads in
 	# normal mode, and 4 in --non-directional mode.
 
-	if param.bismark.nondirectional:
-		bismark_bowtie_threads = 4
-	else:
-		bismark_bowtie_threads = 2
-
+	bismark_bowtie_threads = 4 if param.bismark.nondirectional else 2
 	bismark_cores = int(pm.cores) // bismark_bowtie_threads
 
 	if int(pm.cores) % bismark_bowtie_threads != 0:
-		print("inefficient core request; make divisible by " + 	str(bismark_bowtie_threads))
+		print("inefficient core request; make divisible by " + str(bismark_bowtie_threads))
 
-	bismark_folder = os.path.join(param.pipeline_outfolder, "bismark_" + args.genome_assembly )
+	bismark_folder = os.path.join(param.pipeline_outfolder, "bismark_" + args.genome_assembly)
 	ngstk.make_sure_path_exists(bismark_folder)
-	bismark_temp = os.path.join(bismark_folder, "bismark_temp" )
+	bismark_temp = os.path.join(bismark_folder, "bismark_temp")
 	ngstk.make_sure_path_exists(bismark_temp)
 
 	if args.paired_end:
@@ -214,7 +207,7 @@ def main(cmdl):
 	if args.paired_end:
 		cmd += " --minins 0"
 		cmd += " --maxins " + str(param.bismark.maxins)
-	cmd += " -p " + str(bismark_cores) # Number of processors
+	cmd += " -p " + str(bismark_cores)    # Number of processors
 	cmd += " --basename=" + args.sample_name
 
 	# By default, BS-seq libraries are directional, but this can be turned off
@@ -227,17 +220,14 @@ def main(cmdl):
 		pm.report_result("Aligned_reads", ar)
 		rr = float(pm.get_stat("Raw_reads"))
 		tr = float(pm.get_stat("Trimmed_reads"))
-		pm.report_result("Alignment_rate", round(float(ar) *
-	 100 / float(tr), 2))
+		pm.report_result("Alignment_rate", round(float(ar) * 100 / float(tr), 2))
 		pm.report_result("Total_efficiency", round(float(ar) * 100 / float(rr), 2))
 
 		mr = ngstk.count_multimapping_reads(out_bismark, args.paired_end)
 		pm.report_result("Multimap_reads", mr)
-		pm.report_result("Multimap_rate", round(float(mr) *
-	 100 / float(tr), 2))
+		pm.report_result("Multimap_rate", round(float(mr) * 100 / float(tr), 2))
 
 	pm.run(cmd, out_bismark, follow = check_bismark)
-
 
 	# Secondary single mode:
 	# align unmapped in single end mode?
@@ -248,9 +238,9 @@ def main(cmdl):
 			read_string = "R" + str(read_n)
 			bismark2_folder = os.path.join(bismark_folder, "se" + str(read_string))
 			ngstk.make_sure_path_exists(bismark2_folder)
-			bismark2_temp = os.path.join(bismark2_folder, "bismark2_temp" )
+			bismark2_temp = os.path.join(bismark2_folder, "bismark2_temp")
 			ngstk.make_sure_path_exists(bismark2_temp)
-			out_bismark2 = os.path.join(bismark2_folder, args.sample_name + read_string +  ".bam")
+			out_bismark2 = os.path.join(bismark2_folder, args.sample_name + read_string + ".bam")
 
 			unmapped_reads_pre = os.path.join(bismark_folder, args.sample_name)
 
@@ -290,16 +280,13 @@ def main(cmdl):
 
 		pm.run(cmd, lock_name="rematch")
 
-
-
-
 	pm.timestamp("### PCR duplicate removal: ")
 	# Bismark's deduplication forces output naming, how annoying.
 	#out_dedup = os.path.join(bismark_folder, args.sample_name + "_pe.deduplicated.bam")
 	out_dedup = re.sub(r'.bam$', '.deduplicated.bam', out_bismark)
 	cmd, out_dedup = get_dedup_bismark_cmd(paired=args.paired_end, infile=out_bismark, prog=tools.deduplicate_bismark)
 	with FolderContext(bismark_folder):
-		pm.run(cmd, out_dedup, follow = lambda: pm.report_result(
+		pm.run(cmd, out_dedup, follow=lambda: pm.report_result(
 			"Deduplicated_reads", ngstk.count_reads(out_dedup, args.paired_end)))
 	if not os.path.isfile(out_dedup):
 		pm.fail_pipeline(IOError("Missing deduplication target: {}".format(out_dedup)))
@@ -340,35 +327,30 @@ def main(cmdl):
 		pm.report_result("Filtered_reads", ngstk.count_reads(out_sam_filter, args.paired_end)))
 
 	# Clean up all intermediates
-	pm.clean_add(out_bismark) # initial mapped bam file
+	pm.clean_add(out_bismark)       # initial mapped bam file
 	pm.clean_add(os.path.join(bismark_folder, "*.fastq"))
 	pm.clean_add(os.path.join(bismark_folder, "*.fq"))
-	pm.clean_add(out_dedup) # deduplicated bam file
-	pm.clean_add(out_sam) # dedup conversion to sam
-	pm.clean_add(out_sam_filter) # after filtering
-
+	pm.clean_add(out_dedup)         # deduplicated bam file
+	pm.clean_add(out_sam)           # dedup conversion to sam
+	pm.clean_add(out_sam_filter)    # after filtering
 
 	# Epilog analysis
 	################################################################################
 
 	# Create the program specification, in scope both for ordinary and spike-in.
+	epilog_prog_spec = None
 	if args.epilog:
 		try:
 			epilog_prog_spec = ProgSpec(jar=tools.epilog, memory=pm.mem, cores=pm.cores)
 		except MissingEpilogError as e:
 			print("ERROR: {} --  skipping epilog".format(str(e)))
-			epilog_prog_spec = None
-	else:
-		epilog_prog_spec = None
 
 	if epilog_prog_spec:
-
 		# Sort and index the deduplicated alignments.
 		out_dedup_sorted = re.sub(r'.bam$', "_sort.bam", out_dedup)
 		cmd2 = tools.samtools + " sort -@ " + str(pm.cores) + " -o " + out_dedup_sorted + " " + out_dedup
 		cmd3 = tools.samtools + " index " + out_dedup_sorted
 		pm.run([cmd2, cmd3], out_dedup_sorted + ".bai")
-
 		# Separate output subfolder for epilog
 		epilog_output_dir = os.path.join(
 			param.pipeline_outfolder, "epilog_" + args.genome_assembly)
@@ -379,7 +361,6 @@ def main(cmdl):
 			readsfile=out_dedup_sorted, sitesfile=resources.methpositions,
 			outdir=epilog_output_dir, rrbs_fill=0)
 		pm.timestamp("### COMPLETE: epilog")
-
 
 	# Methylation extractor
 	################################################################################
@@ -457,7 +438,6 @@ def main(cmdl):
 	if not keep_bismark_report:
 		pm.clean_add(out_cpg_report_filt)
 
-
 	# Make bigwig
 	################################################################################
 	pm.timestamp("### Make bigwig: ")
@@ -473,123 +453,125 @@ def main(cmdl):
 
 	pm.run([cmd1, cmd2], out_bigwig)
 
-
 	# Spike-in alignment
 	################################################################################
 	# currently using bowtie1 instead of bowtie2
 	if resources.bismark_spikein_genome:
 		pm.timestamp("### Bismark spike-in alignment: ")
-		spikein_folder = os.path.join(param.pipeline_outfolder, "bismark_spikein" )
+		spikein_folder = os.path.join(param.pipeline_outfolder, "bismark_spikein")
 		ngstk.make_sure_path_exists(spikein_folder)
-		spikein_temp = os.path.join(spikein_folder, "bismark_temp" )
-		ngstk.make_sure_path_exists(spikein_temp)
 		out_spikein_base = args.sample_name + ".spikein.aln"
 
-		#out_spikein = spikein_folder + args.sample_name + "_R1_trimmed.fastq_unmapped_reads_1.fq_bismark_pe.bam"
-
 		unmapped_reads_pre = os.path.join(bismark_folder, args.sample_name)
+
+		cmd = tools.bismark + " " + resources.bismark_spikein_genome + " "
+
 		if args.paired_end:
 			out_spikein = os.path.join(spikein_folder, out_spikein_base + "_pe.bam")
+			spikein_aln_infiles = [unmapped_reads_pre + sfx for sfx in ["_unmapped_reads_1.fq", "unmapped_reads_2.fq"]]
+			update_aln_cmd = lambda c: c + "--1 {} --2 {}".format(spikein_aln_infiles[0], spikein_aln_infiles[1])
 		else:
 			out_spikein = os.path.join(spikein_folder, out_spikein_base + ".bam")
-		cmd = tools.bismark + " " + resources.bismark_spikein_genome + " "
-		if args.paired_end:
-			cmd += " --1 " + unmapped_reads_pre + "_unmapped_reads_1.fq"
-			cmd += " --2 " + unmapped_reads_pre + "_unmapped_reads_2.fq"
+			spikein_aln_infiles = [unmapped_reads_pre + "_unmapped_reads.fq"]
+			update_aln_cmd = lambda c: c + spikein_aln_infiles[0]
+		missing_infiles = [f for f in spikein_aln_infiles if not os.path.isfile(f)]
+		if missing_infiles:
+			print("Skipping spike-in alignment; missing input file(s): {}".format(", ".join(missing_infiles)))
 		else:
-			cmd += unmapped_reads_pre + "_unmapped_reads.fq"
-		cmd += " --bam --unmapped"
-		# Bowtie may be specified in raw form to indicate presence on path.
-		if tools.bowtie1 != "bowtie":
-			cmd += " --path_to_bowtie " + tools.bowtie1
-		#cmd += " --bowtie2"
-		cmd += " --temp_dir " + spikein_temp
-		cmd += " --output_dir " + spikein_folder
-		if args.paired_end:
-			cmd += " --minins 0"
-			cmd += " --maxins " + str(param.bismark.maxins)
-		cmd += " --basename="  + out_spikein_base
-		if param.bismark.nondirectional:
-			cmd += " --non_directional"
+			cmd = update_aln_cmd(cmd)
+			cmd += " --bam --unmapped"
+			
+			# Bowtie may be specified in raw form to indicate presence on path.
+			if tools.bowtie1 != "bowtie":
+				cmd += " --path_to_bowtie " + tools.bowtie1
+			#cmd += " --bowtie2"
 
+			spikein_temp = os.path.join(spikein_folder, "bismark_temp")
+			ngstk.make_sure_path_exists(spikein_temp)
+			cmd += " --temp_dir " + spikein_temp
+			cmd += " --output_dir " + spikein_folder
+			if args.paired_end:
+				cmd += " --minins 0"
+				cmd += " --maxins " + str(param.bismark.maxins)
+			cmd += " --basename=" + out_spikein_base
+			if param.bismark.nondirectional:
+				cmd += " --non_directional"
 
-		pm.run(cmd, out_spikein, nofail=True)
-		# Clean up the unmapped file which is copied from the parent
-		# bismark folder to here:
-		pm.clean_add(os.path.join(spikein_folder, "*.fq"), conditional=False)
-		pm.clean_add(spikein_temp)
+			pm.run(cmd, out_spikein, nofail=True)
+			# Clean up the unmapped file which is copied from the parent
+			# bismark folder to here:
+			pm.clean_add(os.path.join(spikein_folder, "*.fq"), conditional=False)
+			pm.clean_add(spikein_temp)
 
+			pm.timestamp("### PCR duplicate removal (Spike-in): ")
+			# Bismark's deduplication forces output naming, how annoying.
+			#out_spikein_dedup = spikein_folder + args.sample_name + ".spikein.aln.deduplicated.bam"
+			cmd, out_spikein_dedup = get_dedup_bismark_cmd(
+				paired=args.paired_end, infile=out_spikein, prog=tools.deduplicate_bismark)
+			out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_spikein_dedup)
+			cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
+			cmd3 = tools.samtools + " index " + out_spikein_sorted
+			cmd4 = "rm " + out_spikein_dedup
+			pm.run([cmd, cmd2, cmd3, cmd4], out_spikein_sorted + ".bai", nofail=True)
 
-		pm.timestamp("### PCR duplicate removal (Spike-in): ")
-		# Bismark's deduplication forces output naming, how annoying.
-		#out_spikein_dedup = spikein_folder + args.sample_name + ".spikein.aln.deduplicated.bam"
-		cmd, out_spikein_dedup = get_dedup_bismark_cmd(
-			paired=args.paired_end, infile=out_spikein, prog=tools.deduplicate_bismark)
-		out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_spikein_dedup)
-		cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
-		cmd3 = tools.samtools + " index " + out_spikein_sorted
-		cmd4 = "rm " + out_spikein_dedup
-		pm.run([cmd, cmd2, cmd3, cmd4], out_spikein_sorted + ".bai", nofail=True)
+			# Spike-in methylation calling
+			################################################################################
+			pm.timestamp("### Methylation calling (testxmz) Spike-in: ")
+			spike_chroms = ngstk.get_chrs_from_bam(out_spikein_sorted)
 
-		# Spike-in methylation calling
-		################################################################################
-		pm.timestamp("### Methylation calling (testxmz) Spike-in: ")
-		spike_chroms = ngstk.get_chrs_from_bam(out_spikein_sorted)
+			for chrom in spike_chroms:
+				cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "testxmz.py")
+				cmd1 += " " + out_spikein_sorted + " " + chrom
+				cmd1 += " >> " + pm.pipeline_stats_file
+				pm.callprint(cmd1, nofail=True)
 
-		for chrom in spike_chroms:
-			cmd1 = tools.python + " -u " + os.path.join(tools.scripts_dir, "testxmz.py")
-			cmd1 += " " + out_spikein_sorted + " " + chrom
-			cmd1 += " >> " + pm.pipeline_stats_file
-			pm.callprint(cmd1, nofail=True)
+			# spike in conversion efficiency calculation with epilog
+			if epilog_prog_spec:
+				ngstk.make_sure_path_exists(spikein_folder)
+				pm.timestamp("### Spike-in Epilog Methcalling: ")
+				spikein_epiconf = copy.deepcopy(param.epilog)
+				spikein_epiconf.context = "C"
+				spikein_epiconf.no_epi_stats = True    # Always skip stats for spike-in.
+				try:
+					run_main_epi_pipe(pm, epiconf=spikein_epiconf, prog_spec=epilog_prog_spec,
+						readsfile=out_spikein_sorted, sitesfile=resources.spikein_methpositions,
+						outdir=spikein_folder, rrbs_fill=0)
+				except Exception as e:
+					print("WARNING -- Could not run epilog -- {}".format(e))
 
-		# spike in conversion efficiency calculation with epilog
-		if epilog_prog_spec:
-			ngstk.make_sure_path_exists(spikein_folder)
-			pm.timestamp("### Spike-in Epilog Methcalling: ")
-			spikein_epiconf = copy.deepcopy(param.epilog)
-			spikein_epiconf.context = "C"
-			spikein_epiconf.no_epi_stats = True    # Always skip stats for spike-in.
-			try:
-				run_main_epi_pipe(pm, epiconf=spikein_epiconf, prog_spec=epilog_prog_spec,
-					readsfile=out_spikein_sorted, sitesfile=resources.spikein_methpositions,
-					outdir=spikein_folder, rrbs_fill=0)
-			except Exception as e:
-				print("WARNING -- Could not run epilog -- {}".format(e))
-
-		"""
-		epilog_spike_outfile=os.path.join(
-				spikein_folder, args.sample_name + "_epilog.bed")
-		epilog_spike_summary_file=os.path.join(
-				spikein_folder, args.sample_name + "_epilog_summary.bed")
+			"""
+			epilog_spike_outfile=os.path.join(
+					spikein_folder, args.sample_name + "_epilog.bed")
+			epilog_spike_summary_file=os.path.join(
+					spikein_folder, args.sample_name + "_epilog_summary.bed")
+			
+			cmd = tools.epilog
+			cmd += " call"
+			cmd += " --infile=" + out_spikein_sorted  # absolute path to the bsmap aligned bam
+			cmd += " --positions=" + resources.spikein_methpositions
+			cmd += " --outfile=" + epilog_spike_outfile
+			cmd += " --summary=" + epilog_spike_summary_file
+			cmd += " --cores=" + str(pm.cores)
+			cmd += " --qual-threshold=30"
+			cmd += " --read-length-threshold=30"
+			cmd += " --wgbs"    # No RRBS "fill-in"
+			
+			pm.run(cmd, epilog_spike_outfile, nofail=True)
+			
+			# Now parse some results for pypiper result reporting.
 		
-		cmd = tools.epilog
-		cmd += " call"
-		cmd += " --infile=" + out_spikein_sorted  # absolute path to the bsmap aligned bam
-		cmd += " --positions=" + resources.spikein_methpositions
-		cmd += " --outfile=" + epilog_spike_outfile
-		cmd += " --summary=" + epilog_spike_summary_file
-		cmd += " --cores=" + str(pm.cores)
-		cmd += " --qual-threshold=30"
-		cmd += " --read-length-threshold=30"
-		cmd += " --wgbs"    # No RRBS "fill-in"
+			for chrom in spike_chroms:
+				cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "tsv_parser.py")
+				cmd += " -i " + os.path.join(spikein_folder, epilog_spike_summary_file)
+				cmd += " -r context=C chr=" + chrom
 		
-		pm.run(cmd, epilog_spike_outfile, nofail=True)
-		
-		# Now parse some results for pypiper result reporting.
-	
-		for chrom in spike_chroms:
-			cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "tsv_parser.py")
-			cmd += " -i " + os.path.join(spikein_folder, epilog_spike_summary_file)
-			cmd += " -r context=C chr=" + chrom
-	
-			cmd_total = cmd + " -c " + "total"
-			x = pm.checkprint(cmd_total, shell=True)
-			pm.report_result(chrom+'_count_EL', x)
-			cmd_rate = cmd + " -c " + "rate"
-			x = pm.checkprint(cmd_rate, shell=True)
-			pm.report_result(chrom+'_meth_EL', x)
-		"""
-
+				cmd_total = cmd + " -c " + "total"
+				x = pm.checkprint(cmd_total, shell=True)
+				pm.report_result(chrom+'_count_EL', x)
+				cmd_rate = cmd + " -c " + "rate"
+				x = pm.checkprint(cmd_rate, shell=True)
+				pm.report_result(chrom+'_meth_EL', x)
+			"""
 
 	# Final sorting and indexing
 	################################################################################

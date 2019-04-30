@@ -1,6 +1,16 @@
 # Change log
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+	- Officially removed TrimGalore from RRBS pipeline
+
+### Fixed
+
+	- Only attempt spike-in processing if input is present
+
 ## [0.4.0] -- 2019-03-07
 
 ### Changed
