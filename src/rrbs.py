@@ -12,11 +12,11 @@ __version__ = "0.5dev"
 import copy
 import os
 import re
+import pypiper
+from pypiper.utils import head
 from epilog_commands import *
 from helpers import MissingEpilogError, MissingInputFileException, ProgSpec, \
 	get_dedup_bismark_cmd, get_qual_code_cmd
-import pypiper
-from pypiper.utils import head
 
 
 def _parse_args(cmdl):
