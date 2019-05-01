@@ -18,7 +18,7 @@ from helpers import get_qual_code_cmd, FolderContext, MissingEpilogError, \
 	ProgSpec, get_dedup_bismark_cmd
 import pypiper
 from pypiper.utils import head
-from ubiquerg import check_fastq
+from ubiquerg import check_fastq, count_reads
 
 
 def _parse_args(cmdl):
@@ -288,7 +288,7 @@ def main(cmdl):
 	cmd, out_dedup = get_dedup_bismark_cmd(paired=args.paired_end, infile=out_bismark, prog=tools.deduplicate_bismark)
 	with FolderContext(bismark_folder):
 		pm.run(cmd, out_dedup, follow=lambda: pm.report_result(
-			"Deduplicated_reads", ngstk.count_reads(out_dedup, args.paired_end)))
+			"Deduplicated_reads", count_reads(out_dedup, args.paired_end)))
 	if not os.path.isfile(out_dedup):
 		pm.fail_pipeline(IOError("Missing deduplication target: {}".format(out_dedup)))
 
@@ -306,7 +306,7 @@ def main(cmdl):
 	pm.run(cmd, out_sam, shell=True)
 
 	#sorted file same size as presorted?
-	#pm.report_result("Filtered_reads", ngstk.count_reads(out_sam_filter, args.paired_end)) = ngstk.count_reads(out_sam, args.paired_end)
+	#pm.report_result("Filtered_reads", count_reads(out_sam_filter, args.paired_end)) = count_reads(out_sam, args.paired_end)
 	#if sorted_reads != deduplicated_reads:
 	#	raise Exception("Sorted size doesn't match deduplicated size.")
 
@@ -325,7 +325,7 @@ def main(cmdl):
 		cmd = cmd + " --pairedEnd"
 
 	pm.run(cmd, out_sam_filter, follow=lambda:
-		pm.report_result("Filtered_reads", ngstk.count_reads(out_sam_filter, args.paired_end)))
+		pm.report_result("Filtered_reads", count_reads(out_sam_filter, args.paired_end)))
 
 	# Clean up all intermediates
 	pm.clean_add(out_bismark)       # initial mapped bam file
