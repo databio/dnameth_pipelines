@@ -1,2 +1,2 @@
 pypiper>=0.11dev
-ubiquerg
+ubiquerg>=0.0.2

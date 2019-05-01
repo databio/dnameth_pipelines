@@ -100,7 +100,7 @@ def main(cmdl):
 	local_input_files = ngstk.merge_or_link([args.input, args.input2], raw_folder, args.sample_name)
 	cmd, out_fastq_pre, unaligned_fastq = ngstk.input_to_fastq(local_input_files, args.sample_name, args.paired_end, fastq_folder)
 	pm.run(cmd, unaligned_fastq,
-		follow=check_fastq(local_input_files, unaligned_fastq, args.paired_end))
+		follow=check_fastq(local_input_files, unaligned_fastq, args.paired_end, pm))
 	pm.clean_add(out_fastq_pre + "*.fastq", conditional=True)
 
 	pm.report_result("File_mb", ngstk.get_file_size(local_input_files))
