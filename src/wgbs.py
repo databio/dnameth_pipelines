@@ -476,7 +476,7 @@ def main(cmdl):
 			update_aln_cmd = lambda c: c + spikein_aln_infiles[0]
 		missing_infiles = [f for f in spikein_aln_infiles if not os.path.isfile(f)]
 		if missing_infiles:
-			print("Skipping spike-in alignment; missing input file(s): {}".format(", ".join(missing_infiles)))
+			print("Skipping spike-in alignment; missing input file(s):\n{}".format("\n".join(missing_infiles)))
 		else:
 			cmd = update_aln_cmd(cmd)
 			cmd += " --bam --unmapped"
