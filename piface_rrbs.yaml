@@ -1,0 +1,16 @@
+pipeline_name: rrbs-pl
+sample_pipeline:
+  name: rrbs-pl
+  path: src/rrbs.py
+  input_schema: [data_source]
+  command_template: >
+    {pipeline.path} --sample_name {sample.sample_name}
+    --genome {sample.genome}
+    --input {sample.read1}
+    --single-or-paired {sample.read_type}
+    {% if sample.read2 is defined %} --input2 {sample.read2} {% endif %}
+    {% if sample.dark_bases is defined %} --dark-bases {sample.dark_bases} {% endif %}
+  compute:
+    size_dependent_variables: resources_rrbs.tsv
+
+
