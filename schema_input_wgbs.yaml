@@ -1,4 +1,4 @@
-description: A PEP for RRBS samples for the PEPRRBS pipeline.
+description: A PEP for WGBS samples for the PEPWGBS pipeline.
 imports: [http://schema.databio.org/pep/2.0.0.yaml]
 properties:
   samples:
@@ -14,7 +14,7 @@ properties:
           description: "Organism"
         protocol: 
           type: string
-          description: "Must be an RRBS sample"
+          description: "Must be an WGBS sample"
         genome:
           type: string
           description: "Refgenie genome registry identifier"
