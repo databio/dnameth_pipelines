@@ -1,22 +1,22 @@
 pipeline_name: WGBS
-sample_pipeline:
-  name: WGBS  # Name used by pypiper so looper can find the logs
-  path: src/wgbs.py
-  arguments:
-    "--sample-name": sample_name
-    "--genome": genome
-    "--input": data_source
-    "--single-or-paired": read_type
-  input_schema: schema_input_wgbs.yaml
-  command_template: >
-    {pipeline.path} --sample-name {sample.sample_name}
-    --genome {sample.genome}
-    --input {sample.read1}
-    --single-or-paired {sample.read_type}
-    -O {looper.output_folder}
-    -P {compute.cores}
-    -M {compute.mem}    
-    {% if sample.read2 is defined %} --input2 {sample.read2} {% endif %}
-  compute:
-    bulker_crate: databio/methpl
-    size_dependent_variables: resources_wgbs.tsv
+pipeline_type: sample
+name: WGBS  # Name used by pypiper so looper can find the logs
+path: src/wgbs.py
+arguments:
+  "--sample-name": sample_name
+  "--genome": genome
+  "--input": data_source
+  "--single-or-paired": read_type
+input_schema: schema_input_wgbs.yaml
+command_template: >
+  {pipeline.path} --sample-name {sample.sample_name}
+  --genome {sample.genome}
+  --input {sample.read1}
+  --single-or-paired {sample.read_type}
+  -O {looper.output_folder}
+  -P {compute.cores}
+  -M {compute.mem}    
+  {% if sample.read2 is defined %} --input2 {sample.read2} {% endif %}
+compute:
+  bulker_crate: databio/methpl
+  size_dependent_variables: resources_wgbs.tsv
