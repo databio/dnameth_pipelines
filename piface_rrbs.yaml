@@ -1,6 +1,5 @@
 pipeline_name: rrbs-pl
 pipeline_type: sample
-name: rrbs-pl
 path: src/rrbs.py
 input_schema: schema_input_rrbs.yaml
 command_template: >
@@ -8,7 +7,7 @@ command_template: >
   --genome {sample.genome}
   --input {sample.read1}
   --single-or-paired {sample.read_type}
-  -O {looper.output_folder}
+  -O {looper.output_dir}
   -P {compute.cores}
   -M {compute.mem}    
   {% if sample.read2 is defined %} --input2 {sample.read2} {% endif %}
