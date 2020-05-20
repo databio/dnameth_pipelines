@@ -1,4 +1,4 @@
-pipeline_name: rrbs-pl
+pipeline_name: RRBS
 pipeline_type: sample
 path: src/rrbs.py
 input_schema: schema_input_rrbs.yaml
@@ -14,5 +14,6 @@ command_template: >
   {% if sample.dark_bases is defined %} --dark-bases {sample.dark_bases} {% endif %}
 compute:
   size_dependent_variables: resources_rrbs.tsv
+  bulker_crate: databio/methpl
 
 
