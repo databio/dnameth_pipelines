@@ -674,7 +674,7 @@ class bsAlignedRead(bsAlignedReadMinimal):
                 fragmentSequence = refSeqHandler.getRefSeq(readstart-self.seqMotifLength, readend+self.seqMotifLength,reverse=False).upper()
             else: # transform to reverse complement if on minus strand
                 fragmentSequence = refSeqHandler.getRefSeq(readstart-self.seqMotifLength, readend+self.seqMotifLength,reverse=True).upper()
-        except Exception, ex:
+        except Exception as ex:
             sys.stdout.flush()
             print('WARNING: Could not retrieve sequence due to the following exception: '+str(type(ex))+": "+str(ex)    )
             self.isDiscarded = True
@@ -897,7 +897,7 @@ class bsAlignedRead(bsAlignedReadMinimal):
     def setMateInfo(self,mate):
         '''
         sets the information about the mate which is given as bsAlignedRead. takes care of assigning positions where read and mate overlap
-        and setting the respective bases to not be analyzed if applicable (i.e. if readnumber in pair <> 1)
+        and setting the respective bases to not be analyzed if applicable (i.e. if readnumber in pair != 1)
         also identifies whether for non WGBSS a restriction site is overlooked
         '''        
         #there are the following scenarios how the paired reads in a proper pair can lie:
@@ -974,7 +974,7 @@ class bsAlignedRead(bsAlignedReadMinimal):
         
         #if the current read number is 1 process the entire read
         #else do not process the overlap
-        if self.overlapWithMate > 0 and self.pairNum <> 1:
+        if self.overlapWithMate > 0 and self.pairNum != 1:
             self.excludedBases[self.overlapWithMateStartI:self.overlapWithMateEndI] = True
             
         #check if there has been a digestion error
@@ -1795,7 +1795,7 @@ class StatisticsCollection:
         take a StatisticsCollection object from a processed region and update the corresponding Statistics object in the global collection
         is called from performAnalysis_wrapup()
         '''
-        if self.numberOfLanes <> procStatsCol.numberOfLanes or seqMotif not in self.seqMotifs or seqMotif not in procStatsCol.seqMotifs or self.strands <> procStatsCol.strands:
+        if self.numberOfLanes != procStatsCol.numberOfLanes or seqMotif not in self.seqMotifs or seqMotif not in procStatsCol.seqMotifs or self.strands != procStatsCol.strands:
             raise Exception("Incompatible StatisticsCollections")
         for lane in range(self.numberOfLanes):
             for strand in self.strands:    
@@ -2480,7 +2480,7 @@ class OutFileHandler:
                 sys.stdout.flush()
                 bigBedReturnCode = os.system(bigBedFormatCmd)
                 try:
-                    if bigBedReturnCode <> 0:
+                    if bigBedReturnCode != 0:
                         raise Exception("BigBed conversion failed")
                 except:
                     print("WARNING: BigBed conversion failed. Command used: " + bigBedFormatCmd)
@@ -2928,7 +2928,7 @@ class ReferenceGenomeRegion:
         #just an assertion:
         ls = self.len
         lr = end - start
-        if ls <> lr:
+        if ls != lr:
             print("WARNING: in reference sequence handling: length of retrieved sequence  (" + str(ls) + ") does not match genomic coordinates ("+regionName +"["+str(start)+","+str(end)+") - length: " +str(lr)+")\nfile used: " + str(chromFile))
         
     def __qualityCheckChromFileAndGetOffset__(self):
@@ -3769,7 +3769,7 @@ def sequenceDataProcessing(genomicRegion, startPos, endPos, statsPickledFile, ou
                 print(h.heap())
             sys.stdout.flush()
         count = count + 1
-        if alignedRead.is_unmapped <> 0:
+        if alignedRead.is_unmapped != 0:
             countDiscardedAlignments += 1
             continue
         
@@ -3814,7 +3814,7 @@ def sequenceDataProcessing(genomicRegion, startPos, endPos, statsPickledFile, ou
         #assuming the readnumber corresponds to the order of mapping positions, determine the number of reads where  read#1 does not map to the + strand
         #hints at sequencing into the adapter
         if options.pairedEnd and options.processZSField and read.isPaired and curReadStartsInWindow:
-            if (mappedStrand == "+" and read.pairNum <> 1) or (mappedStrand == "-" and read.pairNum <> 2):
+            if (mappedStrand == "+" and read.pairNum != 1) or (mappedStrand == "-" and read.pairNum != 2):
                 statisticsLanes.updateStatsVal(seqMotif,inputFileNo,options.isStrandSpecific,ampStrand,'mappingOrderDoesNotMatchStrand')
                 
         if read.isDiscarded: #because of mismatch criteria or the reference sequence could not be retrieved or there was some error in parsing
@@ -3890,7 +3890,7 @@ def sequenceDataProcessing(genomicRegion, startPos, endPos, statsPickledFile, ou
                         statisticsLanes.updateStatsVal(seqMotif,inputFileNo,options.isStrandSpecific,ampStrand,'discard_improperPairs')
                     continue
                 #only take read #1 into account for improperly paired reads
-                elif read.pairNum <> 1:                    
+                elif read.pairNum != 1:                    
                     read.discardMe()
                     countDiscardedAlignments += 1
                     if curReadStartsInWindow:
@@ -4507,7 +4507,7 @@ def combineDuplicatesInCpGmethFile(infilename,outfilename,seqMotif): #TODO: func
                 duplicates += 1
                 meth += int(curMethInfo[0])
                 total += int(curMethInfo[1]) 
-                if llcur[5] == llprev[5] and strand <> "b":
+                if llcur[5] == llprev[5] and strand != "b":
                     strand = llcur[5]
                 else:
                         strand = "b"                 
@@ -4683,7 +4683,7 @@ def performAnalysis(options):
     # identify which chromosomes to include or exclude
     global chromSizeHash
     includeList = []
-    if options.includedChromosomes <> "":
+    if options.includedChromosomes != "":
         includeList = options.includedChromosomes.split(",")
         
     excludeList = options.excludedChromosomes.split(",")
@@ -4794,7 +4794,7 @@ def performAnalysis(options):
     manageProcesses(chromSortList,chromSizeHash,chromFileHandler,includedRegions,outfns,shellScriptHandlers4seqMotifs,jobH,mainPickleFileName4regions,strands,seqMotifList,path,options,fragmentsInfo,debug)
     
     spikeIns = None
-    if options.spikeInControlSeqs <> "":
+    if options.spikeInControlSeqs != "":
         print("Reading Spike In controls from " + options.spikeInControlSeqs)
         spikeIns = SpikeInControls(options.spikeInControlSeqs,options.spikeInMotifLen)
         
@@ -4967,7 +4967,7 @@ def performAnalysis_wrapup(options_l):
             print("["+time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())+"] " + "Postprocessing file " + outfns.seqMotifOutfileNames[seqMotif][finalOutfile])
             sys.stdout.flush()
             if doLiftover:
-                if finalOutfile <> 'readQualOutfile': 
+                if finalOutfile != 'readQualOutfile': 
                     (finalOutfileAfterLiftOver, callString, success) = performLiftOver(outfns.seqMotifOutfileNames[seqMotif][finalOutfile], options.inGenome, options.outGenome, True)
                 else:
                     if options.readDetailsFileLiftOver:
@@ -5051,7 +5051,7 @@ def performAnalysis_wrapup(options_l):
             os.system(callStringLogs)
 #            os.system(callStringErrs)
 
-    if options.spikeInControlSeqs <> "":
+    if options.spikeInControlSeqs != "":
         print("Analysing Spike In controls from " + options.spikeInControlSeqs)
         spikeIns.extractSICreads(options)
         spikeIns.processSICreads(options)
