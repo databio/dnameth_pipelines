@@ -9,6 +9,7 @@ resources:
 tools:
   # paths to required tools
   python: python
+  python2: python2
   java: java
   samtools: samtools
   picard: ${PICARD}

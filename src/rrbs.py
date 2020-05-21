@@ -273,7 +273,7 @@ def main(cmdl):
 
 	ngstk.make_sure_path_exists (biseq_output_path)
 
-	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "biseqMethCalling.py")
+	cmd = tools.python2 + " -u " + os.path.join(tools.scripts_dir, "biseqMethCalling.py")
 	cmd += " --sampleName=" + args.sample_name
 	cmd += " --alignmentFile=" + out_bsmap      # this is the absolute path to the bsmap aligned bam file
 	cmd += " --methodPrefix=RRBS"
