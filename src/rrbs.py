@@ -17,7 +17,7 @@ from pypiper.utils import head
 from epilog_commands import *
 from helpers import MissingEpilogError, MissingInputFileException, ProgSpec, \
 	get_dedup_bismark_cmd, get_qual_code_cmd
-
+from refgenconf import RefGenConf as RGC, select_genome_config
 
 def _parse_args(cmdl):
 	from argparse import ArgumentParser
@@ -66,12 +66,21 @@ def main(cmdl):
 	outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
 	pm = pypiper.PipelineManager(name="RRBS", outfolder=outfolder, args=args, version=__version__)
 
+
 	# Set up a few additional paths not in the config file
 	pm.config.tools.scripts_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tools")
 	pm.config.resources.ref_genome_fasta = os.path.join(pm.config.resources.genomes, args.genome_assembly, args.genome_assembly + ".fa")
 	pm.config.resources.chrom_sizes = os.path.join(pm.config.resources.genomes, args.genome_assembly, args.genome_assembly + ".chromSizes")
 	pm.config.resources.genomes_split = os.path.join(pm.config.resources.resources, "genomes_split")
 	pm.config.resources.bismark_spikein_genome = os.path.join(pm.config.resources.genomes, pm.config.resources.spikein_genome, "indexed_bismark_bt1")
+
+	# Refgenie resources
+	rgc = RGC(select_genome_config(pm.config.resources.get("genome_config")))
+	pm.config.resources.ref_genome_fasta = rgc.seek(args.genome_assembly, "fasta")
+	pm.config.resources.chrom_sizes = rgc.seek(args.genome_assembly, "fasta", seek_key="chrom_sizes")
+	pm.config.resources.bismark_spikein_genome = rgc.seek(args.genome_assembly, "bismark_bt1_index")
+	pm.config.resources.genomes_split = rgc.seek(args.genome_assembly, "split_fasta")
+
 
 	# Epilog indexes
 	pm.config.resources.methpositions = os.path.join(pm.config.resources.genomes, args.genome_assembly, "indexed_epilog", args.genome_assembly + "_cg.tsv.gz")
