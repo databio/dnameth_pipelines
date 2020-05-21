@@ -674,7 +674,7 @@ class bsAlignedRead(bsAlignedReadMinimal):
                 fragmentSequence = refSeqHandler.getRefSeq(readstart-self.seqMotifLength, readend+self.seqMotifLength,reverse=False).upper()
             else: # transform to reverse complement if on minus strand
                 fragmentSequence = refSeqHandler.getRefSeq(readstart-self.seqMotifLength, readend+self.seqMotifLength,reverse=True).upper()
-        except Exception, ex:
+        except Exception as ex:
             sys.stdout.flush()
             print('WARNING: Could not retrieve sequence due to the following exception: '+str(type(ex))+": "+str(ex)    )
             self.isDiscarded = True
