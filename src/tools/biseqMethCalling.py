@@ -3188,6 +3188,7 @@ class ProcessShellScriptHandler:
         self.jobnames.append(curPname)
         curLogFile = self.path + curPname + ".log"
         self.logFileNames.append(curLogFile)
+        # This used to use 'sh ' but I changed it to '. '
         jobString = ". " + self.path + self.curFileName
         if options.parallelize:
 #            jobString = self.submitCmd + " -o " + curLogFile + " -e " + curLogFile + ".err" + " -J " + curPname + " " + jobString

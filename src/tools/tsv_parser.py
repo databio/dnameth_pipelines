@@ -44,7 +44,7 @@ parser.add_argument('-H', '--no-header', dest='header',
 
 args = parser.parse_args()
 
-input_open = open(args.input_file, 'rb')
+input_open = open(args.input_file, 'rt')
 if args.header:
 	f = csv.DictReader(input_open, delimiter="\t")
 else:
