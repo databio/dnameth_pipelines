@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 '''
 biseqMethCalling.py
 (C) Christoph Bock, Natalie Jaeger, Fabian Mueller
@@ -73,7 +73,7 @@ system commands on the same machine as the 'main' task. Communication between th
 #  some overlapping bases between the read pairs will be excluded from the analysis. Implementing this feature is postponed, as it takes a significant amount of time and computing resources
 #- in the statistics of medians, although not mathematically sound medians of medians are computed as an approximation. Precise computation would require a significant amount of computing resources
 # core libraries
-import cPickle
+import pickle as cPickle
 import math
 import os
 import shutil
@@ -3188,7 +3188,7 @@ class ProcessShellScriptHandler:
         self.jobnames.append(curPname)
         curLogFile = self.path + curPname + ".log"
         self.logFileNames.append(curLogFile)
-        jobString = "sh " + self.path + self.curFileName
+        jobString = ". " + self.path + self.curFileName
         if options.parallelize:
 #            jobString = self.submitCmd + " -o " + curLogFile + " -e " + curLogFile + ".err" + " -J " + curPname + " " + jobString
             jobString = self.submitCmd + " -o " + curLogFile + " -J " + curPname + " " + jobString
@@ -4395,11 +4395,12 @@ def manageProcesses(chromSortList,chromSizeHash,chromFileHandler,includedRegions
                             cPickle.dump(processZSField, paramPKLfile)
                             paramPKLfile.close() 
                             
-                            pString = "python %s --task region --pickleFile %s --RP_paramPickle %s" % (sys.argv[0],inPKLfn,paramPKLfn) # sys.argv[0]: currently executed script
+                            pString = "python2 %s --task region --pickleFile %s --RP_paramPickle %s" % (sys.argv[0],inPKLfn,paramPKLfn) # sys.argv[0]: currently executed script
                             
                             if options.debugEnableRuntimeProfiling:
                                 pString += " --debugEnableRuntimeProfiling --runtimeProfileFile " + runtimeProfileDir + os.sep + "runtime_profile_region_" + seqMotif + "_" + chrom + "_" + str(processUnitStart) + "to" + str(processUnitEnd) + ".cProfile"
                             jobStr = shellScriptHs[seqMotif].addProcess(pString, regionID, outPKLfn,regionCoordTupel)
+                            print(jobStr)
                             if len(jobStr) > 0:
                                 jobH.addJob(jobStr)
        
@@ -4695,7 +4696,7 @@ def performAnalysis(options):
             if not os.path.exists(alignmentFile+'.bai'): 
                 try:
                     pysam.index(alignmentFile)
-                except pysam.SamtoolsError, e:
+                except pysam.SamtoolsError as e:
                     print("WARNING: the following exception occurred during BAM file indexing of " + alignmentFile + " :")
                     print(str(e))
                     raise SystemExit
@@ -4813,7 +4814,7 @@ def performAnalysis(options):
     mpf2.close()
     
     #start the wrapup task
-    pString = "python %s --task wrapup --pickleFile %s" % (sys.argv[0],mainPickleFileName4wrapup)
+    pString = "python2 %s --task wrapup --pickleFile %s" % (sys.argv[0],mainPickleFileName4wrapup)
     if options.debugEnableRuntimeProfiling:
         runtimeProfileDir = options.outputDir + os.sep + "runtime_profiles"
         pString += " --debugEnableRuntimeProfiling --runtimeProfileFile " + runtimeProfileDir + os.sep + options.sampleName + "runtime_profile_wrapup.cProfile"
