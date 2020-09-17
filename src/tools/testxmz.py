@@ -91,7 +91,7 @@ def calc_methylation(bamfile, region):
 			#message += region + "_" + "CHH_count\t%d\n" % chh_total
 			#message += region + "_" + "CHH_pct\t%f\n" % chh_total_pct
 
-		print message
+		print(message)
 
 		#outfilename = os.path.splitext(bamfile)[0] + "." + region + ".txt"
 		#out = open (outfilename, "w")
