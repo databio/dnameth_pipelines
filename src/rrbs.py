@@ -72,13 +72,13 @@ def main(cmdl):
 	pm.config.resources.ref_genome_fasta = os.path.join(pm.config.resources.genomes, args.genome_assembly, args.genome_assembly + ".fa")
 	pm.config.resources.chrom_sizes = os.path.join(pm.config.resources.genomes, args.genome_assembly, args.genome_assembly + ".chromSizes")
 	pm.config.resources.genomes_split = os.path.join(pm.config.resources.resources, "genomes_split")
-	pm.config.resources.bismark_spikein_genome = os.path.join(pm.config.resources.genomes, pm.config.resources.spikein_genome, "indexed_bismark_bt1")
+	pm.config.resources.bismark_spikein_genome = os.path.join(pm.config.resources.genomes, pm.config.resources.spikein_genome, "indexed_bismark_bt2")
 
 	# Refgenie resources
 	rgc = RGC(select_genome_config(pm.config.resources.get("genome_config")))
 	pm.config.resources.ref_genome_fasta = rgc.seek(args.genome_assembly, "fasta")
 	pm.config.resources.chrom_sizes = rgc.seek(args.genome_assembly, "fasta", seek_key="chrom_sizes")
-	pm.config.resources.bismark_spikein_genome = rgc.seek(args.genome_assembly, "bismark_bt1_index")
+	pm.config.resources.bismark_spikein_genome = rgc.seek(args.genome_assembly, "bismark_bt2_index")
 	pm.config.resources.genomes_split = rgc.seek(args.genome_assembly, "split_fasta")
 
 
@@ -504,12 +504,12 @@ def main(cmdl):
 	################################################################################
 	pm.timestamp("### PCR duplicate removal (spike-in): ")
 	# Bismark's deduplication forces output naming, how annoying.
-	#out_spikein_dedup = spikein_folder + args.sample_name + ".spikein.aln.deduplicated.bam"
+	out_spikein_dedup = spikein_folder + args.sample_name + ".spikein.aln.deduplicated.bam"
 	try:
 		cmd, out_spikein_dedup = get_dedup_bismark_cmd(paired=args.paired_end,
 			infile=out_spikein, prog=tools.deduplicate_bismark)
 	except MissingInputFileException as e:
-		print("Could not create Bismark deduplication command ({}); skipping spike-in")
+		print("Could not create Bismark deduplication command ({}); skipping spike-in".format(e))
 	else:
 		out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_spikein_dedup)
 		cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
