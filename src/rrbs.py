@@ -467,7 +467,7 @@ def main(cmdl):
 	# convert BAM to fastq
 	bsmap_fastq_unalignable_pre = os.path.join(bsmap_folder, args.sample_name + "_unalignable")
 	bsmap_fastq_unalignable = bsmap_fastq_unalignable_pre + "_R1.fastq"
-	cmd = ngstk.bam_to_fastq(bsmap_unalignable_bam, bsmap_fastq_unalignable_pre, args.paired_end)
+	cmd, fq1, fq2 = ngstk.bam_to_fastq_awk(bsmap_unalignable_bam, bsmap_fastq_unalignable_pre, args.paired_end)
 	pm.run(cmd, bsmap_fastq_unalignable)
 
 	# actual spike-in analysis
