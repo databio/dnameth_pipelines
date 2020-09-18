@@ -430,7 +430,10 @@ def main(cmdl):
 			outdir=epilog_output_dir, rrbs_fill=args.rrbs_fill)
 		pm.timestamp("### COMPLETE: epilog processing")
 	"""
-		
+	
+	epilog_output_dir = os.path.join(
+		param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+	ngstk.make_sure_path_exists(epilog_output_dir)		
 	epilog_outfile = os.path.join(
 			epilog_output_dir, args.sample_name + "_epilog.bed")
 	epilog_summary_file = os.path.join(
