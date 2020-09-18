@@ -570,7 +570,7 @@ def main(cmdl):
 	epilog_spike_outfile=os.path.join(
 			spikein_folder, args.sample_name + "_epilog.bed")
 	epilog_spike_summary_file=os.path.join(
-			spikein_folder, args.sample_name + "_epilog_summary.bed")
+			spikein_folder, args.sample_name + "_epilog.summary.bed")
 	
 	cmd = tools.epilog
 	cmd += " run -- "
