@@ -444,12 +444,12 @@ def main(cmdl):
 	cmd += " " + out_bsmap  # absolute path to the bsmap aligned bam
 	cmd += " " + resources.methpositions
 	cmd += " --output " + epilog_outfile
-	# cmd += " --summary-filename=" + epilog_summary_file
+	cmd += " --skipSummary " + epilog_summary_file
 	cmd += " --cores=" + str(pm.cores)
 	cmd += " --minBaseQuality " + str(param.epilog.qual_threshold)
 	cmd += " --minReadLength " + str(param.epilog.read_length_threshold)
 	cmd += " --rrbsFill " + str(args.rrbs_fill)
-	cmd += " --context CG " + str(args.rrbs_fill)
+	cmd += " --context CG "
 	cmd += " --strandMethod flag"    # Strand mode required because this isn't a bismark alignment.
 
 	pm.run(cmd, epilog_outfile, nofail=True)
@@ -577,11 +577,12 @@ def main(cmdl):
 	cmd += " " + out_spikein_sorted # absolute path to the bsmap aligned bam
 	cmd += " " + resources.spikein_methpositions
 	cmd += " --output " + epilog_spike_outfile
-	# cmd += " --summary-filename=" + epilog_spike_summary_file
+	cmd += " --skipSummary " + epilog_spike_summary_file
 	cmd += " --cores=" + str(pm.cores)
 	cmd += " --minBaseQuality 30"    # quality_threshold
 	cmd += " --minReadLength 30"    # read length cutoff
 	cmd += " --rrbsFill 0"
+	cmd += " --context C"
 	cmd += " --strandMethod tag"
 
 	pm.run(cmd, epilog_spike_outfile, nofail=True)
