@@ -82,9 +82,14 @@ def main(cmdl):
 	pm.config.resources.genomes_split = rgc.seek(args.genome_assembly, "split_fasta")
 
 
+
 	# Epilog indexes
 	pm.config.resources.methpositions = os.path.join(pm.config.resources.genomes, args.genome_assembly, "indexed_epilog", args.genome_assembly + "_cg.tsv.gz")
 	pm.config.resources.spikein_methpositions = os.path.join(pm.config.resources.genomes, pm.config.resources.spikein_genome, "indexed_epilog", pm.config.resources.spikein_genome + "_index.tsv.gz")
+
+	# update to using refgenie for epilog indexes:
+	pm.config.resources.methpositions = rgc.seek(args.genome_assembly, "epilog_index")
+	pm.config.resources.spikein_methpositions = rgc.seek(pm.config.resources.spikein_genome, "epilog_index")
 
 	pm.config.parameters.pipeline_outfolder = outfolder
 
@@ -403,8 +408,9 @@ def main(cmdl):
 	pm.run([cmd, cmd2], out_bigwig, shell=True)
 
 	################################################################################
-
+	pm.timestamp("### Epilog Methcalling: ")
 	# Create the program specification, in scope both for ordinary and spike-in.
+	"""
 	if args.epilog:
 		try:
 			epilog_prog_spec = ProgSpec(jar=tools.epilog, memory=pm.mem, cores=pm.cores)
@@ -423,28 +429,40 @@ def main(cmdl):
 			readsfile=out_bsmap, sitesfile=resources.methpositions,
 			outdir=epilog_output_dir, rrbs_fill=args.rrbs_fill)
 		pm.timestamp("### COMPLETE: epilog processing")
+	"""
+		
+	epilog_outfile = os.path.join(
+			epilog_output_dir, args.sample_name + "_epilog.bed")
+	epilog_summary_file = os.path.join(
+			epilog_output_dir, args.sample_name + "_epilog_summary.bed")
 
-		"""
-		epilog_outfile = os.path.join(
-				epilog_output_dir, args.sample_name + "_epilog.bed")
-		epilog_summary_file = os.path.join(
-				epilog_output_dir, args.sample_name + "_epilog_summary.bed")
-	
-		cmd = tools.epilog
-		cmd += " call"
-		cmd += " --infile=" + out_bsmap  # absolute path to the bsmap aligned bam
-		cmd += " --positions=" + resources.methpositions
-		cmd += " --outfile=" + epilog_outfile
-		cmd += " --summary-filename=" + epilog_summary_file
-		cmd += " --cores=" + str(pm.cores)
-		cmd += " --qual-threshold=" + str(param.epilog.qual_threshold)
-		cmd += " --read-length-threshold=" + str(param.epilog.read_length_threshold)
-		cmd += " --rrbs-fill=" + str(args.rrbs_fill)
-		cmd += " --use-strand"    # Strand mode required because this isn't a bismark alignment.
-	
-		pm.run(cmd, epilog_outfile, nofail=True)
-		"""
+	cmd = tools.epilog
+	cmd += " run"
+	cmd += " " + out_bsmap  # absolute path to the bsmap aligned bam
+	cmd += " " + resources.methpositions
+	cmd += " --output " + epilog_outfile
+	# cmd += " --summary-filename=" + epilog_summary_file
+	cmd += " --cores=" + str(pm.cores)
+	cmd += " --minBaseQuality " + str(param.epilog.qual_threshold)
+	cmd += " --minReadLength " + str(param.epilog.read_length_threshold)
+	cmd += " --rrbsFill " + str(args.rrbs_fill)
+	cmd += " --strandMethod"    # Strand mode required because this isn't a bismark alignment.
 
+	pm.run(cmd, epilog_outfile, nofail=True)
+	
+	"""
+	cmd = tools.epilog
+	cmd += " call"
+	cmd += " --infile=" + out_bsmap  # absolute path to the bsmap aligned bam
+	cmd += " --positions=" + resources.methpositions
+	cmd += " --outfile=" + epilog_outfile
+	cmd += " --summary-filename=" + epilog_summary_file
+	cmd += " --cores=" + str(pm.cores)
+	cmd += " --qual-threshold=" + str(param.epilog.qual_threshold)
+	cmd += " --read-length-threshold=" + str(param.epilog.read_length_threshold)
+	cmd += " --rrbs-fill=" + str(args.rrbs_fill)
+	cmd += " --use-strand"    # Strand mode required because this isn't a bismark alignment.
+	"""
 
 	################################################################################
 	pm.timestamp("### Bismark alignment (spike-in): ")
