@@ -23,7 +23,7 @@ tools:
   deduplicate_bismark: deduplicate_bismark
   bsmap: bsmap
   biseqMethCalling_tools: ${RESOURCES}/tools
-  epilog: ${EPILOG}
+  epilog: epilog
 
 parameters:
   # parameters passed to bioinformatic tools, subclassed by tool
