@@ -430,7 +430,7 @@ def main(cmdl):
 			outdir=epilog_output_dir, rrbs_fill=args.rrbs_fill)
 		pm.timestamp("### COMPLETE: epilog processing")
 	"""
-	
+
 	epilog_output_dir = os.path.join(
 		param.pipeline_outfolder, "epilog_" + args.genome_assembly)
 	ngstk.make_sure_path_exists(epilog_output_dir)		
@@ -440,7 +440,7 @@ def main(cmdl):
 			epilog_output_dir, args.sample_name + "_epilog_summary.bed")
 
 	cmd = tools.epilog
-	cmd += " run"
+	cmd += " run -- "
 	cmd += " " + out_bsmap  # absolute path to the bsmap aligned bam
 	cmd += " " + resources.methpositions
 	cmd += " --output " + epilog_outfile
@@ -449,7 +449,8 @@ def main(cmdl):
 	cmd += " --minBaseQuality " + str(param.epilog.qual_threshold)
 	cmd += " --minReadLength " + str(param.epilog.read_length_threshold)
 	cmd += " --rrbsFill " + str(args.rrbs_fill)
-	cmd += " --strandMethod"    # Strand mode required because this isn't a bismark alignment.
+	cmd += " --context CG " + str(args.rrbs_fill)
+	cmd += " --strandMethod flag"    # Strand mode required because this isn't a bismark alignment.
 
 	pm.run(cmd, epilog_outfile, nofail=True)
 	
@@ -549,6 +550,7 @@ def main(cmdl):
 		cmd1 += " >> " + pm.pipeline_stats_file
 		pm.run(cmd1, lock_name="spikein", nofail=True)
 
+	"""
 	if epilog_prog_spec:
 		# spike in conversion efficiency calculation with epilog
 		ngstk.make_sure_path_exists(spikein_folder)
@@ -562,24 +564,26 @@ def main(cmdl):
 				outdir=spikein_folder, rrbs_fill=args.rrbs_fill)
 		except Exception as e:
 			print("WARNING -- Could not run epilog -- {}".format(e))
-
 	"""
+
+	
 	epilog_spike_outfile=os.path.join(
 			spikein_folder, args.sample_name + "_epilog.bed")
 	epilog_spike_summary_file=os.path.join(
 			spikein_folder, args.sample_name + "_epilog_summary.bed")
 	
 	cmd = tools.epilog
-	cmd += " call"
-	cmd += " --infile=" + out_spikein_sorted # absolute path to the bsmap aligned bam
-	cmd += " --positions=" + resources.spikein_methpositions
-	cmd += " --outfile=" + epilog_spike_outfile
-	cmd += " --summary-filename=" + epilog_spike_summary_file
+	cmd += " run -- "
+	cmd += " " + out_spikein_sorted # absolute path to the bsmap aligned bam
+	cmd += " " + resources.spikein_methpositions
+	cmd += " --output " + epilog_spike_outfile
+	# cmd += " --summary-filename=" + epilog_spike_summary_file
 	cmd += " --cores=" + str(pm.cores)
-	cmd += " --qual-threshold=30"    # quality_threshold
-	cmd += " --read-length-threshold=30"    # read length cutoff
-	cmd += " --rrbs-fill=0"
-	
+	cmd += " --minBaseQuality 30"    # quality_threshold
+	cmd += " --minReadLength 30"    # read length cutoff
+	cmd += " --rrbsFill 0"
+	cmd += " --strandMethod tag"
+
 	pm.run(cmd, epilog_spike_outfile, nofail=True)
 	
 	# Now parse some results for pypiper result reporting.
@@ -594,7 +598,7 @@ def main(cmdl):
 		cmd_rate = cmd + " -c " + "rate"
 		x = pm.checkprint(cmd_rate, shell=True)
 		pm.report_result(chrom+'_meth_EL', x)
-	"""
+	
 
 	# PDR calculation:
 	################################################################################
