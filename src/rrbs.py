@@ -444,7 +444,7 @@ def main(cmdl):
 	cmd += " " + out_bsmap  # absolute path to the bsmap aligned bam
 	cmd += " " + resources.methpositions
 	cmd += " --output " + epilog_outfile
-	cmd += " --skipSummary " + epilog_summary_file
+	# cmd += " --skipSummary " + epilog_summary_file
 	cmd += " --cores=" + str(pm.cores)
 	cmd += " --minBaseQuality " + str(param.epilog.qual_threshold)
 	cmd += " --minReadLength " + str(param.epilog.read_length_threshold)
@@ -577,7 +577,7 @@ def main(cmdl):
 	cmd += " " + out_spikein_sorted # absolute path to the bsmap aligned bam
 	cmd += " " + resources.spikein_methpositions
 	cmd += " --output " + epilog_spike_outfile
-	cmd += " --skipSummary " + epilog_spike_summary_file
+	# cmd += " --skipSummary " + epilog_spike_summary_file
 	cmd += " --cores=" + str(pm.cores)
 	cmd += " --minBaseQuality 30"    # quality_threshold
 	cmd += " --minReadLength 30"    # read length cutoff
