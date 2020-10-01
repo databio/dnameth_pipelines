@@ -51,7 +51,7 @@ There are two configuration options: You can either set up environment variables
 
 You never need to interface with the pipeline directly, but you can if you want. Just run `python src/rrbs.py -h` to see usage. But the best way to use this pipeline is to run it using looper. You will need to tell looper about your project. Example project data are in the [examples/test_project](examples/test_project) folder. Run the pipeline across all samples in the test project with this command:
 ```
-looper run examples/test_project/test_config.yaml
+looper run examples/test_config.yaml
 ```
 
 If the looper executable in not your `$PATH`, add the following line to your `.bashrc` or `.profile`:
@@ -74,6 +74,14 @@ Your annotation file must specify these columns:
 - whatever else you want
 
 Run your project as above, by passing your project config file to `looper run`. More detailed instructions and advanced options for how to define your project are in the [Looper documentation on defining a project](http://looper.readthedocs.io/en/latest/define-your-project.html). Of particular interest may be the section on [using looper derived columns](http://looper.readthedocs.io/en/latest/advanced.html#pointing-to-flexible-data-with-derived-columns).
+
+
+Other examples:
+
+```
+looper run examples/test_config.yaml --package bulker_local --limit 1 --ignore-flags -x="-R -M 2G -e" 
+```
+
 
 ## Using a cluster
 

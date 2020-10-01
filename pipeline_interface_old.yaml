@@ -79,3 +79,4 @@ pipelines:
         cores: "6"
         mem: "24000"
         time: "2-00:00:00"
+

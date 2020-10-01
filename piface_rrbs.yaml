@@ -1,0 +1,20 @@
+pipeline_name: RRBS
+pipeline_type: sample
+var_templates:
+ main: "{looper.piface_dir}/src/rrbs.py"
+input_schema: schema_input_rrbs.yaml
+command_template: >
+  {pipeline.var_templates.main} --sample-name {sample.sample_name}
+  --genome {sample.genome}
+  --input {sample.read1}
+  --single-or-paired {sample.read_type}
+  -O {looper.results_subdir}
+  -P {compute.cores}
+  -M {compute.mem}    
+  {% if sample.read2 is defined %} --input2 {sample.read2} {% endif %}
+  {% if sample.dark_bases is defined %} --dark-bases {sample.dark_bases} {% endif %}
+compute:
+  size_dependent_variables: resources_rrbs.tsv
+  bulker_crate: databio/methpl
+
+

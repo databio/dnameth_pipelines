@@ -1,0 +1,6 @@
+max_file_size	cores	mem	time	partition
+0.3	4	4000	0-02:00:00	standard
+1	8	32000	2-00:00:00	standard
+3	16	64000	4-00:00:00	standard
+10	24	64000	7-00:00:00	standard
+NaN	24	128000	7-00:00:00	largemem

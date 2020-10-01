@@ -1,24 +1,23 @@
 #!/usr/bin/env python
 
-"""
-RRBS pipeline
-"""
+""" Processing and analysis pipeline for data from a reduced-representation bisulfite sequencing experiment. """
 
 __author__ = "Nathan Sheffield"
 __email__ = "nathan@code.databio.org"
-__credits__ = ["Charles Dietz", "Johanna Klughammer", "Christoph Bock", "Andreas Schoenegger"]
+__credits__ = ["Charles Dietz", "Johanna Klughammer", "Andreas Schoenegger", "Vince Reuter", "Christoph Bock"]
 __license__ = "GPL3"
-__version__ = "0.4.0"
+__version__ = "0.5dev"
 
 
 import copy
 import os
 import re
 import pypiper
+from pypiper.utils import head
 from epilog_commands import *
-from helpers import MissingEpilogError, ProgSpec, \
-	get_dedup_bismark_cmd
-
+from helpers import MissingEpilogError, MissingInputFileException, ProgSpec, \
+	get_dedup_bismark_cmd, get_qual_code_cmd
+from refgenconf import RefGenConf as RGC, select_genome_config
 
 def _parse_args(cmdl):
 	from argparse import ArgumentParser
@@ -33,8 +32,6 @@ def _parse_args(cmdl):
 	parser = pypiper.add_pypiper_args(parser, all_args=True)
 
 	# Add any pipeline-specific arguments
-	parser.add_argument("-t", "--trimgalore", dest="trimgalore", action="store_true",
-		help='Use trimgalore instead of trimmomatic?')
 	parser.add_argument("-e", "--epilog", dest='epilog', action="store_true",
 		help='Use epilog for meth calling?')
 	parser.add_argument("--pdr", dest="pdr", action="store_true",
@@ -69,20 +66,34 @@ def main(cmdl):
 	outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
 	pm = pypiper.PipelineManager(name="RRBS", outfolder=outfolder, args=args, version=__version__)
 
+
 	# Set up a few additional paths not in the config file
 	pm.config.tools.scripts_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tools")
 	pm.config.resources.ref_genome_fasta = os.path.join(pm.config.resources.genomes, args.genome_assembly, args.genome_assembly + ".fa")
 	pm.config.resources.chrom_sizes = os.path.join(pm.config.resources.genomes, args.genome_assembly, args.genome_assembly + ".chromSizes")
 	pm.config.resources.genomes_split = os.path.join(pm.config.resources.resources, "genomes_split")
-	pm.config.resources.bismark_spikein_genome = os.path.join(pm.config.resources.genomes, pm.config.resources.spikein_genome, "indexed_bismark_bt1")
+	pm.config.resources.bismark_spikein_genome = os.path.join(pm.config.resources.genomes, pm.config.resources.spikein_genome, "indexed_bismark_bt2")
+
+	# Refgenie resources
+	rgc = RGC(select_genome_config(pm.config.resources.get("genome_config")))
+	pm.config.resources.ref_genome_fasta = rgc.seek(args.genome_assembly, "fasta")
+	pm.config.resources.chrom_sizes = rgc.seek(args.genome_assembly, "fasta", seek_key="chrom_sizes")
+	pm.config.resources.bismark_spikein_genome = rgc.seek(args.genome_assembly, "bismark_bt2_index")
+	pm.config.resources.genomes_split = rgc.seek(args.genome_assembly, "split_fasta")
+
+
 
 	# Epilog indexes
 	pm.config.resources.methpositions = os.path.join(pm.config.resources.genomes, args.genome_assembly, "indexed_epilog", args.genome_assembly + "_cg.tsv.gz")
 	pm.config.resources.spikein_methpositions = os.path.join(pm.config.resources.genomes, pm.config.resources.spikein_genome, "indexed_epilog", pm.config.resources.spikein_genome + "_index.tsv.gz")
 
+	# update to using refgenie for epilog indexes:
+	pm.config.resources.methpositions = rgc.seek(args.genome_assembly, "epilog_index")
+	pm.config.resources.spikein_methpositions = rgc.seek(pm.config.resources.spikein_genome, "epilog_index")
+
 	pm.config.parameters.pipeline_outfolder = outfolder
 
-	print(pm.config)
+	print("Pipeline configuration: {}".format(pm.config))
 	tools = pm.config.tools  # Convenience alias
 	param = pm.config.parameters
 	resources = pm.config.resources
@@ -109,8 +120,6 @@ def main(cmdl):
 	pm.report_result("Read_type", args.single_or_paired)
 	pm.report_result("Genome", args.genome_assembly)
 
-
-
 	if args.dark_bases and args.dark_bases != 0:
 		pm.timestamp("### Dark sequencing mode: ")
 		cmd = tools.scripts_dir + "/darkSeqCombineReads.pl " + \
@@ -123,22 +132,11 @@ def main(cmdl):
 		pm.run(cmd, unaligned_fastq)
 		args.paired_end = False
 
-
-
 	################################################################################
 	pm.timestamp("### Adapter trimming: ")
 
 	# We need to detect the quality encoding type of the fastq.
-
-	if args.paired_end:
-		# Just look at the first read
-		cmd = tools.python + " -u " + os.path.join(tools.scripts_dir,
-		"detect_quality_code.py") + " -f " + unaligned_fastq[0]
-	else:
-		cmd = tools.python + " -u " + os.path.join(tools.scripts_dir,
-		"detect_quality_code.py") + " -f " + unaligned_fastq
-
-	encoding_string = pm.checkprint(cmd)
+	encoding_string = pm.checkprint(get_qual_code_cmd(tools, head(unaligned_fastq)))
 	if encoding_string.find("phred33") != -1:
 		encoding = "phred33"
 	elif encoding_string.find("phred64") != -1:
@@ -146,72 +144,43 @@ def main(cmdl):
 	else:
 		raise Exception("Unknown quality encoding type: "+encoding_string)
 
-	if args.trimgalore:
-		# Trim galore requires biopython, cutadapt modules. RSeQC as well (maybe?)
-		#   --- $trim_galore -q $q --phred33 -a $a --stringency $s -e $e --length $l --output_dir $output_dir $input_fastq
+	# Trimmomatic
 
-		raise NotImplementedError("TrimGalore no longer supported")
+	trimmed_fastq = out_fastq_pre + "_R1_trimmed.fq"
+	trimmed_fastq_R2 = out_fastq_pre + "_R2_trimmed.fq"
 
-		if args.paired_end:
-			raise NotImplementedError("TrimGalore for PE RRBS not implemented")
-		input_fastq = out_fastq_pre + "_R1.fastq "
+	# REMARK AS: instead of trim_galore we try to use Trimmomatic for now
+	# - we are more compatible with the other pipelines
+	# - better code base, not a python wrapper of a perl script (as trim_galore)
+	# - rrbs-mode not needed because biseq has the same functionality
 
-		# With trimgalore, the output file is predetermined.
-		trimmed_fastq = out_fastq_pre + "_R1_trimmed.fq"
+	# REMARK NS:
+	# The -Xmx4000m restricts heap memory allowed to java, and is necessary
+	# to prevent java from allocating lots of memory willy-nilly
+	# if it's on a machine with lots of memory, which can lead
+	# to jobs getting killed by a resource manager. By default, java will
+	# use more memory on systems that have more memory, leading to node-dependent
+	# killing effects that are hard to trace.
 
-		output_dir = fastq_folder
-
-		# Adapter
-		a = "AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC"
-
-		cmd = tools.trimgalore
-		cmd += " -q 20"  # quality trimming
-		cmd += " --" + encoding
-		cmd += " -a " + a
-		cmd += " --stringency 1"  # stringency: Overlap with adapter sequence required to trim a sequence
-		cmd += " -e 0.1"  # Maximum allowed error rate
-		cmd += " --length 16"  # Minimum Read length
-		# by unchangeable default Trimmomatic discards reads of lenth 0 (produced by ILLUMINACLIP):
-		cmd += " --output_dir " + output_dir + " " + input_fastq
-
+	cmd = tools.java + " -Xmx" + str(pm.mem) + " -jar " + tools.trimmomatic_epignome
+	if args.paired_end:
+		cmd += " PE"
 	else:
-		# Trimmomatic
-
-		trimmed_fastq = out_fastq_pre + "_R1_trimmed.fq"
-		trimmed_fastq_R2 = out_fastq_pre + "_R2_trimmed.fq"
-
-		# REMARK AS: instead of trim_galore we try to use Trimmomatic for now
-		# - we are more compatible with the other pipelines
-		# - better code base, not a python wrapper of a perl script (as trim_galore)
-		# - rrbs-mode not needed because biseq has the same functionality
-
-		# REMARK NS:
-		# The -Xmx4000m restricts heap memory allowed to java, and is necessary
-		# to prevent java from allocating lots of memory willy-nilly
-		# if it's on a machine with lots of memory, which can lead
-		# to jobs getting killed by a resource manager. By default, java will
-		# use more memory on systems that have more memory, leading to node-dependent
-		# killing effects that are hard to trace.
-
-		cmd = tools.java + " -Xmx" + str(pm.mem) + " -jar " + tools.trimmomatic_epignome
-		if args.paired_end:
-			cmd += " PE"
-		else:
-			cmd += " SE"
-		cmd += " -" + encoding
-		cmd += " -threads " + str(pm.cores) + " "
-		#cmd += " -trimlog " + os.path.join(fastq_folder, "trimlog.log") + " "
-		if args.paired_end:
-			cmd += out_fastq_pre + "_R1.fastq "
-			cmd += out_fastq_pre + "_R2.fastq "
-			cmd += out_fastq_pre + "_R1_trimmed.fq "
-			cmd += out_fastq_pre + "_R1_unpaired.fq "
-			cmd += out_fastq_pre + "_R2_trimmed.fq "
-			cmd += out_fastq_pre + "_R2_unpaired.fq "
-		else:
-			cmd += out_fastq_pre + "_R1.fastq "
-			cmd += out_fastq_pre + "_R1_trimmed.fq "
-		cmd += "ILLUMINACLIP:" + resources.adapter_file + param.trimmomatic.illuminaclip
+		cmd += " SE"
+	cmd += " -" + encoding
+	cmd += " -threads " + str(pm.cores) + " "
+	#cmd += " -trimlog " + os.path.join(fastq_folder, "trimlog.log") + " "
+	if args.paired_end:
+		cmd += out_fastq_pre + "_R1.fastq "
+		cmd += out_fastq_pre + "_R2.fastq "
+		cmd += out_fastq_pre + "_R1_trimmed.fq "
+		cmd += out_fastq_pre + "_R1_unpaired.fq "
+		cmd += out_fastq_pre + "_R2_trimmed.fq "
+		cmd += out_fastq_pre + "_R2_unpaired.fq "
+	else:
+		cmd += out_fastq_pre + "_R1.fastq "
+		cmd += out_fastq_pre + "_R1_trimmed.fq "
+	cmd += "ILLUMINACLIP:" + resources.adapter_file + param.trimmomatic.illuminaclip
 
 
 	# Trimming command has been constructed, using either trimming options.
@@ -309,7 +278,7 @@ def main(cmdl):
 
 	ngstk.make_sure_path_exists (biseq_output_path)
 
-	cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "biseqMethCalling.py")
+	cmd = tools.python2 + " -u " + os.path.join(tools.scripts_dir, "biseqMethCalling.py")
 	cmd += " --sampleName=" + args.sample_name
 	cmd += " --alignmentFile=" + out_bsmap      # this is the absolute path to the bsmap aligned bam file
 	cmd += " --methodPrefix=RRBS"
@@ -439,8 +408,9 @@ def main(cmdl):
 	pm.run([cmd, cmd2], out_bigwig, shell=True)
 
 	################################################################################
-
+	pm.timestamp("### Epilog Methcalling: ")
 	# Create the program specification, in scope both for ordinary and spike-in.
+	"""
 	if args.epilog:
 		try:
 			epilog_prog_spec = ProgSpec(jar=tools.epilog, memory=pm.mem, cores=pm.cores)
@@ -459,28 +429,44 @@ def main(cmdl):
 			readsfile=out_bsmap, sitesfile=resources.methpositions,
 			outdir=epilog_output_dir, rrbs_fill=args.rrbs_fill)
 		pm.timestamp("### COMPLETE: epilog processing")
+	"""
 
-		"""
-		epilog_outfile = os.path.join(
-				epilog_output_dir, args.sample_name + "_epilog.bed")
-		epilog_summary_file = os.path.join(
-				epilog_output_dir, args.sample_name + "_epilog_summary.bed")
-	
-		cmd = tools.epilog
-		cmd += " call"
-		cmd += " --infile=" + out_bsmap  # absolute path to the bsmap aligned bam
-		cmd += " --positions=" + resources.methpositions
-		cmd += " --outfile=" + epilog_outfile
-		cmd += " --summary-filename=" + epilog_summary_file
-		cmd += " --cores=" + str(pm.cores)
-		cmd += " --qual-threshold=" + str(param.epilog.qual_threshold)
-		cmd += " --read-length-threshold=" + str(param.epilog.read_length_threshold)
-		cmd += " --rrbs-fill=" + str(args.rrbs_fill)
-		cmd += " --use-strand"    # Strand mode required because this isn't a bismark alignment.
-	
-		pm.run(cmd, epilog_outfile, nofail=True)
-		"""
+	epilog_output_dir = os.path.join(
+		param.pipeline_outfolder, "epilog_" + args.genome_assembly)
+	ngstk.make_sure_path_exists(epilog_output_dir)		
+	epilog_outfile = os.path.join(
+			epilog_output_dir, args.sample_name + "_epilog.bed")
+	epilog_summary_file = os.path.join(
+			epilog_output_dir, args.sample_name + "_epilog_summary.bed")
 
+	cmd = tools.epilog
+	cmd += " run -- "
+	cmd += " " + out_bsmap  # absolute path to the bsmap aligned bam
+	cmd += " " + resources.methpositions
+	cmd += " --output " + epilog_outfile
+	# cmd += " --skipSummary " + epilog_summary_file
+	cmd += " --cores=" + str(pm.cores)
+	cmd += " --minBaseQuality " + str(param.epilog.qual_threshold)
+	cmd += " --minReadLength " + str(param.epilog.read_length_threshold)
+	cmd += " --rrbsFill " + str(args.rrbs_fill)
+	cmd += " --context CG "
+	cmd += " --strandMethod flag"    # Strand mode required because this isn't a bismark alignment.
+
+	pm.run(cmd, epilog_outfile, nofail=True)
+	
+	"""
+	cmd = tools.epilog
+	cmd += " call"
+	cmd += " --infile=" + out_bsmap  # absolute path to the bsmap aligned bam
+	cmd += " --positions=" + resources.methpositions
+	cmd += " --outfile=" + epilog_outfile
+	cmd += " --summary-filename=" + epilog_summary_file
+	cmd += " --cores=" + str(pm.cores)
+	cmd += " --qual-threshold=" + str(param.epilog.qual_threshold)
+	cmd += " --read-length-threshold=" + str(param.epilog.read_length_threshold)
+	cmd += " --rrbs-fill=" + str(args.rrbs_fill)
+	cmd += " --use-strand"    # Strand mode required because this isn't a bismark alignment.
+	"""
 
 	################################################################################
 	pm.timestamp("### Bismark alignment (spike-in): ")
@@ -488,7 +474,7 @@ def main(cmdl):
 
 	# get unaligned reads out of BSMAP bam
 	bsmap_unalignable_bam = os.path.join(bsmap_folder, args.sample_name + "_unalignable.bam")
-	pm.run(tools.samtools + " view -bh -f 4 -F 128 "+out_bsmap+" > " + bsmap_unalignable_bam, bsmap_unalignable_bam, shell=True)
+	pm.run(tools.samtools + " view -bh -f 4 -F 128 " + out_bsmap + " > " + bsmap_unalignable_bam, bsmap_unalignable_bam, shell=True)
 
 	# Re-flag the unaligned paired-end reads to make them look like unpaired for Bismark
 	if args.paired_end:
@@ -502,8 +488,8 @@ def main(cmdl):
 
 	# convert BAM to fastq
 	bsmap_fastq_unalignable_pre = os.path.join(bsmap_folder, args.sample_name + "_unalignable")
-	bsmap_fastq_unalignable = bsmap_fastq_unalignable_pre  + "_R1.fastq"
-	cmd = ngstk.bam_to_fastq(bsmap_unalignable_bam, bsmap_fastq_unalignable_pre, args.paired_end)
+	bsmap_fastq_unalignable = bsmap_fastq_unalignable_pre + "_R1.fastq"
+	cmd, fq1, fq2 = ngstk.bam_to_fastq_awk(bsmap_unalignable_bam, bsmap_fastq_unalignable_pre, args.paired_end)
 	pm.run(cmd, bsmap_fastq_unalignable)
 
 	# actual spike-in analysis
@@ -532,24 +518,26 @@ def main(cmdl):
 
 	# Clean up the unmapped file which is copied from the parent
 	# bismark folder to here:
-	pm.clean_add(os.path.join(spikein_folder,"*.fastq"), conditional=True)
-	pm.clean_add(os.path.join(spikein_folder,"*.fq"), conditional=True)
+	pm.clean_add(os.path.join(spikein_folder, "*.fastq"), conditional=True)
+	pm.clean_add(os.path.join(spikein_folder, "*.fq"), conditional=True)
 	pm.clean_add(out_spikein, conditional=True)
 	pm.clean_add(spikein_temp)
-
-
 
 	################################################################################
 	pm.timestamp("### PCR duplicate removal (spike-in): ")
 	# Bismark's deduplication forces output naming, how annoying.
-	#out_spikein_dedup = spikein_folder + args.sample_name + ".spikein.aln.deduplicated.bam"
-	cmd, out_spikein_dedup = get_dedup_bismark_cmd(paired=args.paired_end,
-		infile=out_spikein, prog=tools.deduplicate_bismark)
-	out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_spikein_dedup)
-	cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
-	cmd3 = tools.samtools + " index " + out_spikein_sorted
-	pm.run([cmd, cmd2, cmd3], out_spikein_sorted + ".bai", nofail=True)
-	pm.clean_add(out_spikein_dedup, conditional=False)
+	out_spikein_dedup = spikein_folder + args.sample_name + ".spikein.aln.deduplicated.bam"
+	try:
+		cmd, out_spikein_dedup = get_dedup_bismark_cmd(paired=args.paired_end,
+			infile=out_spikein, prog=tools.deduplicate_bismark)
+	except MissingInputFileException as e:
+		print("Could not create Bismark deduplication command ({}); skipping spike-in".format(e))
+	else:
+		out_spikein_sorted = re.sub(r'.deduplicated.bam$', '.deduplicated.sorted.bam', out_spikein_dedup)
+		cmd2 = tools.samtools + " sort " + out_spikein_dedup + " -o " + out_spikein_sorted
+		cmd3 = tools.samtools + " index " + out_spikein_sorted
+		pm.run([cmd, cmd2, cmd3], out_spikein_sorted + ".bai", nofail=True)
+		pm.clean_add(out_spikein_dedup, conditional=False)
 
 	# Spike-in methylation calling
 	################################################################################
@@ -562,6 +550,7 @@ def main(cmdl):
 		cmd1 += " >> " + pm.pipeline_stats_file
 		pm.run(cmd1, lock_name="spikein", nofail=True)
 
+	"""
 	if epilog_prog_spec:
 		# spike in conversion efficiency calculation with epilog
 		ngstk.make_sure_path_exists(spikein_folder)
@@ -575,39 +564,42 @@ def main(cmdl):
 				outdir=spikein_folder, rrbs_fill=args.rrbs_fill)
 		except Exception as e:
 			print("WARNING -- Could not run epilog -- {}".format(e))
-
 	"""
+
+	
 	epilog_spike_outfile=os.path.join(
 			spikein_folder, args.sample_name + "_epilog.bed")
 	epilog_spike_summary_file=os.path.join(
-			spikein_folder, args.sample_name + "_epilog_summary.bed")
+			spikein_folder, args.sample_name + "_epilog.summary.bed")
 	
 	cmd = tools.epilog
-	cmd += " call"
-	cmd += " --infile=" + out_spikein_sorted # absolute path to the bsmap aligned bam
-	cmd += " --positions=" + resources.spikein_methpositions
-	cmd += " --outfile=" + epilog_spike_outfile
-	cmd += " --summary-filename=" + epilog_spike_summary_file
+	cmd += " run -- "
+	cmd += " " + out_spikein_sorted # absolute path to the bsmap aligned bam
+	cmd += " " + resources.spikein_methpositions
+	cmd += " --output " + epilog_spike_outfile
+	# cmd += " --skipSummary " + epilog_spike_summary_file
 	cmd += " --cores=" + str(pm.cores)
-	cmd += " --qual-threshold=30"    # quality_threshold
-	cmd += " --read-length-threshold=30"    # read length cutoff
-	cmd += " --rrbs-fill=0"
-	
+	cmd += " --minBaseQuality 30"    # quality_threshold
+	cmd += " --minReadLength 30"    # read length cutoff
+	cmd += " --rrbsFill 0"
+	cmd += " --context C"
+	cmd += " --strandMethod tag"
+
 	pm.run(cmd, epilog_spike_outfile, nofail=True)
 	
 	# Now parse some results for pypiper result reporting.
 	for chrom in spike_chroms:
 		cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "tsv_parser.py")
 		cmd += " -i " + os.path.join(spikein_folder, epilog_spike_summary_file)
-		cmd += " -r context=C chr=" + chrom
+		cmd += " -r context=C chromosome=" + chrom
 	
 		cmd_total = cmd + " -c " + "total"
 		x = pm.checkprint(cmd_total, shell=True)
 		pm.report_result(chrom+'_count_EL', x)
-		cmd_rate = cmd + " -c " + "rate"
+		cmd_rate = cmd + " -c " + "methylRate"
 		x = pm.checkprint(cmd_rate, shell=True)
 		pm.report_result(chrom+'_meth_EL', x)
-	"""
+	
 
 	# PDR calculation:
 	################################################################################

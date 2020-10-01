@@ -2,18 +2,19 @@ resources:
   # paths to reference genomes, adapter files, and other required shared data
   resources: $RESOURCES
   genomes: $GENOMES
+  genome_config: ${REFGENIE}
   adapter_file: $RESOURCES/adapters/RRBS_adapters.fa
   spikein_genome: meth_spikein_k1_k3
 
 tools:
   # paths to required tools
   python: python
+  python2: python2
   java: java
   samtools: samtools
   picard: ${PICARD}
   trimmomatic: ${TRIMMOMATIC}
   trimmomatic_epignome: ${TRIMMOMATIC_EPIGNOME}
-  trimgalore: /cm/shared/apps/trim_galore/0.3.3/trim_galore
   bowtie1: bowtie
   bowtie2: bowtie2
   bedToBigBed: bedToBigBed
@@ -22,7 +23,7 @@ tools:
   deduplicate_bismark: deduplicate_bismark
   bsmap: bsmap
   biseqMethCalling_tools: ${RESOURCES}/tools
-  epilog: ${EPILOG}
+  epilog: epilog
 
 parameters:
   # parameters passed to bioinformatic tools, subclassed by tool

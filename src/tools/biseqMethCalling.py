@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 '''
 biseqMethCalling.py
 (C) Christoph Bock, Natalie Jaeger, Fabian Mueller
@@ -73,7 +73,7 @@ system commands on the same machine as the 'main' task. Communication between th
 #  some overlapping bases between the read pairs will be excluded from the analysis. Implementing this feature is postponed, as it takes a significant amount of time and computing resources
 #- in the statistics of medians, although not mathematically sound medians of medians are computed as an approximation. Precise computation would require a significant amount of computing resources
 # core libraries
-import cPickle
+import pickle as cPickle
 import math
 import os
 import shutil
@@ -320,33 +320,33 @@ def getGappedSeqRead(rr,clipping=True,removeIns=True):
 
 def printread(rr):
     '''
-    helper function to print the key attributes of a pysam read object
+    helper function to print. the key attributes of a pysam read object
     '''
-    print "------------------------------"
-    print rr.qname
-    print "------------------------------"
-    print "is_unmapped: " + str(rr.is_unmapped)
-    print "pos: " + str(rr.pos)
-    print "is_reverse: " + str(rr.is_reverse)
-    print "rlen: " + str(rr.rlen)
-    print "rname: " + str(rr.rname)
-    print "seq: " + rr.seq
-    print "cigar: " + str(rr.cigar)
-    print "is_paired: " + str(rr.is_paired)
-    print "is_proper_pair: " + str(rr.is_proper_pair)
+    print("------------------------------")
+    print(rr.qname)
+    print("------------------------------")
+    print("is_unmapped: " + str(rr.is_unmapped))
+    print("pos: " + str(rr.pos))
+    print("is_reverse: " + str(rr.is_reverse))
+    print("rlen: " + str(rr.rlen))
+    print("rname: " + str(rr.rname))
+    print("seq: " + rr.seq)
+    print("cigar: " + str(rr.cigar))
+    print("is_paired: " + str(rr.is_paired))
+    print("is_proper_pair: " + str(rr.is_proper_pair))
     readpairnumstr = 0
     if rr.is_read1:
         readpairnumstr = 1
     elif rr.is_read2:
         readpairnumstr = 2
-    print "read_in_pair: " + str(readpairnumstr)
-    print "-------------"
-    print "MATE:"
-    print "mate_is_unmapped: " + str(rr.mate_is_unmapped)
-    print "mpos: " + str(rr.mpos)
-    print "mrnm: " + str(rr.mrnm)
-    print "mate_is_reverse: " + str(rr.mate_is_reverse)
-    print "isize: " + str(rr.isize)
+    print("read_in_pair: " + str(readpairnumstr))
+    print("-------------")
+    print("MATE:")
+    print("mate_is_unmapped: " + str(rr.mate_is_unmapped))
+    print("mpos: " + str(rr.mpos))
+    print("mrnm: " + str(rr.mrnm))
+    print("mate_is_reverse: " + str(rr.mate_is_reverse))
+    print("isize: " + str(rr.isize))
 
                 
 def getSeqBitArrays(s,padding=0,padVal=False,addBisulfite=1,addH=0,alphabet=["C","G","A","T","-"],otherChar="N"):
@@ -393,7 +393,7 @@ def getSeqBitArrays(s,padding=0,padVal=False,addBisulfite=1,addH=0,alphabet=["C"
 #debug
 def printSeqBitArrays(sba):
     for b in sba.keys():
-        print b + str(sba[b])
+        print(b + str(sba[b]))
 
 def getBisulfiteMatchArray(refBitA,querBitA,rl=None):
     if not rl:
@@ -414,7 +414,7 @@ def transformQualStr(s):
     try:
         tmp = map(lambda x: ASCII2PHRED[x],s)
     except KeyError:
-        print "WARNING: could not convert ASCII to Phred score: '" + s + "' --> set to 0"
+        print("WARNING: could not convert ASCII to Phred score: '" + s + "' --> set to 0")
         tmp = len(s) * [0]
     return tmp
 
@@ -572,7 +572,7 @@ class bsAlignedRead(bsAlignedReadMinimal):
             try:
                 self.ZSfield = alignedRead.opt("ZS")
             except KeyError:
-                print "WARNING: read " + str(alignedRead) +" does not contain ZS field"
+                print("WARNING: read " + str(alignedRead) +" does not contain ZS field")
             self.account4beingRead2 = self.account4beingRead2 and self.ZSfield[1] == "-"
         else:
             self.account4beingRead2 = self.account4beingRead2  and self.pairNum == 2
@@ -674,9 +674,9 @@ class bsAlignedRead(bsAlignedReadMinimal):
                 fragmentSequence = refSeqHandler.getRefSeq(readstart-self.seqMotifLength, readend+self.seqMotifLength,reverse=False).upper()
             else: # transform to reverse complement if on minus strand
                 fragmentSequence = refSeqHandler.getRefSeq(readstart-self.seqMotifLength, readend+self.seqMotifLength,reverse=True).upper()
-        except Exception, ex:
+        except Exception as ex:
             sys.stdout.flush()
-            print 'WARNING: Could not retrieve sequence due to the following exception: '+str(type(ex))+": "+str(ex)    
+            print('WARNING: Could not retrieve sequence due to the following exception: '+str(type(ex))+": "+str(ex)    )
             self.isDiscarded = True
             exceptionOccurred = True
             return
@@ -699,21 +699,21 @@ class bsAlignedRead(bsAlignedReadMinimal):
                 if startsInRegion2Process: #only count the read towards the statistics if it starts in the processing window that is currently processed
                     statsObj.updateStatsVal(seqMotif,lane,options.isStrandSpecific,ampStrand,'discard_minReadLength')
             if debug:
-                print "NOTICE: discarded short read"
-                print alignedRead.qname + " on " + self.chrom + "[" + str(readstart) +","+ str(readend) + ")" + mappedStrand
+                print("NOTICE: discarded short read")
+                print(alignedRead.qname + " on " + self.chrom + "[" + str(readstart) +","+ str(readend) + ")" + mappedStrand)
                 
         #just an assertion that everything has the correct format
         rl = len(self.readSequence)
         
         if rl > len(self.readSequenceBitArrays["C"]) or rl > (len(self.fragmentSequenceBitArrays["C"])-2*self.seqMotifLength):
-            print "ERROR: readlen does not match fragment length"
-            print alignedRead.qname + " on " + self.chrom + "[" + str(readstart) +","+ str(readend) + ")" + mappedStrand
-            print self.readSequence_raw + " , pos: "+str(alignedRead.pos)+"-- raw"
-            print self.readSequence + " " + str(rl) + "bp [" +  str(len(self.readSequenceBitArrays["C"])) + " bitarray] -- processed"
-            print self.fragmentSequence + " " + str(len(self.fragmentSequence)) + "bp [" +  str(len(self.fragmentSequenceBitArrays["C"])) + " bitarray]"
-            print "Reference handler object:"
-            print "chrom :" + refSeqHandler.chromName + "[" + str(refSeqHandler.chromStart) + "," + str(refSeqHandler.chromEnd) +"]"
-            print "seqlength: " + str(len(refSeqHandler.seq))
+            print("ERROR: readlen does not match fragment length")
+            print(alignedRead.qname + " on " + self.chrom + "[" + str(readstart) +","+ str(readend) + ")" + mappedStrand)
+            print(self.readSequence_raw + " , pos: "+str(alignedRead.pos)+"-- raw")
+            print(self.readSequence + " " + str(rl) + "bp [" +  str(len(self.readSequenceBitArrays["C"])) + " bitarray] -- processed")
+            print(self.fragmentSequence + " " + str(len(self.fragmentSequence)) + "bp [" +  str(len(self.fragmentSequenceBitArrays["C"])) + " bitarray]")
+            print("Reference handler object:")
+            print("chrom :" + refSeqHandler.chromName + "[" + str(refSeqHandler.chromStart) + "," + str(refSeqHandler.chromEnd) +"]")
+            print("seqlength: " + str(len(refSeqHandler.seq)))
             self.isDiscarded = True
             exceptionOccurred = True
             return
@@ -897,7 +897,7 @@ class bsAlignedRead(bsAlignedReadMinimal):
     def setMateInfo(self,mate):
         '''
         sets the information about the mate which is given as bsAlignedRead. takes care of assigning positions where read and mate overlap
-        and setting the respective bases to not be analyzed if applicable (i.e. if readnumber in pair <> 1)
+        and setting the respective bases to not be analyzed if applicable (i.e. if readnumber in pair != 1)
         also identifies whether for non WGBSS a restriction site is overlooked
         '''        
         #there are the following scenarios how the paired reads in a proper pair can lie:
@@ -974,7 +974,7 @@ class bsAlignedRead(bsAlignedReadMinimal):
         
         #if the current read number is 1 process the entire read
         #else do not process the overlap
-        if self.overlapWithMate > 0 and self.pairNum <> 1:
+        if self.overlapWithMate > 0 and self.pairNum != 1:
             self.excludedBases[self.overlapWithMateStartI:self.overlapWithMateEndI] = True
             
         #check if there has been a digestion error
@@ -1316,7 +1316,7 @@ class IncludedRegions:
                     self.regions[chrom] = [(start,stop)]
         except IndexError:
             self.regions = {}
-            print "WARNING: could not parse includedRegion string: '" + s + "' --> resetted to '' (all regions)"
+            print("WARNING: could not parse includedRegion string: '" + s + "' --> resetted to '' (all regions)")
             
     def overlapsWithRegion(self,chrom,start,end):
         '''
@@ -1417,35 +1417,35 @@ class Statistics:
         self.uniqueCpgMethStdev = None
     
     def printDebugAll(self):
-        print "SampleName: " + str(self.SampleName)
-        print "inputFileName: " + str(self.inputFileName)
-        print "strand: " + str(self.strand)
-        print "seqMotifName: " + str(self.seqMotifName)
-        print "cytosineStatsVal: " + str(self.cytosineStatsVal)
-        print "statsVal: " + str(self.statsVal)
-        print "allReadsMethSum: " + str(self.allReadsMethSum)
-        print "allReadsMethSumOfSquares: " + str(self.allReadsMethSumOfSquares)
-        print "allReadsMethCount: " + str(self.allReadsMethCount)
-        print "uniqueCpgMethSum: " + str(self.uniqueCpgMethSum)
-        print "uniqueCpgMethSumOfSquares: " + str(self.uniqueCpgMethSumOfSquares)
-        print "uniqueCpgMethCount: " + str(self.uniqueCpgMethCount)
-        print "medianLists: " + str(self.medianLists)
-        print "Q1: " + str(self.Q1)
-        print "Median: " + str(self.Median)
-        print "Q3: " + str(self.Q3)
-        print "fragmentRanges: " + str(self.fragmentRanges) 
-        print "coverage4fragmentSizes: " + str(self.coverage4fragmentSizes)
-        print "acceptanceRate: " + str(self.acceptanceRate)
-        print "meanMethTotal: " + str(self.meanMethTotal)
-        print "meanMethAtStart: " + str(self.meanMethAtStart)
-        print "conversionRate: " + str(self.conversionRate)
-        print "adjustedMeanMeth: " + str(self.adjustedMeanMeth)
-        print "meanMethAllUniqueCpgs: " + str(self.meanMethAllUniqueCpgs)
-        print "meanMethAllReads: " + str(self.meanMethAllReads)
-        print "allReadsMethMean: " + str(self.allReadsMethMean)
-        print "allReadsMethStdev: " + str(self.allReadsMethStdev)
-        print "uniqueCpgMethMean: " + str(self.uniqueCpgMethMean)
-        print "uniqueCpgMethStdev: " + str(self.uniqueCpgMethStdev)
+        print("SampleName: " + str(self.SampleName))
+        print("inputFileName: " + str(self.inputFileName))
+        print("strand: " + str(self.strand))
+        print("seqMotifName: " + str(self.seqMotifName))
+        print("cytosineStatsVal: " + str(self.cytosineStatsVal))
+        print("statsVal: " + str(self.statsVal))
+        print("allReadsMethSum: " + str(self.allReadsMethSum))
+        print("allReadsMethSumOfSquares: " + str(self.allReadsMethSumOfSquares))
+        print("allReadsMethCount: " + str(self.allReadsMethCount))
+        print("uniqueCpgMethSum: " + str(self.uniqueCpgMethSum))
+        print("uniqueCpgMethSumOfSquares: " + str(self.uniqueCpgMethSumOfSquares))
+        print("uniqueCpgMethCount: " + str(self.uniqueCpgMethCount))
+        print("medianLists: " + str(self.medianLists))
+        print("Q1: " + str(self.Q1))
+        print("Median: " + str(self.Median))
+        print("Q3: " + str(self.Q3))
+        print("fragmentRanges: " + str(self.fragmentRanges) )
+        print("coverage4fragmentSizes: " + str(self.coverage4fragmentSizes))
+        print("acceptanceRate: " + str(self.acceptanceRate))
+        print("meanMethTotal: " + str(self.meanMethTotal))
+        print("meanMethAtStart: " + str(self.meanMethAtStart))
+        print("conversionRate: " + str(self.conversionRate))
+        print("adjustedMeanMeth: " + str(self.adjustedMeanMeth))
+        print("meanMethAllUniqueCpgs: " + str(self.meanMethAllUniqueCpgs))
+        print("meanMethAllReads: " + str(self.meanMethAllReads))
+        print("allReadsMethMean: " + str(self.allReadsMethMean))
+        print("allReadsMethStdev: " + str(self.allReadsMethStdev))
+        print("uniqueCpgMethMean: " + str(self.uniqueCpgMethMean))
+        print("uniqueCpgMethStdev: " + str(self.uniqueCpgMethStdev))
         
     # update the main (process) Statistic object with the stats values from the genome fraction's Statistic object             
     def updateWith(self, genomeFracStats):
@@ -1570,7 +1570,7 @@ class Statistics:
                 self.Q3[listM] = self.medianLists[listM][int(lenList*0.75)]
             else:
                 if debug:
-                    print "Could not calculate Q1, median and Q3 for statistics [" + listM + "]" + " " + debuginfo
+                    print("Could not calculate Q1, median and Q3 for statistics [" + listM + "]" + " " + debuginfo)
                 self.Q1[listM] = "NA"; self.Median[listM] = "NA"; self.Q3[listM] = "NA"
                 
             self.medianLists[listM] = [] # delete lists to save memory (and not pickle it), after extracting median and quartiles
@@ -1589,7 +1589,7 @@ class Statistics:
             self.meanMethTotal = (float(self.cytosineStatsVal['total_cpg']['base'] - self.cytosineStatsVal['total_cpg_conv']['base'])/self.cytosineStatsVal['total_cpg']['base'] *100)        
         if self.cytosineStatsVal['total_cpg']['firstBase'] > 0: self.meanMethAtStart = (float(self.cytosineStatsVal['total_cpg']['firstBase'] - self.cytosineStatsVal['total_cpg_conv']['firstBase'])/self.cytosineStatsVal['total_cpg']['firstBase'] *100)        
         if self.cytosineStatsVal['total_c_nocpg']['base'] > 0:
-            print str(float(self.cytosineStatsVal['total_c_nocpg_conv']['base'])) + " / " + str(self.cytosineStatsVal['total_c_nocpg']['base'])
+            print(str(float(self.cytosineStatsVal['total_c_nocpg_conv']['base'])) + " / " + str(self.cytosineStatsVal['total_c_nocpg']['base']))
             self.conversionRate = (float(self.cytosineStatsVal['total_c_nocpg_conv']['base'])/self.cytosineStatsVal['total_c_nocpg']['base']) *100            
         if self.conversionRate != 'NA': self.adjustedMeanMeth = self.meanMethTotal * (self.conversionRate/100.0)
         else: self.adjustedMeanMeth = 'NA'
@@ -1795,7 +1795,7 @@ class StatisticsCollection:
         take a StatisticsCollection object from a processed region and update the corresponding Statistics object in the global collection
         is called from performAnalysis_wrapup()
         '''
-        if self.numberOfLanes <> procStatsCol.numberOfLanes or seqMotif not in self.seqMotifs or seqMotif not in procStatsCol.seqMotifs or self.strands <> procStatsCol.strands:
+        if self.numberOfLanes != procStatsCol.numberOfLanes or seqMotif not in self.seqMotifs or seqMotif not in procStatsCol.seqMotifs or self.strands != procStatsCol.strands:
             raise Exception("Incompatible StatisticsCollections")
         for lane in range(self.numberOfLanes):
             for strand in self.strands:    
@@ -1896,7 +1896,7 @@ class StatisticsCollection:
             else:
                 self.liftOverMappingErrorDict[seqMotif]["both"] += unmappable
         except KeyError:
-            print "WARNING: unable to update LiftOver mapping error due to KeyError (strand)"
+            print("WARNING: unable to update LiftOver mapping error due to KeyError (strand)")
             exceptionOccurred = True
     
     def readSpikeInCtrlAnalysis(self,sic):
@@ -1939,7 +1939,7 @@ class StatisticsCollection:
                 elif sic.controls[cid]["methStatus"] == "unmethylated":
                     if sic.controls[cid]["strand"] == "-":
                         if motif=="CTT" and sic.controls[cid]["Ccounts"][cPos]["total"] > 0:
-                            print cid + " pos" + str(cPos) + " counted " + str(sic.controls[cid]["Ccounts"][cPos]["total"])
+                            print(cid + " pos" + str(cPos) + " counted " + str(sic.controls[cid]["Ccounts"][cPos]["total"]))
                         sumMotifUnmethConvM += sic.controls[cid]["Ccounts"][cPos]["conv"]
                         sumMotifUnmethConvMminQual += sic.controls[cid]["CcountsQual"][cPos]["conv"]
                         sumMotifUnmethAllM += sic.controls[cid]["Ccounts"][cPos]["total"]
@@ -2227,14 +2227,14 @@ class StatisticsCollection:
     def printMe(self):
         '''
         method just used for debugging
-        print the datastructure as a debug string
+        print(the datastructure as a debug string)
         '''
         for seqMotif in self.seqMotifs:
             for s in self.strands:
-                print getDebugString("Global Statistics (" + str(seqMotif) + "," + str(s) + "):") 
+                print(getDebugString("Global Statistics (" + str(seqMotif) + "," + str(s) + "):") )
                 self.globalStats[seqMotif][s].printDebugAll()
                 for lane in range(self.numberOfLanes):
-                    print getDebugString("Lane Statistics (" + str(seqMotif) + "," + str(s) + "," + str(lane) +  "):")
+                    print(getDebugString("Lane Statistics (" + str(seqMotif) + "," + str(s) + "," + str(lane) +  "):"))
                     self.laneStats[seqMotif][lane][s].printDebugAll()
 
 
@@ -2371,14 +2371,14 @@ class OutFileHandler:
                 #concatenate MAX_CAT_FILE_NUM into a preconcatenated file
                 catCmd = 'cat ' + getSepStringFromList(self.seqMotifFiles2cat[seqMotif][fileType][:MAX_CAT_FILE_NUM]," ",addquotes=True) + ' > ' + collapsedFileName
                 if debug:
-                    print "pre-concatenate: " + catCmd
+                    print("pre-concatenate: " + catCmd)
                 os.system(catCmd)
                 self.seqMotifFiles2cat[seqMotif][fileType] = [collapsedFileName] + self.seqMotifFiles2cat[seqMotif][fileType][MAX_CAT_FILE_NUM:]
                 #delete previous concatenated file
                 if running_index > 1:
                     collapsedFileName_prev = self.seqMotifOutfileNames[seqMotif][fileType] + ".concat" + str(running_index -1)
                     if debug:
-                        print "  removing previous file: " + collapsedFileName_prev
+                        print("  removing previous file: " + collapsedFileName_prev)
                     os.system('rm ' + collapsedFileName_prev)
                 
     def getRegionFileNameDictAndUpdateseqMotifFiles2cat(self,seqMotif,chrom,processUnit):
@@ -2409,7 +2409,7 @@ class OutFileHandler:
             catCmd = 'cat ' + getSepStringFromList(self.seqMotifFiles2cat[seqMotif][finalOutfile]," ",addquotes=True) + ' > ' + self.seqMotifOutfileNames[seqMotif][finalOutfile]
             sys.stdout.flush()
             if debug:
-                print 'Concatenate temp files: ' + catCmd[:160] + '[...] > ' + self.seqMotifOutfileNames[seqMotif][finalOutfile]
+                print('Concatenate temp files: ' + catCmd[:160] + '[...] > ' + self.seqMotifOutfileNames[seqMotif][finalOutfile])
             os.system(catCmd)
             
     def catRegionFiles(self,seqMotif):
@@ -2430,7 +2430,7 @@ class OutFileHandler:
             catCmd = 'cat ' + fileNames2catFileName + ' | xargs cat > ' + self.seqMotifOutfileNames[seqMotif][finalOutfile]
             
             if debug:
-                print 'Concatenate temp files: ' + catCmd
+                print('Concatenate temp files: ' + catCmd)
                 sys.stdout.flush()
             os.system(catCmd)
     
@@ -2476,14 +2476,14 @@ class OutFileHandler:
                 
                 bigBedFormatCmd = options.toolsPath + 'bedToBigBed '+ bedFileToConvert + ' ' + chromSizesFile + ' ' + options.webOutputDir + os.sep + bedFileBigBed +'.bb'
 
-                print "Converting to bigBed format: " + bigBedFormatCmd
+                print("Converting to bigBed format: " + bigBedFormatCmd)
                 sys.stdout.flush()
                 bigBedReturnCode = os.system(bigBedFormatCmd)
                 try:
-                    if bigBedReturnCode <> 0:
+                    if bigBedReturnCode != 0:
                         raise Exception("BigBed conversion failed")
                 except:
-                    print "WARNING: BigBed conversion failed. Command used: " + bigBedFormatCmd
+                    print("WARNING: BigBed conversion failed. Command used: " + bigBedFormatCmd)
                     exceptionOccurred = True
             else: self.addFile(bedFile)
             
@@ -2493,11 +2493,11 @@ class OutFileHandler:
         '''
         for outputFilename in self.outputFilenames:
             if options.gzip:
-                print "Zipping file: " + outputFilename
+                print("Zipping file: " + outputFilename)
                 sys.stdout.flush()
                 os.system("gzip -f "+outputFilename)
                 outputFilename = outputFilename + ".gz"
-            print "Moving file: " + outputFilename
+            print("Moving file: " + outputFilename)
             sys.stdout.flush()
             if (not options.bigBedFormat) and (outputFilename.find('.bed.') > 0):
                 os.system("mv "+ outputFilename+" "+ options.webOutputDir)   
@@ -2544,7 +2544,7 @@ class ReadfileCollection:
         self.readfileNames = fileNameList
         #open all the read/alignment files
         for rf in self.readfileNames:
-            if debug: print "Loading file: " + rf
+            if debug: print("Loading file: " + rf)
             if format == "BAM":
                 self.readfiles.append(pysam.Samfile( rf, "rb" ))
             else:
@@ -2658,7 +2658,7 @@ class ReadfileCollection:
         deterministically find the next gap position downstream of a genomic position (on a given chrom/scaffold)
         '''
         if debug:
-            print "trying unit boundary: " + str(pos)
+            print("trying unit boundary: " + str(pos))
          
         runPos = pos
         minGapSize = 1 # minimum size of the gap
@@ -2673,7 +2673,7 @@ class ReadfileCollection:
             if prevPos == runPos:
                 raise Exception("Encountered endless loop in finding the next window gap")
             if debug:
-                print "  --> " + str(numReads) + " reads found in region --> trying unit boundary: " + str(runPos)
+                print("  --> " + str(numReads) + " reads found in region --> trying unit boundary: " + str(runPos))
             if runPos == -1:
                 raise Exception("could not compute last read end position for chrom " + chrom + " start position " + str(pos) )
             del readIter
@@ -2731,15 +2731,15 @@ class ReadfileCollection:
             except StopIteration: #ran through all reads in the file and found no suitable one
                 read2check = None
             if not read2check:
-                print "WARNING: no properly paired read found for checking for ZS field in file " + rfname
+                print("WARNING: no properly paired read found for checking for ZS field in file " + rfname)
                 sys.stdout.flush()
                 allZS = False
                 continue
             try:
                 v = read2check.opt("ZS")
             except KeyError:
-                print "NOTE: detected no ZS flag in file " + rfname
-                print "  read: " + str(read2check)
+                print("NOTE: detected no ZS flag in file " + rfname)
+                print("  read: " + str(read2check))
                 allZS = False
                 
         return allZS
@@ -2770,7 +2770,7 @@ class PysamMateHash:
         try:
 #            if len(self.mateHash[fileIndex][qname]) > 2:
 #                if debug:
-#                    print "WARNING: read " + qname + " has more than 2 occurrences"
+#                    print("WARNING: read " + qname + " has more than 2 occurrences")
 #                return None
 #            else:
             for rr in self.mateHash[fileIndex][qname]:
@@ -2928,8 +2928,8 @@ class ReferenceGenomeRegion:
         #just an assertion:
         ls = self.len
         lr = end - start
-        if ls <> lr:
-            print "WARNING: in reference sequence handling: length of retrieved sequence  (" + str(ls) + ") does not match genomic coordinates ("+regionName +"["+str(start)+","+str(end)+") - length: " +str(lr)+")\nfile used: " + str(chromFile)
+        if ls != lr:
+            print("WARNING: in reference sequence handling: length of retrieved sequence  (" + str(ls) + ") does not match genomic coordinates ("+regionName +"["+str(start)+","+str(end)+") - length: " +str(lr)+")\nfile used: " + str(chromFile))
         
     def __qualityCheckChromFileAndGetOffset__(self):
         '''
@@ -2946,11 +2946,11 @@ class ReferenceGenomeRegion:
         seq = self.chromFileObj.read(3)
         validLetters = ["A","C","G","T","N"]
         if seq == '':
-            print "WARNING(severe): small chromosome detected: " + self.chromName
+            print("WARNING(severe): small chromosome detected: " + self.chromName)
             self.isWeirdChrom = True
             return offset
         if not seq[0].upper() in validLetters or not seq[1] == "\n" or not seq[2].upper() in validLetters:
-            print "Incorrect file format detected for "+ self.chromName +". Sequence around position 50: "+seq
+            print("Incorrect file format detected for "+ self.chromName +". Sequence around position 50: "+seq)
             raise SystemExit
         return offset
     
@@ -3188,13 +3188,14 @@ class ProcessShellScriptHandler:
         self.jobnames.append(curPname)
         curLogFile = self.path + curPname + ".log"
         self.logFileNames.append(curLogFile)
-        jobString = "sh " + self.path + self.curFileName
+        # This used to use 'sh ' but I changed it to '. '
+        jobString = ". " + self.path + self.curFileName
         if options.parallelize:
 #            jobString = self.submitCmd + " -o " + curLogFile + " -e " + curLogFile + ".err" + " -J " + curPname + " " + jobString
             jobString = self.submitCmd + " -o " + curLogFile + " -J " + curPname + " " + jobString
-        #N#print "-------------------------------------------------------------------"
-        #N#print "REGION job:"
-        #N#print jobString
+        #N#print("-------------------------------------------------------------------")
+        #N#print("REGION job:")
+        #N#print(jobString)
         
         #reset
         self.curFileName = self.curFileNameBase
@@ -3319,29 +3320,29 @@ class SpikeInControls:
         #-f 4: only unaligned reads
         callStringBase = "samtools view -f 4 %s | grep -i -P '\t" #-P for pearl regexpr dialect (to grep for tab). grep for tab in order to filter in the sequence field (heuristic)
         for id in self.ids:
-            print "  extracting spike in control reads for " + id + "..."
+            print("  extracting spike in control reads for " + id + "...")
             curRegEx = self.getRegExpr4id(id, options.spikeInMinMatchLen)
-            print "    pattern to find: " + curRegEx
+            print("    pattern to find: " + curRegEx)
             curMatchedReadFile = options.tempDir + os.sep + options.methodPrefix + "_" + options.sampleName +"_spikeInControl_" + id + "_matchedReads.sam"
             self.matchedReadFiles[id] = curMatchedReadFile
             tmpHeaderFile = options.tempDir + os.sep + options.methodPrefix + "_" + options.sampleName +"_spikeInControl_" + id + "_samheader.txt"
             os.system("samtools view -H -o " + tmpHeaderFile + " " + options.alignmentFiles[0])
             callString = (callStringBase) % (options.alignmentFiles[0]) + curRegEx + "' > " + curMatchedReadFile + "_withoutHeader"
             if debug:
-                print "Executing extraction command:"
-                print callString
+                print("Executing extraction command:")
+                print(callString)
             os.system(callString)
             callString = "cat " + tmpHeaderFile + " " + curMatchedReadFile + "_withoutHeader >" + curMatchedReadFile
             if debug:
-                print "concatenating SAM header and matched reads: "
-                print callString
+                print("concatenating SAM header and matched reads: ")
+                print(callString)
             os.system(callString)
             if len(options.alignmentFiles) > 1:
                 for i in range(1,len(options.alignmentFiles)):
                     callString = (callStringBase) % (options.alignmentFiles[i])+ curRegEx + "' >> " + curMatchedReadFile
                     if debug:
-                        print "Executing extraction command:"
-                        print callString
+                        print("Executing extraction command:")
+                        print(callString)
                     os.system(callString)
         
     def processSICreads(self,options):
@@ -3407,7 +3408,7 @@ class RestrictionSite:
         e.g. useful to specify that Cs out of CG context are unmethylated and thus bisulfite converted. Useful for read filtering by start sequence
         '''
         if resStr.find("_") < 0 or resStr.find("-") < 0 or resStr.count("_") > 1 or resStr.count("-") > 1:
-            print "misspecified restriction site: " + resStr
+            print("misspecified restriction site: " + resStr)
             raise SystemExit
         
         resStr = resStr.strip()
@@ -3683,7 +3684,7 @@ def sequenceDataProcessing(genomicRegion, startPos, endPos, statsPickledFile, ou
     pattern = seqMotif2pattern(seqMotif)
     pattern_compl = strComp(pattern)
 
-    #N#print "Processing genomic region "+genomicRegion +' '+ str(startPos)+' '+ str(endPos)
+    #N#print("Processing genomic region "+genomicRegion +' '+ str(startPos)+' '+ str(endPos))
     #N#sys.stdout.flush()
 
     chromFile = chromFileHandler.getFileObject(chromString)
@@ -3724,21 +3725,21 @@ def sequenceDataProcessing(genomicRegion, startPos, endPos, statsPickledFile, ou
         patternBucketsM = PatternBuckets4region(startPos,endPos,numberOfLanes,countBuckets=SEQMOTIF_THRES)
     
     if debug:
-        print "fetching reads..."
+        print("fetching reads...")
         sys.stdout.flush()
     try:
         pysamReadList = readfileCollection_subp.getReadsInRegion_withFileIndex(genomicRegion, startPos, endPos)
     except ValueError:
-        print '\tChromosome ' + genomicRegion + "[" + str(startPos) + "," + str(endPos) + ') does not exist in current alignment file'
+        print('\tChromosome ' + genomicRegion + "[" + str(startPos) + "," + str(endPos) + ') does not exist in current alignment file')
         sys.stdout.flush()
     if len(pysamReadList) == 0:
-        print 'No reads found for Chromosome ' + genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'
+        print('No reads found for Chromosome ' + genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')')
 
     count = 0
     processedReads = 0
     unalignedCount = 0
     if debug:
-        if count == 0: print "Non-overlapping unit borders: "+str(startPos)+'  '+str(endPos)
+        if count == 0: print("Non-overlapping unit borders: "+str(startPos)+'  '+str(endPos))
 
     #build a mate pair dictionary if Paired end handling is enabled
     if options.pairedEnd:
@@ -3748,8 +3749,8 @@ def sequenceDataProcessing(genomicRegion, startPos, endPos, statsPickledFile, ou
             mateReadHash.addReads(readListExtension) #extend the mate lookup table
         
     if debug:
-        print "processing reads |"+genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'+"| ..."
-    #N#print "number of reads: " + str(len(pysamReadList))
+        print("processing reads |"+genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'+"| ...")
+    #N#print("number of reads: " + str(len(pysamReadList)))
     sys.stdout.flush()
     
 #DEBUG
@@ -3759,17 +3760,17 @@ def sequenceDataProcessing(genomicRegion, startPos, endPos, statsPickledFile, ou
         (alignedRead,inputFileNo) = readAndFileIndex
         sys.stdout.flush()
         if count % 100000 == 0:
-            #N#print "Processing " + genomicRegion + ":" + str(startPos) + " to " + str(endPos) + " record "+str(count)
+            #N#print("Processing " + genomicRegion + ":" + str(startPos) + " to " + str(endPos) + " record "+str(count))
             if options.debugEnableMemoryProfiling:
                 h = guppy.hpy()
-                print "Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
-#                print "MEMORY USAGE (heap): " + genomicRegion + ":" + str(startPos) + " to " + str(endPos) + " record "+str(count) + " (" + str(len(tempReadUnit.reads)) + " in read collection)"
-                print "MEMORY USAGE (heap): " + genomicRegion + ":" + str(startPos) + " to " + str(endPos) + " record "+str(count) + " (" + str(processedReads) + " reads accepted)"
-                print "Heap: "
-                print h.heap()
+                print("Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime()))
+#                print("MEMORY USAGE (heap): " + genomicRegion + ":" + str(startPos) + " to " + str(endPos) + " record "+str(count) + " (" + str(len(tempReadUnit.reads)) + " in read collection)")
+                print("MEMORY USAGE (heap): " + genomicRegion + ":" + str(startPos) + " to " + str(endPos) + " record "+str(count) + " (" + str(processedReads) + " reads accepted)")
+                print("Heap: ")
+                print(h.heap())
             sys.stdout.flush()
         count = count + 1
-        if alignedRead.is_unmapped <> 0:
+        if alignedRead.is_unmapped != 0:
             countDiscardedAlignments += 1
             continue
         
@@ -3814,26 +3815,26 @@ def sequenceDataProcessing(genomicRegion, startPos, endPos, statsPickledFile, ou
         #assuming the readnumber corresponds to the order of mapping positions, determine the number of reads where  read#1 does not map to the + strand
         #hints at sequencing into the adapter
         if options.pairedEnd and options.processZSField and read.isPaired and curReadStartsInWindow:
-            if (mappedStrand == "+" and read.pairNum <> 1) or (mappedStrand == "-" and read.pairNum <> 2):
+            if (mappedStrand == "+" and read.pairNum != 1) or (mappedStrand == "-" and read.pairNum != 2):
                 statisticsLanes.updateStatsVal(seqMotif,inputFileNo,options.isStrandSpecific,ampStrand,'mappingOrderDoesNotMatchStrand')
                 
         if read.isDiscarded: #because of mismatch criteria or the reference sequence could not be retrieved or there was some error in parsing
             countDiscardedAlignments += 1
 ##DEBUG
-#            print 20*"@" +"discarded due to mismatchLenOrReference"+ 20*"@"
-#            print "pysam read:"
+#            print(20*"@" +"discarded due to mismatchLenOrReference"+ 20*"@")
+#            print("pysam read:")
 #            printread(alignedRead)
-#            print "parsed read:"
-#            print read.getDebugString()
+#            print("parsed read:")
+#            print(read.getDebugString())
             continue 
          
         #just an assertion
         if read.chromend <= read.chromstart or read.readend <= read.readstart:
-            print "WARNING: improper readlength detected:"
-            print "readend : " + str(read.readend)
-            print "chromend: " + str(read.chromend)
-            print "readstart : " + str(read.readstart)
-            print "chromstart: " + str(read.chromstart)
+            print("WARNING: improper readlength detected:")
+            print("readend : " + str(read.readend))
+            print("chromend: " + str(read.chromend))
+            print("readstart : " + str(read.readstart))
+            print("chromstart: " + str(read.chromstart))
             printread(alignedRead)
             
             countDiscardedAlignments += 1
@@ -3847,11 +3848,11 @@ def sequenceDataProcessing(genomicRegion, startPos, endPos, statsPickledFile, ou
                 if curReadStartsInWindow:
                     statisticsLanes.updateStatsVal(seqMotif,inputFileNo,options.isStrandSpecific,ampStrand,'discard_restrSite')
 ##DEBUG
-#                print 20*"@" +"discarded due to restriction site"+ 20*"@"
-#                print "pysam read:"
+#                print(20*"@" +"discarded due to restriction site"+ 20*"@")
+#                print("pysam read:")
 #                printread(alignedRead)
-#                print "parsed read:"
-#                print read.getDebugString()
+#                print("parsed read:")
+#                print(read.getDebugString())
                 
                 continue
             
@@ -3890,7 +3891,7 @@ def sequenceDataProcessing(genomicRegion, startPos, endPos, statsPickledFile, ou
                         statisticsLanes.updateStatsVal(seqMotif,inputFileNo,options.isStrandSpecific,ampStrand,'discard_improperPairs')
                     continue
                 #only take read #1 into account for improperly paired reads
-                elif read.pairNum <> 1:                    
+                elif read.pairNum != 1:                    
                     read.discardMe()
                     countDiscardedAlignments += 1
                     if curReadStartsInWindow:
@@ -3982,11 +3983,11 @@ def sequenceDataProcessing(genomicRegion, startPos, endPos, statsPickledFile, ou
         
 
     if debug:
-        print "updating CpG methylation |"+genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'+"| ..."
+        print("updating CpG methylation |"+genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'+"| ...")
         sys.stdout.flush()
     del readfileCollection_subp
-    #N#print "[" + str(time.strftime("%Y-%m-%d %H:%M:%S")) + "] Region " + genomicRegion + " [" + str(startPos) + "," + str(endPos) + "): " + str(unalignedCount) + " of " + str(count) + " reads unaligned, " + str(countDiscardedAlignments) + " discarded"
-    #N#print "[" + str(time.strftime("%Y-%m-%d %H:%M:%S")) + "] Region " + genomicRegion + " [" + str(startPos) + "," + str(endPos) + "): updating statistics..."
+    #N#print("[" + str(time.strftime("%Y-%m-%d %H:%M:%S")) + "] Region " + genomicRegion + " [" + str(startPos) + "," + str(endPos) + "): " + str(unalignedCount) + " of " + str(count) + " reads unaligned, " + str(countDiscardedAlignments) + " discarded")
+    #N#print("[" + str(time.strftime("%Y-%m-%d %H:%M:%S")) + "] Region " + genomicRegion + " [" + str(startPos) + "," + str(endPos) + "): updating statistics...")
     sys.stdout.flush()
         
     # create statistics for CpG methylation summary, list each unique CpG once (per lane and accumulated (not summed!) over all lanes in the region)    
@@ -4054,7 +4055,7 @@ def sequenceDataProcessing(genomicRegion, startPos, endPos, statsPickledFile, ou
             statisticsLanes.addOneRegionStats(seqMotif,"both","uniqueseqMotifCount")
             statisticsLanes.updateRegionStats4process(seqMotif, "both", {"uniqueseqMotifMethSum": uniqueMethAcrossLanes["both"],"uniqueseqMotifMethSumSquares": pow(uniqueMethAcrossLanes["both"],2)})
 
-    #N#print "[" + str(time.strftime("%Y-%m-%d %H:%M:%S")) + "] Region " + genomicRegion + " [" + str(startPos) + "," + str(endPos) + "): creating subprocess output..."
+    #N#print("[" + str(time.strftime("%Y-%m-%d %H:%M:%S")) + "] Region " + genomicRegion + " [" + str(startPos) + "," + str(endPos) + "): creating subprocess output...")
     sys.stdout.flush()
         
     # create process specific output files (output files of all processes will be merged in main process once all processes have finished)
@@ -4065,13 +4066,13 @@ def sequenceDataProcessing(genomicRegion, startPos, endPos, statsPickledFile, ou
                 outfile = open(outfileNames[outFileName], 'w')
                 outfileNames[outFileName] = outfile
              
-#        print str(tempReadUnit.getNumReads()) + ' of ' + str(len(pysamReadList)) +' reads processed for Chromosome ' + genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'
-        #N#print str(processedReads) + ' of ' + str(len(pysamReadList)) +' reads processed for Chromosome ' + genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'
+#        print(str(tempReadUnit.getNumReads()) + ' of ' + str(len(pysamReadList)) +' reads processed for Chromosome ' + genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')')
+        #N#print(str(processedReads) + ' of ' + str(len(pysamReadList)) +' reads processed for Chromosome ' + genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')')
         
 #        # write read and possibly read details output file
 #        if debug:
-#            print "writing output file: Reads |"+genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'+"| ..."
-#            print "  sorting reads..."
+#            print("writing output file: Reads |"+genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'+"| ...")
+#            print("  sorting reads...")
 #            sys.stdout.flush()
 #        tempReadUnit.sort()
 #        if options.readDetailsFile:
@@ -4083,13 +4084,13 @@ def sequenceDataProcessing(genomicRegion, startPos, endPos, statsPickledFile, ou
         #write the rest of the reads in the buffer to the output files
         readFileH.flush()
 
-        #N#print "sorting reads in read output file: Reads |"+genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'+"| ..."
+        #N#print("sorting reads in read output file: Reads |"+genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'+"| ...")
         sys.stdout.flush()
         readFileH.sort()
         
         # create output file for CpG methylation summary, list each CpG once. (if command line parameter "--isStrandSpecific" is set, the same CpG will appear separately for "+" and "-" strand --> 2 output files)          
         if debug:
-            print "writing output file: CpGs |"+genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'+"| ..."
+            print("writing output file: CpGs |"+genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'+"| ...")
             sys.stdout.flush()
         listCpgMethSummary.sort()
         for cpgMethSummary in listCpgMethSummary:
@@ -4099,7 +4100,7 @@ def sequenceDataProcessing(genomicRegion, startPos, endPos, statsPickledFile, ou
             else: outfileNames['cpgOutfile'].write(str(cpgMethSummary))  
     
         if debug:
-            print "assessing fragment coverage |"+genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'+"| ..."
+            print("assessing fragment coverage |"+genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'+"| ...")
         # create global fragment coverage summary file - each fragment appears only once, reporting the number of times the fragment is covered by reads (if command line parameter "options.isStrandSpecific" is set, the same fragment will appear separately for "+" and "-" strand --> 2 output files)                
         coverageSortingList = []
         for fragment in fragmentCoverage.keys():
@@ -4120,7 +4121,7 @@ def sequenceDataProcessing(genomicRegion, startPos, endPos, statsPickledFile, ou
                     coverageSortingList.append(UniqueFragmentsPerLane(fragment, methList, strandInfo))
         coverageSortingList.sort()  
         if debug:
-            print "writing output file: fragments |"+genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'+"| ..."
+            print("writing output file: fragments |"+genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'+"| ...")
             sys.stdout.flush()
         for frag in coverageSortingList:      
             if options.isStrandSpecific:        
@@ -4173,14 +4174,14 @@ def sequenceDataProcessing(genomicRegion, startPos, endPos, statsPickledFile, ou
     #  pickle the statistics object for the 'wrapup' task
     #pickle to tmp file and move to final file name later for easier error checking
     if debug:
-        print "writing output file: Pickle |"+genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'+"| ..."
+        print("writing output file: Pickle |"+genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'+"| ...")
         sys.stdout.flush()
     output = open(statsPickledFile + ".tmp", 'wb')
     cPickle.dump(statisticsLanes, output)
     cPickle.dump(exceptionOccurred, output)
     output.close()
     if debug:
-        print "  moving pickle file |"+genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'+"| ..."
+        print("  moving pickle file |"+genomicRegion + "[" + str(startPos) + "," + str(endPos) + ')'+"| ...")
         sys.stdout.flush()
 #    os.system("cp " + statsPickledFile + ".tmp " + statsPickledFile) #TODO: comment in for debug for WGBSS: strangely some tmp files were not moved
     os.system("mv " + statsPickledFile + ".tmp " + statsPickledFile)
@@ -4212,7 +4213,7 @@ def subprocProfileWrapper_sequenceDataProcessing(genomicRegion, startPos, endPos
 #    '''
 #    
 #    if debug:
-#        print "trying unit boundary: " + str(pos)
+#        print("trying unit boundary: " + str(pos))
 #     
 #    runPos = pos
 #    minGapSize = 1 # minimum size of the gap
@@ -4228,7 +4229,7 @@ def subprocProfileWrapper_sequenceDataProcessing(genomicRegion, startPos, endPos
 #            if prevPos == runPos:
 #                raise Exception("Encountered endless loop in finding the next window gap")
 #            if debug:
-#                print "  --> " + str(len(readList)) + " reads found in region --> trying unit boundary: " + str(runPos)
+#                print("  --> " + str(len(readList)) + " reads found in region --> trying unit boundary: " + str(runPos))
 #            if runPos == -1:
 #                raise Exception("could not compute last read end position for chrom " + chrom + " start position " + str(pos) )
 #        del readList #try to remove, because the loops seems to consume too much memory. is this really necassary????
@@ -4298,17 +4299,17 @@ def manageProcesses(chromSortList,chromSizeHash,chromFileHandler,includedRegions
         processZSField = None
         #check for custom ZS field in the bam files to determine the read numbers and orientations
         if options.pairedEnd:
-            print "checking for ZS field in BAM files..."
+            print("checking for ZS field in BAM files...")
             processZSField = readfileCollection.checkForZSfield()
             if processZSField:
-                print "  all files contain ZS field --> using ZS to determine read numbers and orientation"
+                print("  all files contain ZS field --> using ZS to determine read numbers and orientation")
             else:
-                print "  not all files contain ZS field --> using flag field to determine read numbers and orientation"      
+                print("  not all files contain ZS field --> using flag field to determine read numbers and orientation"      )
             
         runtimeProfileDir = options.outputDir + os.sep + "runtime_profiles"
 
         while nextChromNo <= len(chromSortList):
-            if debug: print "Processing nextChromNo: " + str(nextChromNo)
+            if debug: print("Processing nextChromNo: " + str(nextChromNo))
             # identify next valid processUnit and start process
             if (processUnit == None or chrom == None or curChromPos >= chromSizeHash[chrom]):
                 #only get next chromosome info if not working on the last chromosome
@@ -4318,7 +4319,7 @@ def manageProcesses(chromSortList,chromSizeHash,chromFileHandler,includedRegions
                     nextChromNo += 1
                     # determine single process genomic unit borders for parallel analysis
                     numChromUnits = int(math.ceil(float(chromSizeHash[chrom]) / float(options.genomeFraction * ONE_MB)))
-                    #N#print "estimated number of chromUnits for " + chrom + ": " + str(numChromUnits)
+                    #N#print("estimated number of chromUnits for " + chrom + ": " + str(numChromUnits))
                     processUnit = 0
                     curChromPos = 0
                 else:
@@ -4339,7 +4340,7 @@ def manageProcesses(chromSortList,chromSizeHash,chromFileHandler,includedRegions
                         windowEstimatedReadCount = readfileCollection.getEstimatedReadCount4Region(chrom, curChromPos, windowBoundary2try)
                     while smartWindowSize > minWindowSize and windowEstimatedReadCount > options.smartWindows:
                         if debug:
-                            print "Number of reads estimated in " +chrom+"["+str(curChromPos)+","+str(windowBoundary2try)+"): "+str(windowEstimatedReadCount)+" > "+str(options.smartWindows)+" --> decreasing window size "
+                            print("Number of reads estimated in " +chrom+"["+str(curChromPos)+","+str(windowBoundary2try)+"): "+str(windowEstimatedReadCount)+" > "+str(options.smartWindows)+" --> decreasing window size ")
                         windowBoundary2try = int((curChromPos + windowBoundary2try)/2)
                         if options.SWexactReadCount:
 #                            windowBoundary2try = readfileCollection.findNextGap(windowBoundary2try,chrom,chromSizeHash[chrom])
@@ -4349,7 +4350,7 @@ def manageProcesses(chromSortList,chromSizeHash,chromFileHandler,includedRegions
                         smartWindowSize = windowBoundary2try - curChromPos
                         
                     if smartWindowSize <= minWindowSize:
-                        print "INFO: minimum smart window length reached for window " +chrom+"["+str(curChromPos)+","+str(windowBoundary2try)+") ! --> Proceeding anyway"
+                        print("INFO: minimum smart window length reached for window " +chrom+"["+str(curChromPos)+","+str(windowBoundary2try)+") ! --> Proceeding anyway")
                 processUnitStart = curChromPos
 #                processUnitEnd = readfileCollection.findNextGap(windowBoundary2try,chrom,chromSizeHash[chrom])
                 processUnitEnd = windowBoundary2try
@@ -4370,8 +4371,8 @@ def manageProcesses(chromSortList,chromSizeHash,chromFileHandler,includedRegions
             
                         # launch process
                         numProcesses += 1
-                        #N#print "-------------------------------------------------------------------------------------------------"
-                        #N#print "Initializing process at " + time.strftime("%Y-%m-%d %H:%M:%S") + ": "+chrom+" "+str(processUnit)+" window: [" + str(processUnitStart) + "," + str(processUnitEnd) + ")"
+                        #N#print("-------------------------------------------------------------------------------------------------")
+                        #N#print("Initializing process at " + time.strftime("%Y-%m-%d %H:%M:%S") + ": "+chrom+" "+str(processUnit)+" window: [" + str(processUnitStart) + "," + str(processUnitEnd) + ")")
                         chrom_clean = cleanupChromName(chrom)
                         procName = "P_"+ seqMotif + "_" + chrom_clean+"_"+str(processUnit)+"_" + str(processUnitStart) + "to" + str(processUnitEnd)
                         regionID = chrom_clean + "-" + str(processUnit)
@@ -4382,7 +4383,7 @@ def manageProcesses(chromSortList,chromSizeHash,chromFileHandler,includedRegions
                         #check whether region is already processed. if so, then nothing needs to be done
                         if not checkRestart4region(outfileNameHashTemp,outPKLfn):
                             shellScriptHs[seqMotif].addPKLfile(outPKLfn)
-                            print "Skipping region ["+chrom +'_' + str(processUnit)+"_" + str(processUnitStart) + "to" + str(processUnitEnd) + "] <-- already processed"
+                            print("Skipping region ["+chrom +'_' + str(processUnit)+"_" + str(processUnitStart) + "to" + str(processUnitEnd) + "] <-- already processed")
                         else:
                             paramPKLfn = picklePathChrom + procName + "_InParams.cPickle"
                             paramPKLfile = open(paramPKLfn, 'wb')
@@ -4395,20 +4396,21 @@ def manageProcesses(chromSortList,chromSizeHash,chromFileHandler,includedRegions
                             cPickle.dump(processZSField, paramPKLfile)
                             paramPKLfile.close() 
                             
-                            pString = "python %s --task region --pickleFile %s --RP_paramPickle %s" % (sys.argv[0],inPKLfn,paramPKLfn) # sys.argv[0]: currently executed script
+                            pString = "python2 %s --task region --pickleFile %s --RP_paramPickle %s" % (sys.argv[0],inPKLfn,paramPKLfn) # sys.argv[0]: currently executed script
                             
                             if options.debugEnableRuntimeProfiling:
                                 pString += " --debugEnableRuntimeProfiling --runtimeProfileFile " + runtimeProfileDir + os.sep + "runtime_profile_region_" + seqMotif + "_" + chrom + "_" + str(processUnitStart) + "to" + str(processUnitEnd) + ".cProfile"
                             jobStr = shellScriptHs[seqMotif].addProcess(pString, regionID, outPKLfn,regionCoordTupel)
+                            print(jobStr)
                             if len(jobStr) > 0:
                                 jobH.addJob(jobStr)
        
                 else:
                     windowStatsStr += "False"
                     if overlapsIncludedRegions:
-                        print "Randomly skipping current interval at " + time.strftime("%Y-%m-%d %H:%M:%S") + ": "+chrom+" "+str(processUnit)+" window: [" + str(processUnitStart) + "," + str(processUnitEnd) + ")"
+                        print("Randomly skipping current interval at " + time.strftime("%Y-%m-%d %H:%M:%S") + ": "+chrom+" "+str(processUnit)+" window: [" + str(processUnitStart) + "," + str(processUnitEnd) + ")")
                     else:
-                        print "[" + time.strftime("%Y-%m-%d %H:%M:%S") + "] skipped intervall not included in --includedRegions" + ": "+chrom+" "+str(processUnit)+" window: [" + str(processUnitStart) + "," + str(processUnitEnd) + ")"
+                        print("[" + time.strftime("%Y-%m-%d %H:%M:%S") + "] skipped intervall not included in --includedRegions" + ": "+chrom+" "+str(processUnit)+" window: [" + str(processUnitStart) + "," + str(processUnitEnd) + ")")
                 
                 if debug:
                     windowStatsF.write(windowStatsStr+"\n")
@@ -4425,12 +4427,12 @@ def manageProcesses(chromSortList,chromSizeHash,chromFileHandler,includedRegions
                 jobStr = shellScriptHs[seqMotif].writeShellScript()
                 jobH.addJob(jobStr)
         
-        print "Region processing completed at " + time.strftime("%Y-%m-%d %H:%M:%S") + " using " + str(numProcesses) + " of " + str(numRegions) + " processes/chromUnits total" 
+        print("Region processing completed at " + time.strftime("%Y-%m-%d %H:%M:%S") + " using " + str(numProcesses) + " of " + str(numRegions) + " processes/chromUnits total" )
             
             
 def isBedPlus8applicable(filename):
     '''
-    checks if a tab seperated file has > MAX_LIFTOVER_COLS (ie 20) columns and print a warning message
+    checks if a tab seperated file has > MAX_LIFTOVER_COLS (ie 20) columns and print(a warning message)
     this is useful as LiftOver with the option -bedPlus returns a maximum of 20 columns and neglects the others
     '''
     MAX_LIFTOVER_COLS = 20
@@ -4439,7 +4441,7 @@ def isBedPlus8applicable(filename):
     numcols = len(l.split("\t"))
     f.close()
     if  numcols > MAX_LIFTOVER_COLS:
-        print "WARNING: LiftOver using -bedPlus=8: too many columns (" + str(numcols) + ") could not transfer all of them"
+        print("WARNING: LiftOver using -bedPlus=8: too many columns (" + str(numcols) + ") could not transfer all of them")
         
         
 def performLiftOver(infile, inGenome, outGenome, execute, bedPlus8 = False):
@@ -4449,7 +4451,7 @@ def performLiftOver(infile, inGenome, outGenome, execute, bedPlus8 = False):
     success = False
     outfile = os.path.splitext(infile)[0]+"."+outGenome
     if not os.path.exists(infile):
-        print "liftOver input file does not exist: "+infile
+        print("liftOver input file does not exist: "+infile)
         raise Exception("LiftOver file does not exist")
     chainFilename = options.toolsPath + inGenome + "To" + outGenome.capitalize()+ ".over.chain.gz"
     callString = options.toolsPath+"liftOver.linux.x86_64 "
@@ -4457,14 +4459,14 @@ def performLiftOver(infile, inGenome, outGenome, execute, bedPlus8 = False):
         callString = callString + "-bedPlus=8 "
     callString = callString + infile+" "+chainFilename+" "+outfile+" "+outfile+".unmappable"
     if execute:
-        print "["+time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())+"] " + "Calling liftOver: " + callString
+        print("["+time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())+"] " + "Calling liftOver: " + callString)
         sys.stdout.flush()
         if os.system(callString) == 0:
-            print "["+time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())+"] " + "liftOver mapping succeeded"
+            print("["+time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())+"] " + "liftOver mapping succeeded")
             success = True
-        else: print "liftOver mapping failed: " + callString
+        else: print("liftOver mapping failed: " + callString)
     else:
-        print "Preparing liftOver call: " + callString
+        print("Preparing liftOver call: " + callString)
     return (outfile, callString, success)
 
 def countHashLines(fileName):
@@ -4507,7 +4509,7 @@ def combineDuplicatesInCpGmethFile(infilename,outfilename,seqMotif): #TODO: func
                 duplicates += 1
                 meth += int(curMethInfo[0])
                 total += int(curMethInfo[1]) 
-                if llcur[5] == llprev[5] and strand <> "b":
+                if llcur[5] == llprev[5] and strand != "b":
                     strand = llcur[5]
                 else:
                         strand = "b"                 
@@ -4647,18 +4649,18 @@ def performAnalysis(options):
     invokes the chopping of the genome (manageProcesses)
     invokes the 'region' and 'wrapup' tasks
     '''
-    print "MAIN process started at "
-    print "Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
+    print("MAIN process started at ")
+    print("Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime()))
     
     if debug:
-        print "Alignment files: " + str(options.alignmentFiles)
+        print("Alignment files: " + str(options.alignmentFiles))
     
     # make sure that all alignment files are ready for processing
     for alignmentFile in options.alignmentFiles:
         minTimeSinceAlignment = time.time() - (options.timeDelay*3600)  # alignment files have to be (by default) at least 6h old to be analyzed (to make sure that alignment processing has finished)
         if (os.path.getmtime(alignmentFile) > minTimeSinceAlignment):
             sys.stdout.flush()
-            print "Alignment generation is still running! \nRestart analysis when alignment processing has finished."
+            print("Alignment generation is still running! \nRestart analysis when alignment processing has finished.")
             raise SystemExit    
     
     # prepare temporary output directory and save program parameters for debugging
@@ -4668,22 +4670,22 @@ def performAnalysis(options):
     path = options.tempDir + os.sep
     optionsFile = path + "options_object.bin"
     output = open(optionsFile, 'wb'); cPickle.dump(options, output); output.close()
-    print "Load option settings as follows (for debugging): input = open('" + optionsFile + "', 'rb'); import pickle; options = pickle.load(input);"
+    print("Load option settings as follows (for debugging): input = open('" + optionsFile + "', 'rb'); import pickle; options = pickle.load(input);")
 
     # obtain genome sequence if necessary
     global genomePath
     genomePath = options.genomeDir + os.sep + options.inGenome
     if not os.path.exists(genomePath):
-        print "Genome assembly not found for '"+options.inGenome+"', trying to obtain genome from UCSC Genome Browser"        
+        print("Genome assembly not found for '"+options.inGenome+"', trying to obtain genome from UCSC Genome Browser"        )
         downloadGenome.downloadGenome(options.inGenome, options.genomeDir)    
     if not os.path.exists(genomePath):
-        print "Could not obtain required genome assembly for '"+options.inGenome+"'"
+        print("Could not obtain required genome assembly for '"+options.inGenome+"'")
         raise SystemExit
     
     # identify which chromosomes to include or exclude
     global chromSizeHash
     includeList = []
-    if options.includedChromosomes <> "":
+    if options.includedChromosomes != "":
         includeList = options.includedChromosomes.split(",")
         
     excludeList = options.excludedChromosomes.split(",")
@@ -4695,9 +4697,9 @@ def performAnalysis(options):
             if not os.path.exists(alignmentFile+'.bai'): 
                 try:
                     pysam.index(alignmentFile)
-                except pysam.SamtoolsError, e:
-                    print "WARNING: the following exception occurred during BAM file indexing of " + alignmentFile + " :"
-                    print str(e)
+                except pysam.SamtoolsError as e:
+                    print("WARNING: the following exception occurred during BAM file indexing of " + alignmentFile + " :")
+                    print(str(e))
                     raise SystemExit
             samfile = pysam.Samfile(alignmentFile, "rb")
         else:
@@ -4708,7 +4710,7 @@ def performAnalysis(options):
         for i in range(len(samfile.references)):
             #genomic region retrieved from samfile can have either chromosone numbers as strings (e.g. '21', 'X') or full identifiers (e.g. 'chr21','chrX')
             #--> use manualGenomeCorrection.get(genomicRegion,genomicRegion) to correct for that
-            #N#print samfile.references[i]
+            #N#print(samfile.references[i])
             genomicRegion = samfile.references[i]
             chrSize = samfile.lengths[i]
             chrom = manualGenomeCorrection.get(genomicRegion,genomicRegion)
@@ -4717,7 +4719,7 @@ def performAnalysis(options):
             if options.ignore_chrRandom_chrM_hap and chrom == "chrM" or chrom.find("random") >= 0 or chrom.find("hap") >= 0: continue
             chromFilename = genomePath + os.sep + chrom + ".fa"
             if not os.path.exists(chromFilename):
-                print "WARNING: No sequence data found, skipping chromosome: " + chrom
+                print("WARNING: No sequence data found, skipping chromosome: " + chrom)
             elif genomicRegion not in chromSizeHash.keys():                
                 chromSizeHash[genomicRegion] = chrSize
                 chromFileHandler.addFile(chrom, chromFilename)
@@ -4725,11 +4727,11 @@ def performAnalysis(options):
         
         
     chromSortList = sorted(chromSizeHash.keys())
-    if debug: print 'chromSizeHash  ' + str(chromSizeHash)
-    if debug: print 'chromSizeHash  ' + str(len(chromSizeHash))
+    if debug: print('chromSizeHash  ' + str(chromSizeHash))
+    if debug: print('chromSizeHash  ' + str(len(chromSizeHash)))
     
-    if debug: print 'chromSortList  ' + str(chromSortList)
-    if debug: print 'chromSortList  ' + str(len(chromSortList))
+    if debug: print('chromSortList  ' + str(chromSortList))
+    if debug: print('chromSortList  ' + str(len(chromSortList)))
     
     includedRegions = IncludedRegions(options.includedRegions)
    
@@ -4747,8 +4749,8 @@ def performAnalysis(options):
     strands = ['both']
     if options.isStrandSpecific: strands = ['both', '-', '+']
     
-    #N#print 'numberOfLanes---------------------------------'
-    #N#print numberOfLanes
+    #N#print('numberOfLanes---------------------------------')
+    #N#print(numberOfLanes)
     
     fragmentsInfo = FragmentsInfo(options.fragmentSizeRanges)
     statisticsLanes = StatisticsCollection(options.alignmentFiles,seqMotifList,strands,fragmentsInfo)
@@ -4784,7 +4786,7 @@ def performAnalysis(options):
     jobH = jobHandler()
     
     for seqMotif in seqMotifList:
-        print "Processing Cp" + seqMotif
+        print("Processing Cp" + seqMotif)
         #prepare output filenames
         outfns.addFiles4seqMotif(seqMotif, options)
         #shellScriptHandler
@@ -4794,8 +4796,8 @@ def performAnalysis(options):
     manageProcesses(chromSortList,chromSizeHash,chromFileHandler,includedRegions,outfns,shellScriptHandlers4seqMotifs,jobH,mainPickleFileName4regions,strands,seqMotifList,path,options,fragmentsInfo,debug)
     
     spikeIns = None
-    if options.spikeInControlSeqs <> "":
-        print "Reading Spike In controls from " + options.spikeInControlSeqs
+    if options.spikeInControlSeqs != "":
+        print("Reading Spike In controls from " + options.spikeInControlSeqs)
         spikeIns = SpikeInControls(options.spikeInControlSeqs,options.spikeInMotifLen)
         
     mainPickleFileName4wrapup= path +'main_data_4wrapup.pkl'    
@@ -4813,7 +4815,7 @@ def performAnalysis(options):
     mpf2.close()
     
     #start the wrapup task
-    pString = "python %s --task wrapup --pickleFile %s" % (sys.argv[0],mainPickleFileName4wrapup)
+    pString = "python2 %s --task wrapup --pickleFile %s" % (sys.argv[0],mainPickleFileName4wrapup)
     if options.debugEnableRuntimeProfiling:
         runtimeProfileDir = options.outputDir + os.sep + "runtime_profiles"
         pString += " --debugEnableRuntimeProfiling --runtimeProfileFile " + runtimeProfileDir + os.sep + options.sampleName + "runtime_profile_wrapup.cProfile"
@@ -4831,35 +4833,35 @@ def performAnalysis(options):
         addStr = addStr[:-4] + "\"" #:-4 cut off trailing ' && '
         jobString += addStr + " " + pString
         if len(addStr) < 6:
-            print "Sorry, NO region jobs were submitted. Exiting..."
-            print "This can have multiple reasons:"
-            print "(a) Temporary files are already present for all the regions. Have you run the analysis already?"
-            print "(b) You specified an illegal subset of regions"
-            print "(c) --debugRandomSubset option resulted in no regions to be processed by chance"
-            #print "(d) witchcraft. In this case burn all women with red hair around you! ;-)"
-            print "(d) programming error. In this case we would be happy about your report."
+            print("Sorry, NO region jobs were submitted. Exiting...")
+            print("This can have multiple reasons:")
+            print("(a) Temporary files are already present for all the regions. Have you run the analysis already?")
+            print("(b) You specified an illegal subset of regions")
+            print("(c) --debugRandomSubset option resulted in no regions to be processed by chance")
+            #print("(d) witchcraft. In this case burn all women with red hair around you! ;-)")
+            print("(d) programming error. In this case we would be happy about your report.")
             sys.stdout.flush()
             raise SystemExit
     else:
         jobString = pString
-    print "-------------------------------------------------------------------"
-    print "WRAPUP job:"
-    print "Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
-    print jobString
+    print("-------------------------------------------------------------------")
+    print("WRAPUP job:")
+    print("Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime()))
+    print(jobString)
     sys.stdout.flush()
     jobH.addJob(jobString)
     
-    print "-------------------------------------------------------------------"
-    print "executing jobs and writing to shellscript ..."
-    print "Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
+    print("-------------------------------------------------------------------")
+    print("executing jobs and writing to shellscript ...")
+    print("Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime()))
     sys.stdout.flush()
     if not options.prepareOnly:
         jobH.execute(2)
     jobH.write2file(options.outputDir + os.sep + options.sampleName + "_submittedJobs.sh")
     
-    print "-------------------------------------------------------------------"
-    print "MAIN process finished at "
-    print "Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())        
+    print("-------------------------------------------------------------------")
+    print("MAIN process finished at ")
+    print("Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())        )
 
 
 def performAnalysis_region(options_l):
@@ -4902,9 +4904,9 @@ def performAnalysis_region(options_l):
     options.processZSField = processZSField
     sequenceDataProcessing(chrom, processUnitStart, processUnitEnd, outPKLfn, outfileNameHashTemp, strands, seqMotif, fragmentsInfo,chromSizeHash,chromFileHandler,restrSite)
     
-    #N#print "-------------------------------------------------------------------"
-    #N#print "REGION process finished at "
-    #N#print "Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
+    #N#print("-------------------------------------------------------------------")
+    #N#print("REGION process finished at ")
+    #N#print("Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime()))
     
 def performAnalysis_wrapup(options_l):
     '''
@@ -4917,8 +4919,8 @@ def performAnalysis_wrapup(options_l):
     concatenate the regions list output files (reads, readDetails, CpGs, fragments)
     perfoms Liftover, conversion to bigBed and zipping (if required)
     '''
-    print "WRAPUP process started at "
-    print "Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())       
+    print("WRAPUP process started at ")
+    print("Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())       )
     #read main picklefile
     mpf = open(options_l.pickleFile, 'rb')
     statisticsLanes = cPickle.load(mpf)
@@ -4945,8 +4947,8 @@ def performAnalysis_wrapup(options_l):
             if not isValidFile(statsPickle):
                 missingPKLfiles.append(statsPickle)
     if len(missingPKLfiles) > 0:
-        print "ERROR: Region picklefile(s) missing. Program will terminate now"
-        print str(missingPKLfiles)
+        print("ERROR: Region picklefile(s) missing. Program will terminate now")
+        print(str(missingPKLfiles))
         raise SystemExit    
     
     for seqMotif in seqMotifList:
@@ -4964,10 +4966,10 @@ def performAnalysis_wrapup(options_l):
         # LiftOver
         doLiftover = options.inGenome != options.outGenome
         for finalOutfile in outfns.seqMotifOutfileNames[seqMotif].keys():
-            print "["+time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())+"] " + "Postprocessing file " + outfns.seqMotifOutfileNames[seqMotif][finalOutfile]
+            print("["+time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())+"] " + "Postprocessing file " + outfns.seqMotifOutfileNames[seqMotif][finalOutfile])
             sys.stdout.flush()
             if doLiftover:
-                if finalOutfile <> 'readQualOutfile': 
+                if finalOutfile != 'readQualOutfile': 
                     (finalOutfileAfterLiftOver, callString, success) = performLiftOver(outfns.seqMotifOutfileNames[seqMotif][finalOutfile], options.inGenome, options.outGenome, True)
                 else:
                     if options.readDetailsFileLiftOver:
@@ -4982,7 +4984,7 @@ def performAnalysis_wrapup(options_l):
             doSort = doLiftover or finalOutfile.find('fragmentOutfile') >= 0 or finalOutfile == 'readQualOutfile' or finalOutfile == 'readOutfile'
             
             if doSort:
-                print "  ["+time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())+"] " + "Sorting bed file..."
+                print("  ["+time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())+"] " + "Sorting bed file...")
                 sys.stdout.flush()
                 unsortedFile = outfns.seqMotifOutfileNames[seqMotif][finalOutfile] + ".unsorted"
                 os.system("mv " + outfns.seqMotifOutfileNames[seqMotif][finalOutfile] + " " + unsortedFile)
@@ -4991,7 +4993,7 @@ def performAnalysis_wrapup(options_l):
                 os.system(sortCmd)
             if doLiftover:
                 if debug:
-                    print "  ["+time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())+"] " +"Counting mapping e.r.r.o.r.s.."
+                    print("  ["+time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())+"] " +"Counting mapping e.r.r.o.r.s..")
                     sys.stdout.flush()
                 # count the number of mapping errors == number of lines starting with '#' in the unmappable file
                 try:
@@ -4999,7 +5001,7 @@ def performAnalysis_wrapup(options_l):
                     unmappableAfterLiftover = countHashLines(unmappableFile)
                     statisticsLanes.updateLiftOverMappingErrors(unmappableAfterLiftover,seqMotif,finalOutfile,options)
                 except:
-                    print "WARNING: could not count mapping errors from file " + unmappableFile
+                    print("WARNING: could not count mapping errors from file " + unmappableFile)
                     exceptionOccurred = True
             
                 #LiftOver might create duplicate CpGs in the CpG Output file: remove them ...   
@@ -5007,22 +5009,22 @@ def performAnalysis_wrapup(options_l):
                     fileWithDuplicates = outfns.seqMotifOutfileNames[seqMotif][finalOutfile] + ".duplicates"
                     os.system("mv " + outfns.seqMotifOutfileNames[seqMotif][finalOutfile] + " " + fileWithDuplicates)
                     
-                    print "  Search and combine duplicates: seqMotif output..."
+                    print("  Search and combine duplicates: seqMotif output...")
                     numDuplicates = combineDuplicatesInCpGmethFile(fileWithDuplicates,outfns.seqMotifOutfileNames[seqMotif][finalOutfile],seqMotif)
                     if debug:
-                        print "    " + str(numDuplicates) + " duplicates found"
+                        print("    " + str(numDuplicates) + " duplicates found")
             #...and the fragment output file. Here the duplicates could also be due to the processed Regions cutting through a fragment
             if finalOutfile.find('fragmentOutfile') >= 0:
                 fileWithDuplicates = outfns.seqMotifOutfileNames[seqMotif][finalOutfile] + ".duplicates"
                 os.system("mv " + outfns.seqMotifOutfileNames[seqMotif][finalOutfile] + " " + fileWithDuplicates)
                 
-                print "  Search and combine duplicates: fragments..."
+                print("  Search and combine duplicates: fragments...")
                 numDuplicates = combineDuplicatesInFragmentFile(fileWithDuplicates,outfns.seqMotifOutfileNames[seqMotif][finalOutfile])
                 if debug:
-                    print "    " + str(numDuplicates) + " duplicates found"
+                    print("    " + str(numDuplicates) + " duplicates found")
                     
         if debug:
-            print 60*"-"+"\nPostprocessing done"
+            print(60*"-"+"\nPostprocessing done")
             sys.stdout.flush()
         
         outfns.addHeaderReadQualOutfile(seqMotif,options)
@@ -5033,7 +5035,7 @@ def performAnalysis_wrapup(options_l):
             statisticsLanes.updateStrandSpecific(seqMotif)
         
         if debug:
-            print "[" + str(time.strftime("%Y-%m-%d %H:%M:%S")) + "]: combining and calculating statistics..."
+            print("[" + str(time.strftime("%Y-%m-%d %H:%M:%S")) + "]: combining and calculating statistics...")
             sys.stdout.flush()
         statisticsLanes.calcStats_setConversionRate(seqMotif)
         
@@ -5047,12 +5049,12 @@ def performAnalysis_wrapup(options_l):
             concatRegionLogFN = options.outputDir + os.sep + options.methodPrefix + "_Cp" + seqMotif + "_regionJobLogs_" + options.sampleName +".log"
             callStringLogs += " > " + concatRegionLogFN
 #            callStringErrs += " > " + concatRegionLogFN + ".err"
-            print "    Concatenating region job logfiles..."
+            print("    Concatenating region job logfiles...")
             os.system(callStringLogs)
 #            os.system(callStringErrs)
 
-    if options.spikeInControlSeqs <> "":
-        print "Analysing Spike In controls from " + options.spikeInControlSeqs
+    if options.spikeInControlSeqs != "":
+        print("Analysing Spike In controls from " + options.spikeInControlSeqs)
         spikeIns.extractSICreads(options)
         spikeIns.processSICreads(options)
         statisticsLanes.readSpikeInCtrlAnalysis(spikeIns)
@@ -5063,23 +5065,23 @@ def performAnalysis_wrapup(options_l):
     toolsPath = options.toolsPath
     chromSizesFile = None
     if options.bigBedFormat:
-        print "[" + str(time.strftime("%Y-%m-%d %H:%M:%S")) + "]: BigBed handling..."
+        print("[" + str(time.strftime("%Y-%m-%d %H:%M:%S")) + "]: BigBed handling...")
         chromSizesFile = options.outGenome.replace("/","")+'.chrom.sizes'
         if not os.path.exists(chromSizesFile): # check again with above code for redundancy
             chromSizesFileCmd = toolsPath + 'fetchChromSizes ' +options.outGenome+' > ' + chromSizesFile
             sys.stdout.flush()
-            print "Calling fetchChromSizes: " + chromSizesFileCmd
+            print("Calling fetchChromSizes: " + chromSizesFileCmd)
             sys.stdout.flush()
             os.system(chromSizesFileCmd)
 
     #create webOutputDir if it does not exist already
     if not os.path.exists(options.webOutputDir): os.mkdir(options.webOutputDir)     
     outfns.processBedFiles(options,chromSizesFile)
-    print "[" + str(time.strftime("%Y-%m-%d %H:%M:%S")) + "]: (zipping and) moving files..."
+    print("[" + str(time.strftime("%Y-%m-%d %H:%M:%S")) + "]: (zipping and) moving files...")
     outfns.zipAndMoveOutfiles()
 
     # GLOBAL STATISTICS over all lanes of sample, if more than one lane was given as input file
-    print "[" + str(time.strftime("%Y-%m-%d %H:%M:%S")) + "]: Computing statistics from lanes and writing output..."
+    print("[" + str(time.strftime("%Y-%m-%d %H:%M:%S")) + "]: Computing statistics from lanes and writing output...")
     statisticsLanes.computeGlobalStats()
     statisticsLanes.calcMeanSDs()
     statsFileName = statisticsLanes.writeStatistics2files(path,options)
@@ -5088,9 +5090,9 @@ def performAnalysis_wrapup(options_l):
         sys.stdout.flush()
         shutil.rmtree(path)
 
-    print "-------------------------------------------------------------------"
-    print "WRAPUP process finished at "
-    print "Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
+    print("-------------------------------------------------------------------")
+    print("WRAPUP process finished at ")
+    print("Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime()))
     
 
 def performAnalysis_diagnostics(options):
@@ -5100,15 +5102,15 @@ def performAnalysis_diagnostics(options):
     by investigating job processes and checking for error messages
     the temp directory and the temporary files need to be still available for proper functionality
     '''
-    print "DIAGNOSTICS process started at "
-    print "Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
+    print("DIAGNOSTICS process started at ")
+    print("Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime()))
     
     pfn_wrapup = options.tempDir + os.sep + 'main_data_4wrapup.pkl'
     try:
         mpf = open(pfn_wrapup, 'rb')
     except:
-        print "could not open " + pfn_wrapup
-        print "Program will terminate now"
+        print("could not open " + pfn_wrapup)
+        print("Program will terminate now")
         raise SystemExit
         
     statisticsLanes = cPickle.load(mpf)
@@ -5126,19 +5128,19 @@ def performAnalysis_diagnostics(options):
     statsFileName = analysisOptions.outputDir + os.sep + analysisOptions.methodPrefix +"_statistics_"+ analysisOptions.sampleName + ".txt"
     analysisFinished = isValidFile(statsFileName)
     
-    print "-------------------------------------------------------------------"
-    print "GENERAL INFORMATION"
-    print "-------------------------------------------------------------------"
-    print "processed motifs:          " + "Cp" + listAsString(analysisSeqMotifList)
-    print "# alignment files:         " + str(len(analysisOptions.alignmentFiles))
-    print "analysis finished:         " + str(analysisFinished)
+    print("-------------------------------------------------------------------")
+    print("GENERAL INFORMATION")
+    print("-------------------------------------------------------------------")
+    print("processed motifs:          " + "Cp" + listAsString(analysisSeqMotifList))
+    print("# alignment files:         " + str(len(analysisOptions.alignmentFiles)))
+    print("analysis finished:         " + str(analysisFinished))
     
-    print "-------------------------------------------------------------------"
-    print "PROGRESS INFORMATION"
-    print "-------------------------------------------------------------------"
+    print("-------------------------------------------------------------------")
+    print("PROGRESS INFORMATION")
+    print("-------------------------------------------------------------------")
     for seqMotif in analysisSeqMotifList:
-        print "Cp" + seqMotif
-        print "-------------------------------------------------------------------"
+        print("Cp" + seqMotif)
+        print("-------------------------------------------------------------------")
         #check which jobs' pickle files are missing
         missingPKLfiles = []
         for statsPickle in analysisShellScriptHandlers4seqMotifs[seqMotif].pickleFileNames:
@@ -5155,58 +5157,58 @@ def performAnalysis_diagnostics(options):
                 finishedJobLogFiles.append(logFN)
                 
         numJobsTotal = len(analysisShellScriptHandlers4seqMotifs[seqMotif].logFileNames) 
-        #print summary
-        print "  # regions to process (total):     " + str(numRegionsTotal)
-        print "  # regions already processed:      " + str(numRegionsProcessed) + " (" + str(float(numRegionsProcessed)/numRegionsTotal * 100.0) + "%)"
-        print "  # region jobs to process (total): " + str(numJobsTotal)
+        #print(summary)
+        print("  # regions to process (total):     " + str(numRegionsTotal))
+        print("  # regions already processed:      " + str(numRegionsProcessed) + " (" + str(float(numRegionsProcessed)/numRegionsTotal * 100.0) + "%)")
+        print("  # region jobs to process (total): " + str(numJobsTotal))
         if numJobsTotal > 0:
-            print "  # region jobs already finished:   " + str(len(finishedJobLogFiles)) + " (" + str(float(len(finishedJobLogFiles))/numJobsTotal * 100.0) + "%)"
+            print("  # region jobs already finished:   " + str(len(finishedJobLogFiles)) + " (" + str(float(len(finishedJobLogFiles))/numJobsTotal * 100.0) + "%)")
         else:
-            print "  # region jobs already finished:   NA (region jobs to process = 0)"
+            print("  # region jobs already finished:   NA (region jobs to process = 0)")
         
-    print "-------------------------------------------------------------------"
-    print "ERROR INFORMATION"
-    print "-------------------------------------------------------------------"
+    print("-------------------------------------------------------------------")
+    print("ERROR INFORMATION")
+    print("-------------------------------------------------------------------")
     
-    print "-------------------------------------------------------------------"
-    print "Main Task"
-    print "-------------------------------------------------------------------"
+    print("-------------------------------------------------------------------")
+    print("Main Task")
+    print("-------------------------------------------------------------------")
     mainLogFn = options.mainTaskLogFile
     if isValidFile(mainLogFn):
         noticeStrings_main = getNoticesInLog(mainLogFn)
         for ns in noticeStrings_main:
-            print ns
+            print(ns)
     else:
-        print "not a valid log file (task not finished yet?)"
-    print "-------------------------------------------------------------------"
-    print "Region Tasks"
-    print "-------------------------------------------------------------------"
+        print("not a valid log file (task not finished yet?)")
+    print("-------------------------------------------------------------------")
+    print("Region Tasks")
+    print("-------------------------------------------------------------------")
     if not analysisFinished:
         #look in the temporary log files
         for logFN in finishedJobLogFiles:
             noticeStrings = getNoticesInLog(logFN)
             if len(noticeStrings) > 0:
-                print logFN + ":"
+                print(logFN + ":")
                 for ns in noticeStrings:
-                    print "    " + ns
-    print "-------------------------------------------------------------------"
-    print "Wrapup Task"
-    print "-------------------------------------------------------------------"
+                    print("    " + ns)
+    print("-------------------------------------------------------------------")
+    print("Wrapup Task")
+    print("-------------------------------------------------------------------")
     wrapupLogFn = analysisOptions.outputDir + os.sep + analysisOptions.sampleName + "_wrapup.log"
     if isValidFile(wrapupLogFn):
         noticeStrings_wrapup = getNoticesInLog(wrapupLogFn)
         for ns in noticeStrings_wrapup:
-            print ns
+            print(ns)
     else:
-        print "not a valid log file (task not finished yet?)"
+        print("not a valid log file (task not finished yet?)")
     
-    print "-------------------------------------------------------------------"
-    print "DIAGNOSTICS task finished at "
-    print "Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
+    print("-------------------------------------------------------------------")
+    print("DIAGNOSTICS task finished at ")
+    print("Local time: " + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime()))
     
     
 if __name__ == '__main__':
-    #N#print "Starting program..."
+    #N#print("Starting program...")
     # constructing command line parser
     import optparse
     parser = optparse.OptionParser()
@@ -5313,14 +5315,14 @@ if __name__ == '__main__':
     setGlobals(options)     
     
     if debug:
-        print "using pysam version "+ pysam.version.__version__ + " from " + pysam.__file__
+        print("using pysam version "+ pysam.version.__version__ + " from " + pysam.__file__)
     
     if options.task == "main":
         
         if len(options.alignmentFiles) < 1 or len(options.outputDir) < 1 or len(options.sampleName) < 1 or len(options.outGenome) < 1 or len(options.inGenome) < 1:
-            print "Mandatory parameters missing. Program will terminate now."
-            print "\nYour parameter settings:"
-            print options        
+            print("Mandatory parameters missing. Program will terminate now.")
+            print("\nYour parameter settings:")
+            print(options        )
             raise SystemExit
         # prepare output directory and filenames
         if not os.path.exists(options.outputDir): os.mkdir(options.outputDir)
@@ -5337,7 +5339,7 @@ if __name__ == '__main__':
             # stats.strip_dirs().sort_stats('time').print_stats()
         else:
             performAnalysis(options)
-        print "Program successfully terminating...."  
+        print("Program successfully terminating...."  )
     elif options.task == "region":
         if options.debugEnableRuntimeProfiling:
             cProfile.run('performAnalysis_region(options)', options.runtimeProfileFile)
