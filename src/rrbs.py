@@ -591,12 +591,12 @@ def main(cmdl):
 	for chrom in spike_chroms:
 		cmd = tools.python + " -u " + os.path.join(tools.scripts_dir, "tsv_parser.py")
 		cmd += " -i " + os.path.join(spikein_folder, epilog_spike_summary_file)
-		cmd += " -r context=C chr=" + chrom
+		cmd += " -r context=C chromosome=" + chrom
 	
 		cmd_total = cmd + " -c " + "total"
 		x = pm.checkprint(cmd_total, shell=True)
 		pm.report_result(chrom+'_count_EL', x)
-		cmd_rate = cmd + " -c " + "rate"
+		cmd_rate = cmd + " -c " + "methylRate"
 		x = pm.checkprint(cmd_rate, shell=True)
 		pm.report_result(chrom+'_meth_EL', x)
 	
