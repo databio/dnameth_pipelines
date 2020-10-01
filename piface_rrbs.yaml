@@ -1,9 +1,10 @@
 pipeline_name: RRBS
 pipeline_type: sample
-path: src/rrbs.py
+paths:
+ main: src/rrbs.py
 input_schema: schema_input_rrbs.yaml
 command_template: >
-  {pipeline.path} --sample-name {sample.sample_name}
+  {pipeline.paths.main} --sample-name {sample.sample_name}
   --genome {sample.genome}
   --input {sample.read1}
   --single-or-paired {sample.read_type}
